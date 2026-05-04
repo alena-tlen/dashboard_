@@ -1,0 +1,368 @@
+// ========================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// ========================
+
+let currentUser = null;      // Текущий авторизованный пользователь
+let authUsers = [];          // Массив всех пользователей из файла
+let usersLoaded = false;     // Флаг: загружены ли пользователи
+
+const USERS_FILE_PATH = 'users.xlsx';  // Путь к файлу с пользователями
+
+// ========================
+// ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ИЗ EXCEL
+// ========================
+
+/**
+ * Загружает список пользователей из Excel файла
+ * @returns {Promise<boolean>} - true если загрузка успешна
+ */
+async function loadUsersFromFile() {
+    const authError = document.getElementById('authError');
+    const authInfo = document.getElementById('authSuccess');
+    
+    try {
+        // 1. Загружаем файл с сервера
+        const response = await fetch(USERS_FILE_PATH);
+        if (!response.ok) {
+            if (authError) authError.textContent = `❌ Файл ${USERS_FILE_PATH} не найден`;
+            return false;
+        }
+        
+        // 2. Читаем как бинарные данные
+        const arrayBuffer = await response.arrayBuffer();
+        
+        // 3. Парсим Excel через библиотеку XLSX
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: true });
+        
+        // 4. Преобразуем строки Excel в объекты пользователей
+        const users = [];
+        for (const row of jsonData) {
+            // Поддерживаем разные варианты написания колонок
+            let email = row['почта'] || row['email'] || row['Email'] || '';
+            let password = row['пароль'] || row['password'] || row['Пароль'] || '';
+            let fio = row['фио'] || row['ФИО'] || row['name'] || '';
+            let access = row['доступ'] || row['access'] || row['Доступ'] || '';
+            
+            // Очищаем и нормализуем данные
+            email = String(email).trim().toLowerCase();
+            password = String(password).trim();
+            fio = String(fio).trim();
+            access = String(access).trim().toLowerCase();
+            
+            // Пропускаем пустые строки
+            if (!email || !password) continue;
+            
+            // Определяем статус блокировки
+            const isBlocked = access === 'заблокирован' || access === 'blocked' || access === 'нет';
+            const isAllowed = access === 'разрешён' || access === 'разрешен' || access === 'да' || access === 'yes';
+            
+            users.push({
+                email: email,
+                password: password,
+                fio: fio || email.split('@')[0],  // Если ФИО нет, берем часть email
+                isAdmin: false,  // Админ определяется отдельно
+                blocked: isBlocked || (!isAllowed && access !== '')
+            });
+        }
+        
+        // 5. Проверяем результат
+        if (users.length === 0) {
+            if (authError) authError.textContent = '❌ Файл не содержит данных';
+            return false;
+        }
+        
+        // 6. Сохраняем и обновляем интерфейс
+        authUsers = users;
+        usersLoaded = true;
+        
+        const activeCount = users.filter(u => !u.blocked).length;
+        if (authInfo) {
+            authInfo.textContent = `✅ Загружено ${users.length} пользователей (${activeCount} активных)`;
+            authInfo.style.color = '#48bb78';
+            setTimeout(() => { if (authInfo) authInfo.textContent = ''; }, 3000);
+        }
+        
+        updateStatusDisplay();
+        return true;
+        
+    } catch (error) {
+        console.error('Ошибка загрузки:', error);
+        if (authError) authError.textContent = `❌ Ошибка загрузки файла: ${error.message}`;
+        return false;
+    }
+}
+
+// ========================
+// ОТОБРАЖЕНИЕ СТАТУСА БАЗЫ
+// ========================
+
+/**
+ * Обновляет информацию о загруженных пользователях на странице входа
+ */
+function updateStatusDisplay() {
+    const authTitle = document.getElementById('authTitle');
+    if (!authTitle) return;
+    
+    // Создаем блок со статусом, если его нет
+    let statusDiv = document.getElementById('autoStatusDiv');
+    if (!statusDiv) {
+        statusDiv = document.createElement('div');
+        statusDiv.id = 'autoStatusDiv';
+        statusDiv.style.cssText = `
+            background: #0f0f1a; 
+            border-radius: 8px; 
+            padding: 10px; 
+            margin-bottom: 16px; 
+            font-size: 13px; 
+            color: #ffffff !important; 
+            border: 1px solid #2d2d3a;
+        `;
+        authTitle.insertAdjacentElement('afterend', statusDiv);
+    }
+    
+    // Заполняем информацией
+    if (authUsers.length > 0) {
+        const activeCount = authUsers.filter(u => !u.blocked).length;
+        statusDiv.innerHTML = `📁 База пользователей: ${authUsers.length} чел. (✅ ${activeCount} активных)`;
+    } else if (!usersLoaded) {
+        statusDiv.innerHTML = `📁 Загрузка базы пользователей...`;
+    } else {
+        statusDiv.innerHTML = `📁 База пользователей: не загружена`;
+    }
+}
+
+// ========================
+// АВТОРИЗАЦИЯ
+// ========================
+
+/**
+ * Проверяет логин и пароль
+ * @param {string} email - Email пользователя
+ * @param {string} password - Пароль
+ * @returns {Object} - Результат проверки
+ */
+function login(email, password) {
+    // Проверяем, загружена ли база
+    if (!usersLoaded || authUsers.length === 0) {
+        return { success: false, error: 'База пользователей не загружена.' };
+    }
+    
+    // Ищем пользователя
+    const user = authUsers.find(u => u.email === email.toLowerCase() && u.password === password);
+    
+    if (!user) {
+        return { success: false, error: 'Неверный email или пароль' };
+    }
+    
+    if (user.blocked) {
+        return { success: false, error: 'Ваш аккаунт заблокирован.' };
+    }
+    
+    return { 
+        success: true, 
+        user: { 
+            email: user.email, 
+            fio: user.fio, 
+            isAdmin: user.isAdmin, 
+            blocked: user.blocked 
+        } 
+    };
+}
+
+// ========================
+// ВЫХОД ИЗ СИСТЕМЫ
+// ========================
+
+/**
+ * Выход из системы, очистка данных
+ */
+function logout() {
+    currentUser = null;
+    localStorage.removeItem('dashboard_current_user');
+    
+    // Прячем главное приложение
+    document.getElementById('mainApp').style.display = 'none';
+    // Показываем форму авторизации
+    document.getElementById('authContainer').style.display = 'flex';
+    
+    // Очищаем поля
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authPassword').value = '';
+}
+
+// ========================
+// СБРОС ДАННЫХ
+// ========================
+
+/**
+ * Сбрасывает все финансовые данные из localStorage
+ */
+function resetAllData() {
+    if (confirm('Сбросить финансовые данные? Все загруженные файлы будут удалены!')) {
+        localStorage.removeItem('dashboard_financial_data');
+        alert('Финансовые данные сброшены! Страница обновится.');
+        location.reload();
+    }
+}
+
+// ========================
+// ИНИЦИАЛИЗАЦИЯ АВТОРИЗАЦИИ
+// ========================
+
+/**
+ * Главная функция инициализации авторизации
+ * Проверяет сохраненную сессию и настраивает форму
+ */
+async function initAuth() {
+    updateStatusDisplay();
+    await loadUsersFromFile();
+    
+    // Проверяем, есть ли сохраненный пользователь
+    const savedUser = localStorage.getItem('dashboard_current_user');
+    
+    if (savedUser && usersLoaded && authUsers.length > 0) {
+        try {
+            const userData = JSON.parse(savedUser);
+            const currentUserData = authUsers.find(u => u.email === userData.email);
+            
+            // Если пользователь существует и не заблокирован
+            if (currentUserData && !currentUserData.blocked) {
+                currentUser = {
+                    email: currentUserData.email,
+                    fio: currentUserData.fio,
+                    isAdmin: currentUserData.isAdmin,
+                    blocked: currentUserData.blocked
+                };
+                
+                // Показываем главное приложение
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('userInfo').innerHTML = `👤 ${currentUser.fio}`;
+                
+                // Запускаем приложение
+                initApp();
+                return;
+            }
+        } catch(e) {
+            console.error('Ошибка восстановления сессии:', e);
+        }
+    }
+    
+    // Если нет сохраненной сессии, показываем форму входа
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('authContainer').style.display = 'flex';
+    setupAuthForms();
+}
+
+// ========================
+// НАСТРОЙКА ФОРМЫ АВТОРИЗАЦИИ
+// ========================
+
+/**
+ * Настраивает обработчики формы входа
+ */
+function setupAuthForms() {
+    const authTitle = document.getElementById('authTitle');
+    const authFio = document.getElementById('authFio');
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const authToggle = document.getElementById('authToggle');
+    const authError = document.getElementById('authError');
+    const authSuccess = document.getElementById('authSuccess');
+    const resetDataBtn = document.getElementById('resetDataBtn');
+    const authEmail = document.getElementById('authEmail');
+    const authPassword = document.getElementById('authPassword');
+    
+    // Скрываем форму регистрации (в данной версии только вход)
+    if (authToggle) authToggle.style.display = 'none';
+    if (authFio) authFio.style.display = 'none';
+    if (authTitle) authTitle.textContent = '🔐 Вход в систему';
+    if (authSubmitBtn) authSubmitBtn.textContent = 'Войти';
+    
+    // Кнопка сброса данных
+    if (resetDataBtn) resetDataBtn.onclick = resetAllData;
+    
+    // Обработчик кнопки входа
+    if (authSubmitBtn) {
+        authSubmitBtn.onclick = () => {
+            const email = authEmail.value.trim();
+            const password = authPassword.value;
+            
+            // Очищаем предыдущие сообщения
+            if (authError) authError.textContent = '';
+            if (authSuccess) authSuccess.textContent = '';
+            
+            // Проверка заполнения полей
+            if (!email || !password) {
+                if (authError) authError.textContent = 'Заполните все поля';
+                return;
+            }
+            
+            // Проверка загрузки базы
+            if (!usersLoaded || authUsers.length === 0) {
+                if (authError) authError.textContent = 'База пользователей не загружена. Проверьте файл users.xlsx';
+                return;
+            }
+            
+            // Выполняем вход
+            const result = login(email, password);
+            
+            if (result.success) {
+                currentUser = result.user;
+                
+                // Сохраняем сессию
+                localStorage.setItem('dashboard_current_user', JSON.stringify({ 
+                    email: currentUser.email, 
+                    fio: currentUser.fio, 
+                    isAdmin: currentUser.isAdmin 
+                }));
+                
+                // Показываем приложение
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('userInfo').innerHTML = `👤 ${currentUser.fio}`;
+                
+                // Запускаем приложение
+                initApp();
+            } else {
+                if (authError) authError.textContent = result.error;
+            }
+        };
+    }
+}
+
+// ========================
+// АДМИН-ПАНЕЛЬ
+// ========================
+
+/**
+ * Показывает админ-панель (только для администратора)
+ */
+function showAdminPanel() {
+    if (currentUser && currentUser.isAdmin) {
+        const tbody = document.getElementById('adminTableBody');
+        if (tbody) {
+            tbody.innerHTML = '';
+            
+            // Выводим список пользователей
+            for (const user of authUsers) {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = user.fio;
+                row.insertCell(1).textContent = user.email;
+                row.insertCell(2).textContent = user.blocked ? '🔴 Заблокирован' : '🟢 Активен';
+                
+                const actionCell = row.insertCell(3);
+                actionCell.textContent = '📝 Редактировать в Excel';
+                actionCell.style.color = '#f59e0b';
+                actionCell.style.cursor = 'pointer';
+                
+                // Пояснение для пользователя
+                actionCell.title = 'Управление пользователями осуществляется через файл users.xlsx';
+            }
+        }
+        document.getElementById('adminPanel').classList.add('active');
+    } else {
+        alert('Доступ запрещен. Только для администратора.\n\nУправление пользователями - через файл users.xlsx');
+    }
+}
