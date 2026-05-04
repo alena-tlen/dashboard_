@@ -14,7 +14,6 @@ function formatCurrency(value) {
         maximumFractionDigits: 0
     }).format(Math.abs(value)); 
 }
-
 /**
  * Форматирует сумму с указанием валюты
  * @param {number} amount - сумма
@@ -30,11 +29,9 @@ function formatCurrencyWithCurrency(amount, currency = 'RUB') {
     });
     return `${formatter.format(Math.abs(amount))} ${symbol}`;
 }
-
 // ========================
 // СКЛОНЕНИЕ СУЩЕСТВИТЕЛЬНЫХ
 // ========================
-
 /**
  * Склоняет существительное в зависимости от числа
  * @param {number} number - число
@@ -55,11 +52,9 @@ function declension(number, one, two, five) {
     if (lastDigit >= 2 && lastDigit <= 4) return two;
     return five;
 }
-
 // ========================
 // УВЕДОМЛЕНИЯ
 // ========================
-
 /**
  * Показывает временное уведомление в правом верхнем углу
  * @param {string} message - текст уведомления
@@ -156,7 +151,6 @@ function animateNumber(element, start, end, duration = 600, isCurrency = true, i
     if (element._animationFrame) {
         cancelAnimationFrame(element._animationFrame);
     }
-    
     return new Promise((resolve) => {
         const startTime = performance.now();
         
@@ -214,7 +208,6 @@ function detectCurrency(account) {
     if (accUpper.includes('EUR')) return 'EUR';
     return 'RUB';
 }
-
 // ========================
 // ФОРМАТИРОВАНИЕ ДАТ
 // ========================
