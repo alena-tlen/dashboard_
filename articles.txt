@@ -1,0 +1,53 @@
+{
+  "articles": [
+{
+      "title": "‎‎Куда ушли деньги?",
+      "description": "Как Отчет о движении денежных средств (ОДДС) построит ваш бюджет на 2026 год",
+      "link": "https://dzen.ru/a/aUQi7-4l2iRxblff",
+      "imageUrl": "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_694422efee25da24716e57df_6944df65f601824824d7dcd2/scale_1200",
+      "source": "Дзен"
+    },
+{
+      "title": "Не интуиция, а данные:",
+      "description": "как проверка сезонности товара увеличивает прибыль на маркетплейсах в 2 раза",
+      "link": "https://dzen.ru/a/aUJfXHCHshQP72er",
+      "imageUrl": "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_69425f5c7087b2140fef67ab_694266457776ec1d42dcf190/scale_1200",
+      "source": "Дзен"
+    },
+    {
+      "title": "Новая математика Wildberries:",
+      "description": "как считать логистику в 2025, чтобы изменения не съели вашу прибыль",
+      "link": "https://dzen.ru/a/aTpM12C2ywnnOE1Z",
+      "imageUrl": "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_693a4cd760b6cb09e7384d59_693a4d3e7dacff446d643140/scale_1200",
+      "source": "Дзен"
+    },
+    {
+      "title": "От выручки к прибыли:",
+      "description": "5 финансовых метрик, которые покажут, растет ли ваш бизнес на маркетплейсах",
+      "link": "https://dzen.ru/a/aTVej6Hkmx5Lxxp8",
+      "imageUrl": "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_69355e8fa1e49b1e4bc71a7c_693562f4e836de0ad2a2cb25/scale_1200",
+      "source": "Дзен"
+    },
+    {
+      "title": "Не сокращать, а управлять:",
+      "description": "как легально снизить издержки на маркетплейсах и платить налоги с умом",
+      "link": "https://dzen.ru/a/aTNLIMENSWCg5mck",
+      "imageUrl": "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_69334b20c10d4960a0e66724_693414cdd34bd828e4f60e13/scale_1200",
+      "source": "Рекомендуем"
+    },
+    {
+      "title": "От кассовых разрывов к уверенному росту:",
+      "description": "как считать реальную маржу на Wildberries и принимать взвешенные решения",
+      "link": "https://dzen.ru/a/aTHNcHtDNS8cAMIJ",
+      "imageUrl": "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_6931cd707b43352f1c00c209_6931d7e1e3bdaf628d3c7aed/scale_1200",
+      "source": "Чек-лист"
+    },
+    {
+      "title": "Новые правила игры:",
+      "description": " как перестать конкурировать ценой на маркетплейсах и начать зарабатывать",
+      "link": "https://dzen.ru/a/aTCrtTbujTc_BhXQ",
+      "imageUrl": "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_6930abb536ee8d373f0615d0_6930b09c9349010e6b7d9b01/scale_1200",
+      "source": "Совет дня"
+    }
+  ]
+}
