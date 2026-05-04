@@ -9,6 +9,12 @@ let usersLoaded = false;     // Флаг: загружены ли пользов
 const USERS_FILE_PATH = 'users.xlsx';  // Путь к файлу с пользователями
 
 // ========================
+// НАСТРОЙКА РЕЖИМА ТЕСТИРОВАНИЯ
+// ========================
+
+const TEST_MODE = true; // ← МЕНЯЙТЕ ЗДЕСЬ: true = без авторизации, false = с авторизацией
+
+// ========================
 // ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ИЗ EXCEL
 // ========================
 /**
@@ -210,11 +216,41 @@ function resetAllData() {
 // ИНИЦИАЛИЗАЦИЯ АВТОРИЗАЦИИ
 // ========================
 
-/**
- * Главная функция инициализации авторизации
- * Проверяет сохраненную сессию и настраивает форму
- */
 async function initAuth() {
+    // ═══════════════════════════════════════════════════════════
+    // ТЕСТОВЫЙ РЕЖИМ - пропускаем авторизацию
+    // ═══════════════════════════════════════════════════════════
+    if (TEST_MODE) {
+        console.log('🔓 ТЕСТОВЫЙ РЕЖИМ: авторизация отключена');
+        
+        // Создаем тестового пользователя
+        currentUser = {
+            email: 'test@example.com',
+            fio: 'Тестовый Пользователь',
+            isAdmin: true, // true = админ, false = обычный пользователь
+            blocked: false
+        };
+        
+        // Показываем главное приложение
+        const mainApp = document.getElementById('mainApp');
+        const authContainer = document.getElementById('authContainer');
+        const userInfo = document.getElementById('userInfo');
+        const adminBtn = document.getElementById('adminBtn');
+        
+        if (mainApp) mainApp.style.display = 'block';
+        if (authContainer) authContainer.style.display = 'none';
+        if (userInfo) userInfo.innerHTML = `👤 ${currentUser.fio}`;
+        if (adminBtn) adminBtn.style.display = 'inline-block';
+        
+        // Запускаем приложение
+        initApp();
+        return; // Выходим из функции, оригинальный код не выполняется
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // ОРИГИНАЛЬНЫЙ КОД АВТОРИЗАЦИИ (выполняется только если TEST_MODE = false)
+    // ═══════════════════════════════════════════════════════════
+    
     updateStatusDisplay();
     await loadUsersFromFile();
     
@@ -244,7 +280,7 @@ async function initAuth() {
                 initApp();
                 return;
             }
-        } catch(e) {
+        } catch (e) {
             console.error('Ошибка восстановления сессии:', e);
         }
     }
