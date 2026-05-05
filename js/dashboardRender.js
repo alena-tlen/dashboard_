@@ -719,6 +719,24 @@ function generateEfficiencySimpleBreakdown(data) {
 function generateTabsPanel() {
     const f = calculateFinancials(currentData);
     
+    // Получаем данные за предыдущий период для сравнения
+    const prevMonths = getPreviousMonths(currentFilters.month || [], 1);
+    let prevData = [];
+    if (prevMonths.length > 0 && currentFilters.year) {
+        let prevYear = parseInt(currentFilters.year);
+        if (prevMonths[0] === 'декабрь' && (currentFilters.month || [])[0] === 'январь') {
+            prevYear = prevYear - 1;
+        }
+        prevData = originalData.filter(row => {
+            if (currentFilters.company && row.компания !== currentFilters.company) return false;
+            if (row.год != prevYear) return false;
+            if (!prevMonths.includes(row.месяц)) return false;
+            return true;
+        });
+    }
+    
+    const fPrev = prevData.length > 0 ? calculateFinancials(prevData) : null;
+    
     // Продажи
     let salesFromArticle = currentData.filter(d => {
         const article = d.статья?.toLowerCase() || '';
@@ -738,6 +756,17 @@ function generateTabsPanel() {
     const salesByChannel = calculateSalesByChannel(currentData);
     const avgCheckByChannel = calculateAvgCheckByChannel(currentData);
     
+    // Функция для получения тренда
+    function getTrendValue(currentValue, previousValue) {
+        if (!previousValue || previousValue === 0) return { class: '', html: '' };
+        const percent = ((currentValue - previousValue) / previousValue) * 100;
+        const isPositive = percent >= 0;
+        return {
+            class: isPositive ? 'trend-positive' : 'trend-negative',
+            html: `<span class="trend-arrow">${isPositive ? '↑' : '↓'}</span> <span class="trend-value">${Math.abs(percent).toFixed(1)}%</span> <span class="trend-text">к предыдущему периоду</span>`
+        };
+    }
+    
     // JSON с данными для вкладок
     const tabs = [
         {
@@ -746,9 +775,7 @@ function generateTabsPanel() {
             title: 'Чистая выручка',
             value: formatCurrency(f.netRevenue),
             valueColor: '#48bb78',
-            chartData: getMonthlyNetRevenueData(),
-            breakdown: generateSimpleBreakdown(netRevenueByChannel, 'value', true),
-            trend: getTrend(f.netRevenue, fPrev?.netRevenue)
+            trend: getTrendValue(f.netRevenue, fPrev?.netRevenue)
         },
         {
             id: 'sales',
@@ -756,9 +783,7 @@ function generateTabsPanel() {
             title: 'Продажи',
             value: new Intl.NumberFormat('ru-RU').format(totalSalesQuantity) + ' шт',
             valueColor: '#4299e1',
-            chartData: getMonthlySalesData(),
-            breakdown: generateSimpleBreakdown(salesByChannel, 'sales', false, ' шт'),
-            trend: getTrend(totalSalesQuantity, fPrev?.totalSalesQuantity)
+            trend: getTrendValue(totalSalesQuantity, fPrev?.totalSalesQuantity)
         },
         {
             id: 'avgCheck',
@@ -766,9 +791,7 @@ function generateTabsPanel() {
             title: 'Средний чек',
             value: formatCurrency(avgCheck),
             valueColor: '#9f7aea',
-            chartData: getMonthlyAvgCheckData(),
-            breakdown: generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true),
-            trend: getTrend(avgCheck, fPrev?.avgCheck)
+            trend: getTrendValue(avgCheck, fPrev?.avgCheck)
         },
         {
             id: 'efficiency',
@@ -776,9 +799,7 @@ function generateTabsPanel() {
             title: 'Эффективность',
             value: efficiency.toFixed(2) + ' ₽',
             valueColor: efficiency >= 1 ? '#48bb78' : '#ed8936',
-            chartData: getMonthlyEfficiencyData(),
-            breakdown: generateEfficiencySimpleBreakdown(currentData),
-            trend: getTrend(efficiency, fPrev?.efficiency)
+            trend: getTrendValue(efficiency, fPrev?.efficiency)
         }
     ];
     
@@ -798,8 +819,8 @@ function generateTabsPanel() {
                 ${tabs.map((tab, idx) => `
                     <div class="tab-pane ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}">
                         <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>
-                        <div class="tab-trend ${tab.trend?.class || ''}">
-                            ${tab.trend?.html || ''}
+                        <div class="tab-trend ${tab.trend.class}">
+                            ${tab.trend.html}
                         </div>
                         <div class="tab-chart-container">
                             <canvas id="tabChart_${tab.id}" style="height: 80px; width: 100%;"></canvas>
@@ -809,7 +830,10 @@ function generateTabsPanel() {
                             <span class="breakdown-toggle">▼</span>
                         </div>
                         <div class="tab-breakdown-content" id="breakdown_${tab.id}" style="display: none;">
-                            ${tab.breakdown}
+                            ${tab.id === 'netRevenue' ? generateSimpleBreakdown(netRevenueByChannel, 'value', true) : 
+                              tab.id === 'sales' ? generateSimpleBreakdown(salesByChannel, 'sales', false, ' шт') :
+                              tab.id === 'avgCheck' ? generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true) :
+                              generateEfficiencySimpleBreakdown(currentData)}
                         </div>
                     </div>
                 `).join('')}
