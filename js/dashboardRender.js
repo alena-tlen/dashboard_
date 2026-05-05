@@ -1694,3 +1694,188 @@ function generateAverageCheckBreakdown(data) {
 function generateCostBreakdown(data) {
     return '<div style="padding: 16px; text-align: center;">Данные по себестоимости по каналам отсутствуют</div>';
 }
+
+// ========================
+// ИНИЦИАЛИЗАЦИЯ ВКЛАДОК С АВТОПЕРЕКЛЮЧЕНИЕМ
+// ========================
+
+let activeTabIndex = 0;
+let tabInterval = null;
+let tabCharts = {};
+
+function initTabs() {
+    const tabsContainer = document.querySelector('.modern-tabs-container');
+    if (!tabsContainer) {
+        console.log('Контейнер вкладок не найден');
+        return;
+    }
+    
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    const indicator = document.getElementById('tabsIndicator');
+    
+    if (tabBtns.length === 0) {
+        console.log('Кнопки вкладок не найдены');
+        return;
+    }
+    
+    // Функция переключения вкладки
+    function switchToTab(index) {
+        if (index === activeTabIndex) return;
+        
+        // Обновляем активные классы
+        tabBtns.forEach((btn, i) => {
+            btn.classList.toggle('active', i === index);
+        });
+        tabPanes.forEach((pane, i) => {
+            pane.classList.toggle('active', i === index);
+        });
+        
+        // Обновляем индикатор
+        if (indicator && tabBtns[index]) {
+            const btn = tabBtns[index];
+            indicator.style.width = btn.offsetWidth + 'px';
+            indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
+        }
+        
+        activeTabIndex = index;
+        
+        // Отрисовываем график для активной вкладки
+        renderTabChart(activeTabIndex);
+    }
+    
+    // Отрисовка графика для вкладки
+    function renderTabChart(index) {
+        const activePane = tabPanes[index];
+        if (!activePane) return;
+        
+        const tabId = activePane.dataset.tab;
+        const canvas = document.getElementById(`tabChart_${tabId}`);
+        if (!canvas) return;
+        
+        // Получаем данные для графика
+        let chartData = [];
+        let chartLabels = [];
+        
+        if (tabId === 'netRevenue') {
+            chartData = getMonthlyNetRevenueData();
+            chartLabels = MONTHS_ORDER.filter((_, i) => chartData[i] && chartData[i] > 0);
+            chartData = chartData.filter(v => v && v > 0);
+        } else if (tabId === 'sales') {
+            chartData = getMonthlySalesData();
+            chartLabels = MONTHS_ORDER.filter((_, i) => chartData[i] && chartData[i] > 0);
+            chartData = chartData.filter(v => v && v > 0);
+        } else if (tabId === 'avgCheck') {
+            chartData = getMonthlyAvgCheckData();
+            chartLabels = MONTHS_ORDER.filter((_, i) => chartData[i] && chartData[i] > 0);
+            chartData = chartData.filter(v => v && v > 0);
+        } else if (tabId === 'efficiency') {
+            chartData = getMonthlyEfficiencyData();
+            chartLabels = MONTHS_ORDER.filter((_, i) => chartData[i] !== undefined && chartData[i] !== 0);
+            chartData = chartData.filter(v => v !== undefined && v !== 0);
+        }
+        
+        if (chartData.length === 0) return;
+        
+        // Уничтожаем старый график
+        if (tabCharts[tabId]) {
+            try { 
+                if (typeof tabCharts[tabId].destroy === 'function') {
+                    tabCharts[tabId].destroy();
+                }
+            } catch(e) {
+                console.warn('Ошибка при уничтожении графика:', e);
+            }
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        tabCharts[tabId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartLabels.map(l => l.slice(0, 3)),
+                datasets: [{
+                    data: chartData,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102,126,234,0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { enabled: false } 
+                },
+                scales: { 
+                    x: { display: false }, 
+                    y: { display: false } 
+                }
+            }
+        });
+    }
+    
+    // Автопереключение каждые 5 секунд
+    function startAutoSwitch() {
+        if (tabInterval) clearInterval(tabInterval);
+        tabInterval = setInterval(() => {
+            const nextIndex = (activeTabIndex + 1) % tabBtns.length;
+            switchToTab(nextIndex);
+        }, 5000);
+    }
+    
+    function stopAutoSwitch() {
+        if (tabInterval) {
+            clearInterval(tabInterval);
+            tabInterval = null;
+        }
+    }
+    
+    // Навешиваем обработчики на кнопки
+    tabBtns.forEach((btn, idx) => {
+        btn.addEventListener('click', () => {
+            stopAutoSwitch();
+            switchToTab(idx);
+            startAutoSwitch();
+        });
+    });
+    
+    // Пауза при наведении на контейнер
+    tabsContainer.addEventListener('mouseenter', stopAutoSwitch);
+    tabsContainer.addEventListener('mouseleave', startAutoSwitch);
+    
+    // Обработчики для раскрытия детализации
+    document.querySelectorAll('.tab-breakdown-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const tabId = header.dataset.tab;
+            const content = document.getElementById(`breakdown_${tabId}`);
+            const isOpen = content.classList.contains('show');
+            
+            if (isOpen) {
+                content.classList.remove('show');
+                header.classList.remove('open');
+                setTimeout(() => content.style.display = 'none', 400);
+            } else {
+                content.style.display = 'block';
+                setTimeout(() => {
+                    content.classList.add('show');
+                    header.classList.add('open');
+                }, 10);
+            }
+        });
+    });
+    
+    // Устанавливаем индикатор и запускаем автопереключение
+    setTimeout(() => {
+        if (indicator && tabBtns[0]) {
+            indicator.style.width = tabBtns[0].offsetWidth + 'px';
+        }
+        renderTabChart(0);
+        startAutoSwitch();
+    }, 200);
+}
