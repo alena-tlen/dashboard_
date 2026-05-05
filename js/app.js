@@ -57,14 +57,16 @@ const debouncedApply = () => {
     if (companyFilter) currentFilters.company = companyFilter.value;
     if (yearFilter) currentFilters.year = yearFilter.value;
     if (monthFilter) {
+        // ВАЖНО: собираем ВСЕ выбранные месяцы
         currentFilters.month = Array.from(monthFilter.selectedOptions).map(o => o.value);
+        console.log('Выбранные месяцы:', currentFilters.month);
     }
-    if (channelFilter) currentFilters.channel = channelFilter.value;  // ДОБАВИТЬ
+    if (channelFilter) currentFilters.channel = channelFilter.value;
     
     currentData = applyFilters(originalData, currentFilters);
     renderDashboard();
     renderCashBlock();
-    updateDashboardAIAnalytics();
+    if (typeof updateDashboardAIAnalytics === 'function') updateDashboardAIAnalytics();
 };
 
 if (companyFilter) companyFilter.onchange = debouncedApply;
@@ -303,6 +305,7 @@ function setupFloatingFilterButton() {
             modalYearFilter.value = realYearFilter.value;
         }
         if (modalMonthFilter && realMonthFilter) {
+            // Копируем выбранные месяцы
             Array.from(modalMonthFilter.options).forEach(opt => {
                 opt.selected = Array.from(realMonthFilter.selectedOptions).some(o => o.value === opt.value);
             });
@@ -312,7 +315,7 @@ function setupFloatingFilterButton() {
         }
     };
     
-    // Закрытие
+    // Закрытие модального окна
     if (modalCloseBtn) {
         modalCloseBtn.onclick = () => filterModal.classList.remove('active');
     }
@@ -321,7 +324,7 @@ function setupFloatingFilterButton() {
         if (e.target === filterModal) filterModal.classList.remove('active');
     };
     
-    // Применение фильтров
+    // ========== ПРИМЕНЕНИЕ ФИЛЬТРОВ (ИСПРАВЛЕНО) ==========
     if (modalApplyBtn) {
         modalApplyBtn.onclick = () => {
             const realCompanyFilter = document.getElementById('companyFilter');
@@ -329,22 +332,52 @@ function setupFloatingFilterButton() {
             const realMonthFilter = document.getElementById('monthFilter');
             const realChannelFilter = document.getElementById('channelFilter');
             
+            // Применяем компанию
             if (realCompanyFilter) realCompanyFilter.value = modalCompanyFilter.value;
+            
+            // Применяем год
             if (realYearFilter) realYearFilter.value = modalYearFilter.value;
+            
+            // ========== ВАЖНО: Применяем МЕСЯЦЫ ==========
             if (realMonthFilter) {
+                // Очищаем все выбранные опции
                 Array.from(realMonthFilter.options).forEach(opt => {
-                    opt.selected = Array.from(modalMonthFilter.selectedOptions).some(o => o.value === opt.value);
+                    opt.selected = false;
+                });
+                // Выбираем те, что отмечены в модальном окне
+                Array.from(modalMonthFilter.selectedOptions).forEach(selectedOpt => {
+                    const optToSelect = Array.from(realMonthFilter.options).find(o => o.value === selectedOpt.value);
+                    if (optToSelect) optToSelect.selected = true;
                 });
             }
+            
+            // Применяем канал
             if (realChannelFilter) realChannelFilter.value = modalChannelFilter.value;
             
-            // Принудительно вызываем обновление
+            // ========== ПРИНУДИТЕЛЬНО ВЫЗЫВАЕМ ОБНОВЛЕНИЕ ==========
+            // Собираем все фильтры
+            if (realCompanyFilter) currentFilters.company = realCompanyFilter.value;
+            if (realYearFilter) currentFilters.year = realYearFilter.value;
+            if (realMonthFilter) {
+                currentFilters.month = Array.from(realMonthFilter.selectedOptions).map(o => o.value);
+            }
+            if (realChannelFilter) currentFilters.channel = realChannelFilter.value;
+            
+            // Применяем фильтры и обновляем дашборд
+            currentData = applyFilters(originalData, currentFilters);
+            renderDashboard();
+            renderCashBlock();
+            if (typeof updateDashboardAIAnalytics === 'function') updateDashboardAIAnalytics();
+            
+            // Также вызываем события change для синхронизации
             if (realCompanyFilter) realCompanyFilter.dispatchEvent(new Event('change'));
             if (realYearFilter) realYearFilter.dispatchEvent(new Event('change'));
             if (realMonthFilter) realMonthFilter.dispatchEvent(new Event('change'));
             if (realChannelFilter) realChannelFilter.dispatchEvent(new Event('change'));
             
             filterModal.classList.remove('active');
+            
+            console.log('Применены фильтры:', currentFilters);
         };
     }
     
@@ -358,6 +391,7 @@ function setupFloatingFilterButton() {
             }
             if (modalChannelFilter) modalChannelFilter.value = '';
             
+            // Вызываем применение
             modalApplyBtn.click();
         };
     }
