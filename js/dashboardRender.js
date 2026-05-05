@@ -177,7 +177,8 @@ function renderDashboard() {
         const expensesChange = fPrev ? getChangePercent(f.totalExpenses, fPrev.totalExpenses) : null;
         const profitChange = fPrev ? getChangePercent(f.profit, fPrev.profit) : null;
         const profitabilityChange = fPrev ? getChangePercent(f.profitability, fPrev.profitability) : null;
-        
+        const ndsChange = fPrev ? getChangePercent(f.totalNDS, fPrev.totalNDS) : null;
+
         // ========================
         // 5. СЕБЕСТОИМОСТЬ
         // ========================
