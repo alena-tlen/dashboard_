@@ -313,8 +313,8 @@ function renderDashboard() {
             expenseChannelsList, true, monthlyDataMap, monthlyLabels, monthlyExpensesArray, f.totalRevenue
         );
         
-        // Генерируем метрики для карусели
-        const carouselItems = generateCarouselItems();
+        // Генерируем метрики для вкладк после доходов
+        const tabsPanel = generateTabsPanel();
         
         // Генерируем блок НДС
         const ndsHtml = generateNdsBlock(f, ndsChange, ndsLabels, ndsValues, revenueForNds, totalNdsPercent, totalNdsAmount, totalRevenueAmount);
@@ -342,31 +342,26 @@ function renderDashboard() {
         // ========================
         
         const dashboardHtml = `
-            ${topPanelHtml}
-            
-            <div class="metrics-grid" style="margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div style="height: 100%;">${revenueHtml}</div>
-                <div class="metric-card" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
-                    <div class="modern-carousel" style="flex: 1; position: relative;">
-                        <button class="carousel-nav-btn carousel-nav-prev" id="carouselPrevBtn">◀</button>
-                        <div class="modern-carousel-track" id="carouselTrack">${carouselItems}</div>
-                        <button class="carousel-nav-btn carousel-nav-next" id="carouselNextBtn">▶</button>
-                        <div class="carousel-indicators" id="carouselIndicators"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 24px;">${expensesHtml}</div>
-            
-            <div class="metrics-grid" style="margin-top: 24px;">
-                ${ndsHtml}
-                ${netRevenueHtml}
-                ${profitHtml}
-                ${salesHtml}
-                ${avgCheckHtml}
-                ${costHtml}
-                ${avgCostHtml}
-            </div>
+    ${topPanelHtml}
+    
+    <div class="metrics-grid" style="margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="height: 100%;">${revenueHtml}</div>
+        <div class="metric-card" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
+            ${tabsPanel}
+        </div>
+    </div>
+    
+    <div style="margin-bottom: 24px;">${expensesHtml}</div>
+    
+    <div class="metrics-grid" style="margin-top: 24px;">
+        ${ndsHtml}
+        ${netRevenueHtml}
+        ${profitHtml}
+        ${salesHtml}
+        ${avgCheckHtml}
+        ${costHtml}
+        ${avgCostHtml}
+    </div>
             
             <div class="metrics-grid" style="margin-top: 24px;">
                 <div class="metric-card" style="grid-column: span 4;">
@@ -412,9 +407,9 @@ function renderDashboard() {
         // ========================
         
         setTimeout(() => {
-            setupCollapsibleHandlers();
-            setupCarousel();
-        }, 200);
+    setupCollapsibleHandlers();
+    initTabs();
+}, 200);
         
     } catch(e) {
         console.error('Ошибка рендера:', e);
@@ -678,10 +673,10 @@ function generateEfficiencySimpleBreakdown(data) {
 
 
 // ========================
-// ГЕНЕРАЦИЯ КАРУСЕЛИ МЕТРИК
+// ГЕНЕРАЦИЯ ПАНЕЛИ С ВКЛАДКАМИ (вместо карусели)
 // ========================
 
-function generateCarouselItems() {
+function generateTabsPanel() {
     const f = calculateFinancials(currentData);
     
     // Продажи
@@ -703,99 +698,160 @@ function generateCarouselItems() {
     const salesByChannel = calculateSalesByChannel(currentData);
     const avgCheckByChannel = calculateAvgCheckByChannel(currentData);
     
-    return `
-        <div class="modern-carousel-slide">
-            <div class="metric-card-mini">
-                <div class="metric-header">
-                    <div class="metric-label">💰 ЧИСТАЯ ВЫРУЧКА</div>
-                    <button class="carousel-breakdown-btn" data-type="netRevenue">📊</button>
-                </div>
-                <div class="metric-value">${formatCurrency(f.netRevenue)}</div>
-                <div class="carousel-breakdown-content" id="breakdown-netRevenue" style="display: none;">
-                    ${generateSimpleBreakdown(netRevenueByChannel, 'value', true)}
-                </div>
-            </div>
-        </div>
-        
-        <div class="modern-carousel-slide">
-            <div class="metric-card-mini">
-                <div class="metric-header">
-                    <div class="metric-label">📦 ПРОДАЖИ</div>
-                    <button class="carousel-breakdown-btn" data-type="sales">📊</button>
-                </div>
-                <div class="metric-value">${new Intl.NumberFormat('ru-RU').format(totalSalesQuantity)}</div>
-                <div class="carousel-breakdown-content" id="breakdown-sales" style="display: none;">
-                    ${generateSimpleBreakdown(salesByChannel, 'sales', false, 'шт')}
-                </div>
-            </div>
-        </div>
-        
-        <div class="modern-carousel-slide">
-            <div class="metric-card-mini">
-                <div class="metric-header">
-                    <div class="metric-label">💳 СРЕДНИЙ ЧЕК</div>
-                    <button class="carousel-breakdown-btn" data-type="avgCheck">📊</button>
-                </div>
-                <div class="metric-value">${formatCurrency(avgCheck)}</div>
-                <div class="carousel-breakdown-content" id="breakdown-avgCheck" style="display: none;">
-                    ${generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true)}
-                </div>
-            </div>
-        </div>
-        
-        <div class="modern-carousel-slide">
-            <div class="metric-card-mini">
-                <div class="metric-header">
-                    <div class="metric-label">⚡ ЭФФЕКТИВНОСТЬ</div>
-                    <button class="carousel-breakdown-btn" data-type="efficiency">📊</button>
-                </div>
-                <div class="metric-value">${efficiency.toFixed(2)} ₽</div>
-                <div class="carousel-breakdown-content" id="breakdown-efficiency" style="display: none;">
-                    ${generateEfficiencySimpleBreakdown(currentData)}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// ========================
-// ПРОСТАЯ РАЗБИВКА ДЛЯ КАРУСЕЛИ
-// ========================
-
-function generateSimpleBreakdown(data, valueKey, isCurrency = true, suffix = '') {
-    if (!data || data.length === 0) {
-        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
-    }
+    // JSON с данными для вкладок
+    const tabs = [
+        {
+            id: 'netRevenue',
+            icon: '💰',
+            title: 'Чистая выручка',
+            value: formatCurrency(f.netRevenue),
+            valueColor: '#48bb78',
+            chartData: getMonthlyNetRevenueData(),
+            breakdown: generateSimpleBreakdown(netRevenueByChannel, 'value', true),
+            trend: getTrend(f.netRevenue, fPrev?.netRevenue)
+        },
+        {
+            id: 'sales',
+            icon: '📦',
+            title: 'Продажи',
+            value: new Intl.NumberFormat('ru-RU').format(totalSalesQuantity) + ' шт',
+            valueColor: '#4299e1',
+            chartData: getMonthlySalesData(),
+            breakdown: generateSimpleBreakdown(salesByChannel, 'sales', false, ' шт'),
+            trend: getTrend(totalSalesQuantity, fPrev?.totalSalesQuantity)
+        },
+        {
+            id: 'avgCheck',
+            icon: '💳',
+            title: 'Средний чек',
+            value: formatCurrency(avgCheck),
+            valueColor: '#9f7aea',
+            chartData: getMonthlyAvgCheckData(),
+            breakdown: generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true),
+            trend: getTrend(avgCheck, fPrev?.avgCheck)
+        },
+        {
+            id: 'efficiency',
+            icon: '⚡',
+            title: 'Эффективность',
+            value: efficiency.toFixed(2) + ' ₽',
+            valueColor: efficiency >= 1 ? '#48bb78' : '#ed8936',
+            chartData: getMonthlyEfficiencyData(),
+            breakdown: generateEfficiencySimpleBreakdown(currentData),
+            trend: getTrend(efficiency, fPrev?.efficiency)
+        }
+    ];
     
-    const total = data.reduce((sum, item) => sum + item[valueKey], 0);
-    const overallAvg = total / data.length;
-    
-    return `
-        <div class="breakdown-list">
-            ${data.map((item, idx) => {
-                const percent = total > 0 ? (item[valueKey] / total) * 100 : 0;
-                const formattedValue = isCurrency ? formatCurrency(item[valueKey]) : item[valueKey].toLocaleString('ru-RU') + suffix;
-                const deviation = ((item[valueKey] - overallAvg) / overallAvg) * 100;
-                const deviationClass = deviation >= 0 ? 'positive' : 'negative';
-                
-                return `
-                    <div style="margin-bottom: 12px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span style="font-size: 12px; font-weight: 500;">${item.name}</span>
-                            <span style="font-size: 12px; font-weight: 600;">${formattedValue}</span>
+    // Генерируем HTML для вкладок
+    let tabsHtml = `
+        <div class="modern-tabs-container">
+            <div class="tabs-header" id="tabsHeader">
+                ${tabs.map((tab, idx) => `
+                    <div class="tab-btn ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}" data-index="${idx}">
+                        <span class="tab-icon">${tab.icon}</span>
+                        <span class="tab-title">${tab.title}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="tabs-indicator" id="tabsIndicator"></div>
+            <div class="tabs-content" id="tabsContent">
+                ${tabs.map((tab, idx) => `
+                    <div class="tab-pane ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}">
+                        <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>
+                        <div class="tab-trend ${tab.trend?.class || ''}">
+                            ${tab.trend?.html || ''}
                         </div>
-                        <div style="font-size: 10px; margin-bottom: 4px;">
-                            <span class="${deviationClass}">${deviation >= 0 ? '↑' : '↓'} ${Math.abs(deviation).toFixed(1)}%</span>
-                            <span style="margin-left: 8px;">${percent.toFixed(1)}% доли</span>
+                        <div class="tab-chart-container">
+                            <canvas id="tabChart_${tab.id}" style="height: 80px; width: 100%;"></canvas>
                         </div>
-                        <div style="background: #e2e8f0; height: 4px; border-radius: 2px; overflow: hidden;">
-                            <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2);"></div>
+                        <div class="tab-breakdown-header" data-tab="${tab.id}">
+                            <span class="breakdown-title">📊 Детализация по каналам</span>
+                            <span class="breakdown-toggle">▼</span>
+                        </div>
+                        <div class="tab-breakdown-content" id="breakdown_${tab.id}" style="display: none;">
+                            ${tab.breakdown}
                         </div>
                     </div>
-                `;
-            }).join('')}
+                `).join('')}
+            </div>
         </div>
     `;
+    
+    return tabsHtml;
+}
+
+// Вспомогательные функции для получения данных по месяцам
+function getMonthlyNetRevenueData() {
+    const monthly = {};
+    currentData.forEach(d => {
+        if (d.месяц && MONTHS_ORDER.includes(d.месяц) && d.тип === 'Доход') {
+            const ndsOut = currentData.filter(row => 
+                row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий'
+            ).reduce((sum, row) => sum + row.сумма, 0);
+            monthly[d.месяц] = (monthly[d.месяц] || 0) + d.сумма - ndsOut;
+        }
+    });
+    return MONTHS_ORDER.filter(m => monthly[m]).map(m => monthly[m] / 1000);
+}
+
+function getMonthlySalesData() {
+    const monthly = {};
+    currentData.forEach(d => {
+        if (d.месяц && MONTHS_ORDER.includes(d.месяц)) {
+            const article = d.статья?.toLowerCase() || '';
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                monthly[d.месяц] = (monthly[d.месяц] || 0) + Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    return MONTHS_ORDER.filter(m => monthly[m]).map(m => monthly[m]);
+}
+
+function getMonthlyAvgCheckData() {
+    const monthlyRevenue = {}, monthlySales = {};
+    currentData.forEach(d => {
+        if (d.месяц && MONTHS_ORDER.includes(d.месяц)) {
+            if (d.тип === 'Доход') {
+                const ndsOut = currentData.filter(row => 
+                    row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий'
+                ).reduce((sum, row) => sum + row.сумма, 0);
+                monthlyRevenue[d.месяц] = (monthlyRevenue[d.месяц] || 0) + d.сумма - ndsOut;
+            }
+            const article = d.статья?.toLowerCase() || '';
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                monthlySales[d.месяц] = (monthlySales[d.месяц] || 0) + Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    const months = MONTHS_ORDER.filter(m => monthlyRevenue[m] && monthlySales[m]);
+    return months.map(m => monthlyRevenue[m] / monthlySales[m]);
+}
+
+function getMonthlyEfficiencyData() {
+    const monthly = {};
+    currentData.forEach(d => {
+        if (d.месяц && MONTHS_ORDER.includes(d.месяц)) {
+            if (!monthly[d.месяц]) monthly[d.месяц] = { revenue: 0, ndsOut: 0, expenses: 0 };
+            if (d.тип === 'Доход') monthly[d.месяц].revenue += d.сумма;
+            if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') monthly[d.месяц].ndsOut += d.сумма;
+            if (d.тип === 'Расход') monthly[d.месяц].expenses += Math.abs(d.сумма);
+        }
+    });
+    return MONTHS_ORDER.filter(m => monthly[m]).map(m => {
+        const netRev = monthly[m].revenue - monthly[m].ndsOut;
+        const profit = netRev - monthly[m].expenses;
+        return profit / (monthly[m].expenses || 1);
+    });
+}
+
+function getTrend(currentValue, previousValue) {
+    if (!previousValue || previousValue === 0) return { class: '', html: '' };
+    const percent = ((currentValue - previousValue) / previousValue) * 100;
+    const isPositive = percent >= 0;
+    return {
+        class: isPositive ? 'trend-positive' : 'trend-negative',
+        html: `<span class="trend-arrow">${isPositive ? '↑' : '↓'}</span> <span class="trend-value">${Math.abs(percent).toFixed(1)}%</span> <span class="trend-text">к предыдущему периоду</span>`
+    };
 }
 
 // ========================
