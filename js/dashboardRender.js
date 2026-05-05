@@ -858,183 +858,6 @@ function generateTabsPanel() {
     return tabsHtml;
 }
 
-// Вспомогательные функции для получения данных по месяцам
-// Вспомогательные функции для получения данных по месяцам
-function getMonthlyNetRevenueData() {
-    try {
-        var data = window.currentData;
-        if (!data || data.length === 0) {
-            return [0];
-        }
-        
-        var months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-        var monthly = {};
-        
-        for (var i = 0; i < months.length; i++) {
-            monthly[months[i]] = 0;
-        }
-        
-        for (var i = 0; i < data.length; i++) {
-            var d = data[i];
-            if (d && d.месяц && d.тип === 'Доход') {
-                var ndsOut = 0;
-                for (var j = 0; j < data.length; j++) {
-                    var row = data[j];
-                    if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
-                        ndsOut += (row.сумма || 0);
-                    }
-                }
-                monthly[d.месяц] += (d.сумма || 0) - ndsOut;
-            }
-        }
-        
-        var result = [];
-        for (var i = 0; i < months.length; i++) {
-            var val = monthly[months[i]];
-            if (val !== 0 && val !== undefined) {
-                result.push(val / 1000);
-            }
-        }
-        return result.length ? result : [0];
-    } catch(e) {
-        console.error('getMonthlyNetRevenueData error:', e);
-        return [0];
-    }
-}
-
-function getMonthlySalesData() {
-    try {
-        var data = window.currentData;
-        if (!data || data.length === 0) {
-            return [0];
-        }
-        
-        var months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-        var monthly = {};
-        
-        for (var i = 0; i < months.length; i++) {
-            monthly[months[i]] = 0;
-        }
-        
-        for (var i = 0; i < data.length; i++) {
-            var d = data[i];
-            if (d && d.месяц) {
-                var article = (d.статья || '').toLowerCase();
-                if (article.indexOf('продажи') !== -1 && (article.indexOf('шт') !== -1 || article.indexOf('штук') !== -1)) {
-                    monthly[d.месяц] += Math.abs(d.сумма || 0);
-                }
-            }
-        }
-        
-        var result = [];
-        for (var i = 0; i < months.length; i++) {
-            var val = monthly[months[i]];
-            if (val !== 0 && val !== undefined) {
-                result.push(val);
-            }
-        }
-        return result.length ? result : [0];
-    } catch(e) {
-        console.error('getMonthlySalesData error:', e);
-        return [0];
-    }
-}
-
-function getMonthlyAvgCheckData() {
-    try {
-        var data = window.currentData;
-        if (!data || data.length === 0) {
-            return [0];
-        }
-        
-        var months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-        var revenue = {};
-        var sales = {};
-        
-        for (var i = 0; i < months.length; i++) {
-            revenue[months[i]] = 0;
-            sales[months[i]] = 0;
-        }
-        
-        for (var i = 0; i < data.length; i++) {
-            var d = data[i];
-            if (d && d.месяц) {
-                if (d.тип === 'Доход') {
-                    var ndsOut = 0;
-                    for (var j = 0; j < data.length; j++) {
-                        var row = data[j];
-                        if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
-                            ndsOut += (row.сумма || 0);
-                        }
-                    }
-                    revenue[d.месяц] += (d.сумма || 0) - ndsOut;
-                }
-                var article = (d.статья || '').toLowerCase();
-                if (article.indexOf('продажи') !== -1 && (article.indexOf('шт') !== -1 || article.indexOf('штук') !== -1)) {
-                    sales[d.месяц] += Math.abs(d.сумма || 0);
-                }
-            }
-        }
-        
-        var result = [];
-        for (var i = 0; i < months.length; i++) {
-            var rev = revenue[months[i]];
-            var sal = sales[months[i]];
-            if (rev !== 0 && sal !== 0 && rev !== undefined && sal !== undefined) {
-                result.push(rev / sal);
-            }
-        }
-        return result.length ? result : [0];
-    } catch(e) {
-        console.error('getMonthlyAvgCheckData error:', e);
-        return [0];
-    }
-}
-
-function getMonthlyEfficiencyData() {
-    try {
-        var data = window.currentData;
-        if (!data || data.length === 0) {
-            return [0];
-        }
-        
-        var months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-        var monthly = {};
-        
-        for (var i = 0; i < months.length; i++) {
-            monthly[months[i]] = { revenue: 0, ndsOut: 0, expenses: 0 };
-        }
-        
-        for (var i = 0; i < data.length; i++) {
-            var d = data[i];
-            if (d && d.месяц) {
-                if (d.тип === 'Доход') {
-                    monthly[d.месяц].revenue += d.сумма || 0;
-                }
-                if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') {
-                    monthly[d.месяц].ndsOut += d.сумма || 0;
-                }
-                if (d.тип === 'Расход') {
-                    monthly[d.месяц].expenses += Math.abs(d.сумма || 0);
-                }
-            }
-        }
-        
-        var result = [];
-        for (var i = 0; i < months.length; i++) {
-            var m = months[i];
-            var netRev = monthly[m].revenue - monthly[m].ndsOut;
-            if (netRev !== 0 && monthly[m].expenses !== 0 && netRev !== undefined && monthly[m].expenses !== undefined) {
-                var profit = netRev - monthly[m].expenses;
-                result.push(profit / (monthly[m].expenses || 1));
-            }
-        }
-        return result.length ? result : [0];
-    } catch(e) {
-        console.error('getMonthlyEfficiencyData error:', e);
-        return [0];
-    }
-}
 
 // ========================
 // ГЕНЕРАЦИЯ БЛОКА НДС ПО КАНАЛАМ
@@ -1419,6 +1242,156 @@ function setupCollapsibleHandlers() {
         });
     });
 }
+
+// ========================
+// ФУНКЦИЯ ДЛЯ ГЕНЕРАЦИИ РАЗБИВКИ ПО КАНАЛАМ
+// ========================
+
+function generateChannelBreakdown(title, dataKey, channels, isCurrency, suffix) {
+    if (!channels || channels.length === 0) {
+        return `<div style="padding: 16px; text-align: center;">Нет данных по каналам для ${title}</div>`;
+    }
+    
+    let html = `<div style="margin-bottom: 12px;"><span style="font-size: 12px; font-weight: 600;">${title}</span></div>`;
+    const total = channels.reduce((sum, ch) => sum + (ch[dataKey] || ch.value || 0), 0);
+    
+    for (const channel of channels) {
+        const value = channel[dataKey] || channel.value || 0;
+        const percent = total > 0 ? (value / total) * 100 : 0;
+        html += `
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="font-weight: 500;">${channel.name}</span>
+                    <span style="font-weight: 700;">${isCurrency ? formatCurrency(value) : value.toLocaleString('ru-RU') + (suffix || '')}</span>
+                </div>
+                <div style="background: rgba(102,126,234,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 3px;"></div>
+                </div>
+                <div style="font-size: 11px; margin-top: 4px;">${percent.toFixed(1)}% доли</div>
+            </div>
+        `;
+    }
+    return html;
+}
+
+// ========================
+// ФУНКЦИЯ ДЛЯ ГЕНЕРАЦИИ ПРИБЫЛИ ПО КАНАЛАМ
+// ========================
+
+function generateProfitByChannels(f, revenueChannels, expenseChannels, netRevenueByChannel) {
+    if (!netRevenueByChannel || netRevenueByChannel.length === 0) {
+        return '<div style="padding: 16px; text-align: center;">Нет данных по прибыли каналов</div>';
+    }
+    
+    let html = '<div style="margin-bottom: 12px;"><span style="font-size: 12px; font-weight: 600;">ПРИБЫЛЬ ПО КАНАЛАМ</span></div>';
+    for (const channel of netRevenueByChannel) {
+        const profitClass = channel.value >= 0 ? 'positive' : 'negative';
+        html += `
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="font-weight: 500;">${channel.name}</span>
+                    <span class="${profitClass}" style="font-weight: 700;">${formatCurrency(channel.value)}</span>
+                </div>
+                <div style="background: rgba(102,126,234,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div style="width: ${Math.min(Math.abs(channel.value / (netRevenueByChannel[0]?.value || 1)) * 100, 100)}%; height: 100%; background: ${channel.value >= 0 ? '#48bb78' : '#f56565'}; border-radius: 3px;"></div>
+                </div>
+            </div>
+        `;
+    }
+    return html;
+}
+
+// ========================
+// ФУНКЦИИ ДЛЯ ГЕНЕРАЦИИ РАЗБИВОК
+// ========================
+
+function generateSalesBreakdown(data) {
+    const salesByChannel = calculateSalesByChannel(data);
+    return generateChannelBreakdown('ПРОДАЖИ ПО КАНАЛАМ', 'sales', salesByChannel, false, ' шт');
+}
+
+function generateAverageCheckBreakdown(data) {
+    const avgCheckByChannel = calculateAvgCheckByChannel(data);
+    return generateChannelBreakdown('СРЕДНИЙ ЧЕК ПО КАНАЛАМ', 'avgCheck', avgCheckByChannel, true, '');
+}
+
+function generateCostBreakdown(data) {
+    return '<div style="padding: 16px; text-align: center;">Данные по себестоимости по каналам отсутствуют</div>';
+}
+
+// ========================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ РАСЧЕТОВ ПО КАНАЛАМ
+// ========================
+
+function calculateSalesByChannel(data) {
+    const salesByChannel = {};
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        salesByChannel[channel] = 0;
+    });
+    
+    data.forEach(d => {
+        if (d.канал && d.тип === 'Справочная') {
+            const article = (d.статья || '').toLowerCase();
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                salesByChannel[d.канал] += Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    
+    return Object.entries(salesByChannel)
+        .filter(([_, sales]) => sales > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, sales]) => ({ name, sales }));
+}
+
+function calculateAvgCheckByChannel(data) {
+    const revenueByChannel = {};
+    const salesByChannel = {};
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        revenueByChannel[channel] = 0;
+        salesByChannel[channel] = 0;
+    });
+    
+    data.forEach(d => {
+        if (d.канал) {
+            // Считаем чистую выручку по каналам
+            if (d.тип === 'Доход') {
+                let ndsOut = 0;
+                data.forEach(row => {
+                    if (row.канал === d.канал && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                        ndsOut += (row.сумма || 0);
+                    }
+                });
+                revenueByChannel[d.канал] += (d.сумма || 0) - ndsOut;
+            }
+            
+            // Считаем продажи в штуках
+            const article = (d.статья || '').toLowerCase();
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                salesByChannel[d.канал] += Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    
+    const result = [];
+    for (const channel of allChannels) {
+        const revenue = revenueByChannel[channel];
+        const sales = salesByChannel[channel];
+        if (revenue > 0 && sales > 0) {
+            result.push({
+                name: channel,
+                avgCheck: revenue / sales
+            });
+        }
+    }
+    
+    return result.sort((a, b) => b.avgCheck - a.avgCheck);
+}
+
 function generateNetRevenueBlock(f, netRevenueChange, monthlyLabels, monthlyRevenues) {
     return `
         <div class="metric-card">
