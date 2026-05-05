@@ -327,12 +327,12 @@ function updateModalFilters() {
     const modalCompanyFilter = document.getElementById('modalCompanyFilter');
     const modalYearFilter = document.getElementById('modalYearFilter');
     const modalMonthFilter = document.getElementById('modalMonthFilter');
+    const modalChannelFilter = document.getElementById('modalChannelFilter');
     
-    // Получаем реальные фильтры
+    // Получаем реальные фильтры (скрытые)
     const realCompanyFilter = document.getElementById('companyFilter');
     const realYearFilter = document.getElementById('yearFilter');
     const realMonthFilter = document.getElementById('monthFilter');
-    const modalChannelFilter = document.getElementById('modalChannelFilter');
     const realChannelFilter = document.getElementById('channelFilter');
     
     // Копируем компании
