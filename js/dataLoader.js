@@ -156,7 +156,9 @@ function applyFilters(data, filters = null) {
     const f = filters || currentFilters;
     if (!f) return data;
     
-    return data.filter(row => {
+    console.log('Применяем фильтры:', f);  // ДОБАВИТЬ
+    
+    const filtered = data.filter(row => {
         if (row.статья === 'Начальный остаток') return true;
         
         if (f.company && row.компания !== f.company) return false;
@@ -166,6 +168,9 @@ function applyFilters(data, filters = null) {
         
         return true;
     });
+    
+    console.log('Отфильтровано записей:', filtered.length);  // ДОБАВИТЬ
+    return filtered;
 }
 
 // ========================
@@ -179,10 +184,14 @@ function updateFilters() {
     const years = [...new Set(originalData.map(d => d.год))].filter(y => y && y !== '').sort((a, b) => parseInt(a) - parseInt(b));
     const months = [...new Set(originalData.map(d => d.месяц))].filter(m => m && m !== '')
         .sort((a, b) => MONTHS_ORDER.indexOf(a) - MONTHS_ORDER.indexOf(b));
-    const channels = [...new Set(originalData.map(d => d.канал))].filter(c => c && c !== '');
     
-    console.log('Годы:', years);
-    console.log('Каналы:', channels);
+    // ========== ТОЛЬКО ЭТИ 5 КАНАЛОВ ==========
+    const allowedChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Оптовики', 'Фулфилмент'];
+    
+    const channels = [...new Set(originalData.map(d => d.канал))]
+        .filter(c => allowedChannels.includes(c));  // Только разрешённые каналы
+    
+    console.log('Каналы для фильтра:', channels);
     
     // Создаём СКРЫТЫЙ фильтр компаний
     let companyFilter = document.getElementById('companyFilter');
@@ -223,7 +232,7 @@ function updateFilters() {
     monthFilter.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
     Array.from(monthFilter.options).forEach(opt => opt.selected = false);
     
-    // Создаём СКРЫТЫЙ фильтр каналов
+    // Создаём СКРЫТЫЙ фильтр каналов (ТОЛЬКО 5 КАНАЛОВ)
     let channelFilter = document.getElementById('channelFilter');
     if (!channelFilter) {
         channelFilter = document.createElement('select');
@@ -231,7 +240,8 @@ function updateFilters() {
         channelFilter.style.display = 'none';
         document.body.appendChild(channelFilter);
     }
-    channelFilter.innerHTML = '<option value="">Все каналы</option>' + channels.map(c => `<option value="${c}">${c}</option>`).join('');
+    channelFilter.innerHTML = '<option value="">Все каналы</option>' + 
+        channels.map(c => `<option value="${c}">${c}</option>`).join('');
     channelFilter.value = '';
     
     // Добавляем обработчик для канала
