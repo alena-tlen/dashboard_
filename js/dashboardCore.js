@@ -56,18 +56,38 @@ function calculateFinancials(data, channelKey = null) {
     });
     const totalNDS = totalNdsOutAll - totalNdsInAll;
     
-    return {
-        totalRevenue,    // Общая выручка (с НДС)
-        netRevenue,      // Чистая выручка (без НДС)
-        totalNDS,        // НДС к уплате (+)/возмещению (-)
-        totalExpenses,   // Общие расходы
-        profit,          // Прибыль
-        profitability,    // Рентабельность в %
-        totalSalesQuantity,  // нужно рассчитать
-        avgCheck,            // нужно рассчитать
-        costData,            // нужно рассчитать
-        avgCost
-    };
+    // Рассчитываем продажи
+let totalSalesQuantity = 0;
+data.forEach(row => {
+    const article = row.статья?.toLowerCase() || '';
+    if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+        totalSalesQuantity += Math.abs(row.сумма || 0);
+    }
+});
+
+// Рассчитываем себестоимость
+let costData = 0;
+data.forEach(row => {
+    if (row.тип === 'Расход' && row.подканал === 'Себестоимость сырья') {
+        costData += Math.abs(row.сумма || 0);
+    }
+});
+
+const avgCheck = totalSalesQuantity > 0 ? netRevenue / totalSalesQuantity : 0;
+const avgCost = totalSalesQuantity > 0 ? costData / totalSalesQuantity : 0;
+
+return {
+    totalRevenue,
+    netRevenue,
+    totalNDS,
+    totalExpenses,
+    profit,
+    profitability,
+    totalSalesQuantity,
+    avgCheck,
+    costData,
+    avgCost
+};
 }
 
 // ========================
