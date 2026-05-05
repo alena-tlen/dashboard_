@@ -1,6 +1,7 @@
 // ========================
 // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-// ========================
+// ========================
+
 let isRendering = false;           // Флаг, чтобы избежать двойного рендера
 let revenueChart = null;           // Экземпляр графика Chart.js для выручки
 let miniRevenueChart = null;       // Мини-график выручки
@@ -592,6 +593,82 @@ function generateNdsBlock(f, ndsChange, ndsLabels, ndsValues, revenueForNds, tot
         </div>
     `;
 }
+
+// ========================
+// ПРОСТАЯ РАЗБИВКА ДЛЯ ЭФФЕКТИВНОСТИ
+// ========================
+
+function generateEfficiencySimpleBreakdown(data) {
+    const efficiencyByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        const revenue = data.filter(d => d.канал === channel && d.тип === 'Доход').reduce((sum, d) => sum + d.сумма, 0);
+        const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+        const expenses = data.filter(d => d.канал === channel && d.тип === 'Расход').reduce((sum, d) => sum + Math.abs(d.сумма), 0);
+        const netRevenue = revenue - ndsOut;
+        const profit = netRevenue - expenses;
+        const efficiency = expenses > 0 ? profit / expenses : 0;
+        
+        if (netRevenue > 0 && expenses > 0) {
+            efficiencyByChannel.push({ 
+                name: channel, 
+                efficiency: efficiency, 
+                profit: profit, 
+                expenses: expenses 
+            });
+        }
+    });
+    
+    if (efficiencyByChannel.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
+    }
+    
+    efficiencyByChannel.sort((a, b) => b.efficiency - a.efficiency);
+    const avgEfficiency = efficiencyByChannel.reduce((sum, ch) => sum + ch.efficiency, 0) / efficiencyByChannel.length;
+    const topChannel = efficiencyByChannel[0];
+    
+    return `
+        <div style="font-size: 12px; font-weight: 600; margin-bottom: 12px; color: #667eea;">📊 ЭФФЕКТИВНОСТЬ ПО КАНАЛАМ</div>
+        
+        <div style="margin-bottom: 16px; padding: 12px; background: rgba(102,126,234,0.1); border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <div style="font-size: 12px; opacity: 0.7;">Средняя эффективность</div>
+                    <div style="font-size: 22px; font-weight: 700; ${avgEfficiency >= 1 ? 'color: #48bb78' : 'color: #f56565'}">${avgEfficiency.toFixed(2)} ₽</div>
+                    <div style="font-size: 10px;">прибыли на 1₽ расходов</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; opacity: 0.7;">🏆 Лидер по эффективности</div>
+                    <div style="font-size: 14px; font-weight: 600;">${topChannel.name}</div>
+                    <div style="font-size: 12px; color: #48bb78;">${topChannel.efficiency.toFixed(2)} ₽ на 1₽ расходов</div>
+                </div>
+            </div>
+        </div>
+        
+        ${efficiencyByChannel.map((item, idx) => {
+            const color = item.efficiency >= 1 ? '#48bb78' : '#f56565';
+            const percent = Math.min((item.efficiency / (avgEfficiency * 2)) * 100, 100);
+            let medal = idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : '';
+            
+            return `
+                <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(102,126,234,0.1);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 14px; font-weight: 600;">${medal}${item.name}</span>
+                        <span style="font-size: 15px; font-weight: 700; color: ${color};">${item.efficiency.toFixed(2)} ₽</span>
+                    </div>
+                    <div style="font-size: 12px; opacity: 0.7;">💰 Прибыль: ${formatCurrency(item.profit)}</div>
+                    <div style="margin-top: 6px;">
+                        <div style="background: #e2e8f0; height: 4px; border-radius: 2px; overflow: hidden;">
+                            <div style="width: ${percent}%; height: 100%; background: ${color}; border-radius: 2px;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('')}
+    `;
+}
+
 
 // ========================
 // ГЕНЕРАЦИЯ КАРУСЕЛИ МЕТРИК
