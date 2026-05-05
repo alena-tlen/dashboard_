@@ -180,8 +180,7 @@ function renderDashboard() {
         const ndsChange = fPrev ? getChangePercent(f.totalNDS, fPrev.totalNDS) : null;
         const salesChange = fPrev ? getChangePercent(totalSalesQuantity, fPrev.totalSalesQuantity) : null;
         const avgCheckChange = fPrev ? getChangePercent(avgCheck, fPrev.avgCheck) : null;
-        const costChange = fPrev ? getChangePercent(costData, fPrev.costData) : null;
-        const avgCostChange = fPrev ? getChangePercent(avgCost, fPrev.avgCost) : null;
+        
 
         // ========================
         // 5. СЕБЕСТОИМОСТЬ
@@ -199,6 +198,9 @@ function renderDashboard() {
             .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
         
         const avgCost = totalSalesQuantity > 0 ? costData / totalSalesQuantity : 0;
+
+        const costChange = fPrev ? getChangePercent(costData, fPrev.costData || 0) : null;
+        const avgCostChange = fPrev ? getChangePercent(avgCost, fPrev.avgCost || 0) : null;
         
         // ========================
         // 6. НДС ПО МЕСЯЦАМ
