@@ -1942,4 +1942,192 @@ body:has(#page-odds.active) .floating-filter-btn {
     display: none !important;
 }
 
+/* ========== СОВРЕМЕННЫЕ ВКЛАДКИ ========== */
+.modern-tabs-container {
+    background: transparent;
+    border-radius: 16px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.tabs-header {
+    display: flex;
+    gap: 8px;
+    background: rgba(102,126,234,0.08);
+    padding: 6px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+body.light .tab-btn { color: #4a5568; }
+body.dark .tab-btn { color: #a0aec0; }
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+}
+
+.tab-btn:hover:not(.active) {
+    background: rgba(102,126,234,0.15);
+    transform: translateY(-1px);
+}
+
+.tab-icon {
+    font-size: 16px;
+}
+
+.tab-title {
+    font-size: 12px;
+}
+
+.tabs-indicator {
+    height: 2px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    width: 0;
+    transition: width 0.3s ease, transform 0.3s ease;
+    border-radius: 2px;
+}
+
+.tabs-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.4s ease;
+    padding: 8px 0;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-main-value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.tab-trend {
+    text-align: center;
+    font-size: 12px;
+    margin-bottom: 16px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: inline-block;
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.trend-positive {
+    background: rgba(72,187,120,0.15);
+    color: #48bb78;
+}
+
+.trend-negative {
+    background: rgba(245,101,101,0.15);
+    color: #f56565;
+}
+
+.trend-arrow {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.trend-value {
+    font-weight: 700;
+    margin: 0 4px;
+}
+
+.trend-text {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.tab-chart-container {
+    margin: 8px 0;
+    padding: 8px 0;
+    border-top: 1px solid rgba(102,126,234,0.1);
+    border-bottom: 1px solid rgba(102,126,234,0.1);
+}
+
+.tab-breakdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: #667eea;
+    border-radius: 8px;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.tab-breakdown-header:hover {
+    background: rgba(102,126,234,0.08);
+}
+
+.breakdown-toggle {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.tab-breakdown-header.open .breakdown-toggle {
+    transform: rotate(180deg);
+}
+
+.tab-breakdown-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    margin-top: 8px;
+    padding: 0 8px;
+}
+
+.tab-breakdown-content.show {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Адаптация под тёмную/светлую тему */
+body.light .tab-breakdown-content {
+    background: rgba(0,0,0,0.02);
+    border-radius: 12px;
+}
+
+body.dark .tab-breakdown-content {
+    background: rgba(255,255,255,0.02);
+    border-radius: 12px;
+}
+
 </style>
