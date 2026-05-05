@@ -12,7 +12,8 @@ let currentFilters = {      // Активные фильтры
 
 // ========================
 // ОСНОВНАЯ ФУНКЦИЯ ЧТЕНИЯ EXCEL
-// ========================
+// ========================
+
 /**
  * Читает Excel файл и преобразует в массив объектов
  * @param {File} file - выбранный файл
@@ -203,7 +204,6 @@ function readExcelFile(file) {
  * @returns {Array} - отфильтрованный массив
  */
 function applyFilters(data, filters = null) {
-    // ОДДС полностью игнорирует глобальные фильтры
     const activePage = document.querySelector('.page-content.active')?.id;
     if (activePage === 'page-odds') {
         return data;
@@ -213,13 +213,14 @@ function applyFilters(data, filters = null) {
     if (!f) return data;
     
     return data.filter(row => {
-        // Начальные остатки всегда показываем
         if (row.статья === 'Начальный остаток') return true;
         
-        // Применяем фильтры
         if (f.company && row.компания !== f.company) return false;
         if (f.year && row.год !== f.year) return false;
         if (f.month && f.month.length > 0 && !f.month.includes(row.месяц)) return false;
+        
+        // ДОБАВЛЯЕМ ФИЛЬТРАЦИЮ ПО КАНАЛУ
+        if (f.channel && row.канал !== f.channel) return false;
         
         return true;
     });
@@ -233,42 +234,90 @@ function applyFilters(data, filters = null) {
  * Обновляет выпадающие списки фильтров на основе данных
  */
 function updateFilters() {
-    // Собираем уникальные значения
     const companies = [...new Set(originalData.map(d => d.компания))].filter(c => c);
-    const years = [...new Set(originalData.map(d => d.год))].filter(y => y && y !== '').sort();
-    const months = [...new Set(originalData.map(d => d.месяц))].filter(m => m && m !== '')
+    
+    // Получаем все годы из данных (включая 2026)
+    const years = [...new Set(originalData.map(d => d.год))]
+        .filter(y => y && y !== '')
+        .sort((a, b) => {
+            // Сортируем как числа
+            const numA = parseInt(a);
+            const numB = parseInt(b);
+            if (isNaN(numA)) return 1;
+            if (isNaN(numB)) return -1;
+            return numA - numB;
+        });
+    
+    const months = [...new Set(originalData.map(d => d.месяц))]
+        .filter(m => m && m !== '')
         .sort((a, b) => MONTHS_ORDER.indexOf(a) - MONTHS_ORDER.indexOf(b));
     
-    // Находим элементы фильтров
-    const companyFilter = document.getElementById('companyFilter');
-    const yearFilter = document.getElementById('yearFilter');
-    const monthFilter = document.getElementById('monthFilter');
+    // Получаем все каналы продаж
+    const channels = [...new Set(originalData.map(d => d.канал))]
+        .filter(c => c && c !== '');
     
-    // Заполняем выпадающие списки
+    // Обновляем фильтр компаний
+    const companyFilter = document.getElementById('companyFilter');
     if (companyFilter) {
         companyFilter.innerHTML = '<option value="">Все компании</option>' + 
             companies.map(c => `<option value="${c}">${c}</option>`).join('');
         companyFilter.value = '';
     }
     
+    // Обновляем фильтр годов
+    const yearFilter = document.getElementById('yearFilter');
     if (yearFilter) {
         yearFilter.innerHTML = '<option value="">Все годы</option>' + 
             years.map(y => `<option value="${y}">${y}</option>`).join('');
         
-        // Автоматически выбираем самый ранний год
+        // Автоматически выбираем самый РАННИЙ год (минимальный)
         if (years.length > 0) {
-            const earliestYear = Math.min(...years.map(y => parseInt(y)));
-            yearFilter.value = earliestYear.toString();
+            const numericYears = years.map(y => parseInt(y)).filter(y => !isNaN(y));
+            if (numericYears.length > 0) {
+                const earliestYear = Math.min(...numericYears);
+                yearFilter.value = earliestYear.toString();
+                // Обновляем currentFilters
+                currentFilters.year = earliestYear.toString();
+            }
         }
     }
     
+    // Обновляем фильтр месяцев
+    const monthFilter = document.getElementById('monthFilter');
     if (monthFilter) {
         monthFilter.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
         monthFilter.setAttribute('multiple', 'multiple');
-        monthFilter.size = 4;
-        // Очищаем выбранные месяцы
+        monthFilter.size = 6;
         Array.from(monthFilter.options).forEach(opt => opt.selected = false);
     }
+    
+    // ========== ДОБАВЛЯЕМ ФИЛЬТР ПО КАНАЛАМ ==========
+    let channelFilter = document.getElementById('channelFilter');
+    if (!channelFilter) {
+        // Создаём фильтр, если его нет
+        const filtersContainer = document.querySelector('.filters-sidebar-content') || 
+                                 document.querySelector('.filter-group-sidebar')?.parentNode;
+        if (filtersContainer) {
+            const channelFilterHtml = `
+                <div class="filter-group-sidebar">
+                    <label>📢 Канал продаж</label>
+                    <select id="channelFilter">
+                        <option value="">Все каналы</option>
+                        ${channels.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+            filtersContainer.insertAdjacentHTML('beforeend', channelFilterHtml);
+            channelFilter = document.getElementById('channelFilter');
+        }
+    } else {
+        channelFilter.innerHTML = '<option value="">Все каналы</option>' + 
+            channels.map(c => `<option value="${c}">${c}</option>`).join('');
+        channelFilter.value = '';
+    }
+    
+    // Обновляем модальные фильтры
+    updateModalFilters();
 }
 
 // ========================
