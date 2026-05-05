@@ -320,6 +320,54 @@ function updateFilters() {
     updateModalFilters();
 }
 
+/**
+ * Обновляет фильтры в модальном окне
+ */
+function updateModalFilters() {
+    const modalCompanyFilter = document.getElementById('modalCompanyFilter');
+    const modalYearFilter = document.getElementById('modalYearFilter');
+    const modalMonthFilter = document.getElementById('modalMonthFilter');
+    
+    // Получаем реальные фильтры
+    const realCompanyFilter = document.getElementById('companyFilter');
+    const realYearFilter = document.getElementById('yearFilter');
+    const realMonthFilter = document.getElementById('monthFilter');
+    const modalChannelFilter = document.getElementById('modalChannelFilter');
+    const realChannelFilter = document.getElementById('channelFilter');
+    
+    // Копируем компании
+    if (modalCompanyFilter && realCompanyFilter) {
+        modalCompanyFilter.innerHTML = realCompanyFilter.innerHTML;
+        modalCompanyFilter.value = realCompanyFilter.value;
+    }
+    
+    // Копируем годы
+    if (modalYearFilter && realYearFilter) {
+        modalYearFilter.innerHTML = realYearFilter.innerHTML;
+        modalYearFilter.value = realYearFilter.value;
+    }
+    
+    // Копируем месяцы
+    if (modalMonthFilter && realMonthFilter) {
+        modalMonthFilter.innerHTML = realMonthFilter.innerHTML;
+        Array.from(modalMonthFilter.options).forEach(opt => {
+            opt.selected = false;
+        });
+        if (realMonthFilter) {
+            Array.from(realMonthFilter.selectedOptions).forEach(selectedOpt => {
+                const optToSelect = Array.from(modalMonthFilter.options).find(o => o.value === selectedOpt.value);
+                if (optToSelect) optToSelect.selected = true;
+            });
+        }
+    }
+    
+    // Копируем каналы
+    if (modalChannelFilter && realChannelFilter) {
+        modalChannelFilter.innerHTML = realChannelFilter.innerHTML;
+        modalChannelFilter.value = realChannelFilter.value;
+    }
+}
+
 // ========================
 // ЗАГРУЗКА ФАЙЛА
 // ========================
