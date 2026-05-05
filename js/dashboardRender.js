@@ -1591,236 +1591,303 @@ function renderTrendsAnalysisHtml(data, f, totalSalesQuantity) {
     `;
 }
 
-function getMonthlySalesData(data, monthlyLabels) {
-    const monthlySales = {};
-    MONTHS_ORDER.forEach(month => { monthlySales[month] = 0; });
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ getMonthlySalesData
+function getMonthlySalesData(dataParam, monthlyLabels) {
+    // Используем переданные данные или глобальные
+    const data = dataParam || window.currentData || [];
     
-    data.forEach(d => {
-        if (d.месяц && MONTHS_ORDER.includes(d.месяц)) {
-            const article = d.статья?.toLowerCase() || '';
+    if (!data || data.length === 0) {
+        return monthlyLabels ? monthlyLabels.map(() => 0) : [];
+    }
+    
+    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const monthlySales = {};
+    
+    for (let i = 0; i < monthsOrder.length; i++) {
+        monthlySales[monthsOrder[i]] = 0;
+    }
+    
+    for (let i = 0; i < data.length; i++) {
+        const d = data[i];
+        if (d && d.месяц && monthsOrder.includes(d.месяц)) {
+            const article = (d.статья || '').toLowerCase();
             if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
                 monthlySales[d.месяц] += Math.abs(d.сумма || 0);
             }
         }
-    });
+    }
     
-    return monthlyLabels.map(m => monthlySales[m] || 0);
+    // Если передан monthlyLabels, возвращаем массив в соответствующем порядке
+    if (monthlyLabels && Array.isArray(monthlyLabels)) {
+        return monthlyLabels.map(m => monthlySales[m] || 0);
+    }
+    
+    // Иначе возвращаем все месяцы с ненулевыми значениями
+    const result = [];
+    for (let i = 0; i < monthsOrder.length; i++) {
+        const val = monthlySales[monthsOrder[i]];
+        if (val !== 0 && val !== undefined) {
+            result.push(val);
+        }
+    }
+    return result.length ? result : [0];
 }
 
-function renderNetRevenueMiniChart() {
-    const canvas = document.getElementById('netRevenueMiniChart');
-    if (!canvas) return;
-    console.log('netRevenueMiniChart готов к отрисовке');
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ getMonthlyNetRevenueData
+function getMonthlyNetRevenueData() {
+    try {
+        const data = window.currentData || [];
+        if (!data || data.length === 0) {
+            return [0];
+        }
+        
+        const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const monthly = {};
+        
+        for (let i = 0; i < months.length; i++) {
+            monthly[months[i]] = 0;
+        }
+        
+        for (let i = 0; i < data.length; i++) {
+            const d = data[i];
+            if (d && d.месяц && d.тип === 'Доход') {
+                // Считаем НДС исходящий для этого месяца
+                let ndsOut = 0;
+                for (let j = 0; j < data.length; j++) {
+                    const row = data[j];
+                    if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                        ndsOut += (row.сумма || 0);
+                    }
+                }
+                monthly[d.месяц] += (d.сумма || 0) - ndsOut;
+            }
+        }
+        
+        // Возвращаем только месяцы с данными
+        const result = [];
+        for (let i = 0; i < months.length; i++) {
+            const val = monthly[months[i]];
+            if (val !== 0 && val !== undefined) {
+                result.push(val / 1000);
+            }
+        }
+        return result.length ? result : [0];
+    } catch(e) {
+        console.error('getMonthlyNetRevenueData error:', e);
+        return [0];
+    }
 }
 
-function renderProfitMiniChart() {
-    const canvas = document.getElementById('profitMiniChart');
-    if (!canvas) return;
-    console.log('profitMiniChart готов к отрисовке');
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ getMonthlyAvgCheckData
+function getMonthlyAvgCheckData() {
+    try {
+        const data = window.currentData || [];
+        if (!data || data.length === 0) {
+            return [0];
+        }
+        
+        const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const revenue = {};
+        const sales = {};
+        
+        for (let i = 0; i < months.length; i++) {
+            revenue[months[i]] = 0;
+            sales[months[i]] = 0;
+        }
+        
+        for (let i = 0; i < data.length; i++) {
+            const d = data[i];
+            if (d && d.месяц) {
+                if (d.тип === 'Доход') {
+                    let ndsOut = 0;
+                    for (let j = 0; j < data.length; j++) {
+                        const row = data[j];
+                        if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                            ndsOut += (row.сумма || 0);
+                        }
+                    }
+                    revenue[d.месяц] += (d.сумма || 0) - ndsOut;
+                }
+                const article = (d.статья || '').toLowerCase();
+                if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                    sales[d.месяц] += Math.abs(d.сумма || 0);
+                }
+            }
+        }
+        
+        const result = [];
+        for (let i = 0; i < months.length; i++) {
+            const rev = revenue[months[i]];
+            const sal = sales[months[i]];
+            if (rev !== 0 && sal !== 0 && rev !== undefined && sal !== undefined) {
+                result.push(rev / sal);
+            }
+        }
+        return result.length ? result : [0];
+    } catch(e) {
+        console.error('getMonthlyAvgCheckData error:', e);
+        return [0];
+    }
 }
 
-function renderMonthlyLineChart(labels, revenues) {
-    const canvas = document.getElementById('monthlyRevenueChart');
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ getMonthlyEfficiencyData
+function getMonthlyEfficiencyData() {
+    try {
+        const data = window.currentData || [];
+        if (!data || data.length === 0) {
+            return [0];
+        }
+        
+        const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const monthly = {};
+        
+        for (let i = 0; i < months.length; i++) {
+            monthly[months[i]] = { revenue: 0, ndsOut: 0, expenses: 0 };
+        }
+        
+        for (let i = 0; i < data.length; i++) {
+            const d = data[i];
+            if (d && d.месяц) {
+                if (d.тип === 'Доход') {
+                    monthly[d.месяц].revenue += d.сумма || 0;
+                }
+                if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') {
+                    monthly[d.месяц].ndsOut += d.сумма || 0;
+                }
+                if (d.тип === 'Расход') {
+                    monthly[d.месяц].expenses += Math.abs(d.сумма || 0);
+                }
+            }
+        }
+        
+        const result = [];
+        for (let i = 0; i < months.length; i++) {
+            const m = months[i];
+            const netRev = monthly[m].revenue - monthly[m].ndsOut;
+            if (netRev !== 0 && monthly[m].expenses !== 0) {
+                const profit = netRev - monthly[m].expenses;
+                result.push(profit / (monthly[m].expenses || 1));
+            }
+        }
+        return result.length ? result : [0];
+    } catch(e) {
+        console.error('getMonthlyEfficiencyData error:', e);
+        return [0];
+    }
+}
+
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ renderTabChart
+function renderTabChart(index) {
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    if (!tabPanes[index]) return;
+    
+    const tabId = tabPanes[index].dataset.tab;
+    const canvas = document.getElementById(`tabChart_${tabId}`);
     if (!canvas) return;
     
-    if (window.monthlyLineChart) {
+    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    
+    let chartData = [];
+    let yAxisLabel = '';
+    let formatValue = (val) => val;
+    
+    if (tabId === 'netRevenue') {
+        chartData = getMonthlyNetRevenueData();
+        yAxisLabel = 'тыс. ₽';
+        formatValue = (val) => (val / 1000).toFixed(0) + 'K';
+    } else if (tabId === 'sales') {
+        const allData = getMonthlySalesData();
+        chartData = allData;
+        yAxisLabel = 'шт';
+        formatValue = (val) => val.toFixed(0);
+    } else if (tabId === 'avgCheck') {
+        chartData = getMonthlyAvgCheckData();
+        yAxisLabel = '₽';
+        formatValue = (val) => (val / 1000).toFixed(0) + 'K';
+    } else if (tabId === 'efficiency') {
+        chartData = getMonthlyEfficiencyData();
+        yAxisLabel = '₽ прибыли';
+        formatValue = (val) => val.toFixed(2);
+    }
+    
+    // Фильтруем данные для отображения только месяцев с ненулевыми значениями
+    const filteredLabels = [];
+    const filteredData = [];
+    for (let i = 0; i < monthsOrder.length && i < chartData.length; i++) {
+        if (chartData[i] && chartData[i] !== 0 && chartData[i] !== undefined && chartData[i] !== null) {
+            filteredLabels.push(monthsOrder[i].slice(0, 3));
+            filteredData.push(chartData[i]);
+        }
+    }
+    
+    if (filteredData.length === 0) {
+        return;
+    }
+    
+    // Уничтожаем старый график, если он существует
+    if (window.tabCharts && window.tabCharts[tabId]) {
         try {
-            if (typeof window.monthlyLineChart.destroy === 'function') {
-                window.monthlyLineChart.destroy();
+            if (typeof window.tabCharts[tabId].destroy === 'function') {
+                window.tabCharts[tabId].destroy();
             }
         } catch(e) {}
-        window.monthlyLineChart = null;
+        window.tabCharts[tabId] = null;
     }
     
     const ctx = canvas.getContext('2d');
-    window.monthlyLineChart = new Chart(ctx, {
+    
+    if (!window.tabCharts) window.tabCharts = {};
+    
+    window.tabCharts[tabId] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels: filteredLabels,
             datasets: [{
-                label: 'Выручка (тыс. ₽)',
-                data: revenues,
-                borderColor: '#48bb78',
-                backgroundColor: 'rgba(72,187,120,0.1)',
+                data: filteredData,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102,126,234,0.1)',
                 borderWidth: 2,
                 fill: true,
-                tension: 0.4
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
-    });
-}
-
-function renderNdsToRevenueChart(labels, ndsValues, revenueValues) {
-    const canvas = document.getElementById('ndsToRevenueChart');
-    if (!canvas) return;
-    
-    // Безопасное уничтожение старого графика
-    if (window.ndsToRevenueChart) {
-        try {
-            if (typeof window.ndsToRevenueChart.destroy === 'function') {
-                window.ndsToRevenueChart.destroy();
-            }
-        } catch(e) {
-            console.warn('Ошибка при уничтожении графика:', e);
-        }
-        window.ndsToRevenueChart = null;
-    }
-    
-    const ndsPercentages = ndsValues.map((nds, idx) => {
-        const revenue = revenueValues[idx] || 0;
-        return revenue > 0 ? (Math.abs(nds) / revenue) * 100 : 0;
-    });
-    
-    const ctx = canvas.getContext('2d');
-    window.ndsToRevenueChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'НДС (% от выручки)',
-                data: ndsPercentages,
-                backgroundColor: ndsPercentages.map(p => p > 20 ? '#f56565' : p > 15 ? '#ed8936' : p > 10 ? '#fbbf24' : '#48bb78'),
-                borderRadius: 8
+                tension: 0.4,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#667eea'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            scales: { y: { title: { display: true, text: '%' } } }
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { 
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            return `${yAxisLabel}: ${formatValue(context.parsed.y)}`;
+                        }
+                    }
+                }
+            },
+            scales: { 
+                x: { 
+                    display: true,
+                    ticks: { font: { size: 10 } }
+                }, 
+                y: { 
+                    display: true,
+                    ticks: { 
+                        font: { size: 10 },
+                        callback: function(value) {
+                            return formatValue(value);
+                        }
+                    }
+                } 
+            }
         }
     });
 }
 
-function renderNdsStatsCard(ndsPercent, ndsAmount, revenue) {
-    const container = document.getElementById('ndsStatsCard');
-    if (!container) return;
-    
-    let status = '', color = '';
-    if (ndsPercent > 20) { status = 'Критичная нагрузка'; color = '#f56565'; }
-    else if (ndsPercent > 15) { status = 'Высокая нагрузка'; color = '#ed8936'; }
-    else if (ndsPercent > 10) { status = 'Средняя нагрузка'; color = '#fbbf24'; }
-    else { status = 'Нормальная нагрузка'; color = '#48bb78'; }
-    
-    container.innerHTML = `
-        <div style="margin-top: 16px; padding: 12px; background: ${color}15; border-radius: 12px; border-left: 3px solid ${color};">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                <div>
-                    <div style="font-size: 12px;">НДС к уплате</div>
-                    <div style="font-size: 20px; font-weight: 700;">${formatCurrency(Math.abs(ndsAmount))}</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 12px;">% от выручки</div>
-                    <div style="font-size: 20px; font-weight: 700; color: ${color};">${ndsPercent.toFixed(1)}%</div>
-                    <div style="font-size: 10px;">${status}</div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderSalesChart(labels, salesData) {
-    const canvas = document.getElementById('salesChart');
-    if (!canvas) return;
-    
-    if (window.salesChart) {
-        try {
-            if (typeof window.salesChart.destroy === 'function') {
-                window.salesChart.destroy();
-            }
-        } catch(e) {}
-        window.salesChart = null;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    window.salesChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Продажи (шт)',
-                data: salesData,
-                backgroundColor: '#60a5fa',
-                borderRadius: 8,
-                barPercentage: 0.7
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
-    });
-}
-
-function generateProfitByChannels(f, revenueChannels, expenseChannels, netRevenueByChannel) {
-    if (!netRevenueByChannel || netRevenueByChannel.length === 0) {
-        return '<div style="padding: 16px; text-align: center;">Нет данных по прибыли каналов</div>';
-    }
-    
-    let html = '<div style="margin-bottom: 12px;"><span style="font-size: 12px; font-weight: 600;">ПРИБЫЛЬ ПО КАНАЛАМ</span></div>';
-    for (const channel of netRevenueByChannel) {
-        const profitClass = channel.value >= 0 ? 'positive' : 'negative';
-        html += `
-            <div style="margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="font-weight: 500;">${channel.name}</span>
-                    <span class="${profitClass}" style="font-weight: 700;">${formatCurrency(channel.value)}</span>
-                </div>
-                <div style="background: rgba(102,126,234,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
-                    <div style="width: ${Math.min(Math.abs(channel.value / (netRevenueByChannel[0]?.value || 1)) * 100, 100)}%; height: 100%; background: ${channel.value >= 0 ? '#48bb78' : '#f56565'}; border-radius: 3px;"></div>
-                </div>
-            </div>
-        `;
-    }
-    return html;
-}
-
-function generateChannelBreakdown(title, dataKey, channels, isCurrency, suffix) {
-    if (!channels || channels.length === 0) {
-        return `<div style="padding: 16px; text-align: center;">Нет данных по каналам для ${title}</div>`;
-    }
-    
-    let html = `<div style="margin-bottom: 12px;"><span style="font-size: 12px; font-weight: 600;">${title}</span></div>`;
-    const total = channels.reduce((sum, ch) => sum + (ch[dataKey] || ch.value || 0), 0);
-    
-    for (const channel of channels) {
-        const value = channel[dataKey] || channel.value || 0;
-        const percent = total > 0 ? (value / total) * 100 : 0;
-        html += `
-            <div style="margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="font-weight: 500;">${channel.name}</span>
-                    <span style="font-weight: 700;">${isCurrency ? formatCurrency(value) : value.toLocaleString('ru-RU') + (suffix || '')}</span>
-                </div>
-                <div style="background: rgba(102,126,234,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
-                    <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 3px;"></div>
-                </div>
-                <div style="font-size: 11px; margin-top: 4px;">${percent.toFixed(1)}% доли</div>
-            </div>
-        `;
-    }
-    return html;
-}
-
-function generateSalesBreakdown(data) {
-    const salesByChannel = calculateSalesByChannel(data);
-    return generateChannelBreakdown('ПРОДАЖИ ПО КАНАЛАМ', 'sales', salesByChannel, false, ' шт');
-}
-
-function generateAverageCheckBreakdown(data) {
-    const avgCheckByChannel = calculateAvgCheckByChannel(data);
-    return generateChannelBreakdown('СРЕДНИЙ ЧЕК ПО КАНАЛАМ', 'avgCheck', avgCheckByChannel, true, '');
-}
-
-function generateCostBreakdown(data) {
-    return '<div style="padding: 16px; text-align: center;">Данные по себестоимости по каналам отсутствуют</div>';
-}
-
-// ========================
-// ИНИЦИАЛИЗАЦИЯ ВКЛАДОК С АВТОПЕРЕКЛЮЧЕНИЕМ
-// ========================
-
-let activeTabIndex = 0;
-let tabInterval = null;
-let tabCharts = {};
-
+// ОБНОВЛЕННАЯ ФУНКЦИЯ initTabs
 function initTabs() {
     const tabsContainer = document.querySelector('.modern-tabs-container');
     if (!tabsContainer) {
@@ -1836,6 +1903,9 @@ function initTabs() {
         console.log('Кнопки вкладок не найдены');
         return;
     }
+    
+    let activeTabIndex = 0;
+    let tabInterval = null;
     
     // Функция переключения вкладки
     function switchToTab(index) {
@@ -1867,84 +1937,6 @@ function initTabs() {
         renderTabChart(activeTabIndex);
     }
     
-    // Отрисовка графика для вкладки
-    function renderTabChart(index) {
-        const activePane = tabPanes[index];
-        if (!activePane) return;
-        
-        const tabId = activePane.dataset.tab;
-        const canvas = document.getElementById(`tabChart_${tabId}`);
-        if (!canvas) return;
-        
-        const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-        
-        let chartData = [];
-        
-        if (tabId === 'netRevenue') {
-            chartData = getMonthlyNetRevenueData();
-        } else if (tabId === 'sales') {
-            chartData = getMonthlySalesData();
-        } else if (tabId === 'avgCheck') {
-            chartData = getMonthlyAvgCheckData();
-        } else if (tabId === 'efficiency') {
-            chartData = getMonthlyEfficiencyData();
-        }
-        
-        // Фильтруем данные
-        const filteredLabels = [];
-        const filteredData = [];
-        for (let i = 0; i < monthsOrder.length; i++) {
-            if (chartData[i] && chartData[i] !== 0 && chartData[i] !== undefined && chartData[i] !== null) {
-                filteredLabels.push(monthsOrder[i].slice(0, 3));
-                filteredData.push(chartData[i]);
-            }
-        }
-        
-        if (filteredData.length === 0) {
-            console.log('Нет данных для графика', tabId);
-            return;
-        }
-        
-        if (tabCharts[tabId]) {
-            try { 
-                if (typeof tabCharts[tabId].destroy === 'function') {
-                    tabCharts[tabId].destroy();
-                }
-            } catch(e) {}
-        }
-        
-        const ctx = canvas.getContext('2d');
-        
-        tabCharts[tabId] = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: filteredLabels,
-                datasets: [{
-                    data: filteredData,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102,126,234,0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: { 
-                    legend: { display: false }, 
-                    tooltip: { enabled: false } 
-                },
-                scales: { 
-                    x: { display: false }, 
-                    y: { display: false } 
-                }
-            }
-        });
-    }
-    
     function startAutoSwitch() {
         if (tabInterval) clearInterval(tabInterval);
         tabInterval = setInterval(() => {
@@ -1960,6 +1952,7 @@ function initTabs() {
         }
     }
     
+    // Добавляем обработчики
     tabBtns.forEach((btn, idx) => {
         btn.addEventListener('click', () => {
             stopAutoSwitch();
@@ -1971,23 +1964,25 @@ function initTabs() {
     tabsContainer.addEventListener('mouseenter', stopAutoSwitch);
     tabsContainer.addEventListener('mouseleave', startAutoSwitch);
     
+    // Обработчики для раскрытия детализации
     document.querySelectorAll('.tab-breakdown-header').forEach(header => {
         header.addEventListener('click', () => {
             const tabId = header.dataset.tab;
             const content = document.getElementById(`breakdown_${tabId}`);
-            const isOpen = content && content.classList.contains('show');
             
-            if (isOpen) {
-                content.classList.remove('show');
-                header.classList.remove('open');
-                setTimeout(() => { if (content) content.style.display = 'none'; }, 400);
-            } else {
-                if (content) {
+            if (content) {
+                if (content.style.display === 'none' || !content.style.display) {
                     content.style.display = 'block';
+                    header.classList.add('open');
                     setTimeout(() => {
                         content.classList.add('show');
-                        header.classList.add('open');
                     }, 10);
+                } else {
+                    content.classList.remove('show');
+                    header.classList.remove('open');
+                    setTimeout(() => {
+                        content.style.display = 'none';
+                    }, 400);
                 }
             }
         });
@@ -2001,6 +1996,10 @@ function initTabs() {
         startAutoSwitch();
     }, 200);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    renderDashboard();
+});
 
 // ========================
 // КОНЕЦ ФАЙЛА
