@@ -597,6 +597,46 @@ function generateNdsBlock(f, ndsChange, ndsLabels, ndsValues, revenueForNds, tot
 }
 
 // ========================
+// ПРОСТАЯ РАЗБИВКА ДЛЯ КАРУСЕЛИ/ВКЛАДОК
+// ========================
+
+function generateSimpleBreakdown(data, valueKey, isCurrency = true, suffix = '') {
+    if (!data || data.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
+    }
+    
+    const total = data.reduce((sum, item) => sum + item[valueKey], 0);
+    const overallAvg = total / data.length;
+    
+    return `
+        <div class="breakdown-list">
+            ${data.map((item, idx) => {
+                const percent = total > 0 ? (item[valueKey] / total) * 100 : 0;
+                const formattedValue = isCurrency ? formatCurrency(item[valueKey]) : item[valueKey].toLocaleString('ru-RU') + suffix;
+                const deviation = ((item[valueKey] - overallAvg) / overallAvg) * 100;
+                const deviationClass = deviation >= 0 ? 'positive' : 'negative';
+                
+                return `
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span style="font-size: 12px; font-weight: 500;">${item.name}</span>
+                            <span style="font-size: 12px; font-weight: 600;">${formattedValue}</span>
+                        </div>
+                        <div style="font-size: 10px; margin-bottom: 4px;">
+                            <span class="${deviationClass}">${deviation >= 0 ? '↑' : '↓'} ${Math.abs(deviation).toFixed(1)}%</span>
+                            <span style="margin-left: 8px;">${percent.toFixed(1)}% доли</span>
+                        </div>
+                        <div style="background: #e2e8f0; height: 4px; border-radius: 2px; overflow: hidden;">
+                            <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2);"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// ========================
 // ПРОСТАЯ РАЗБИВКА ДЛЯ ЭФФЕКТИВНОСТИ
 // ========================
 
