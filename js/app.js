@@ -46,37 +46,31 @@ function initApp() {
     }
     
     // ========================
-    // 2. НАСТРОЙКА ФИЛЬТРОВ
-    // ========================
-    const companyFilter = document.getElementById('companyFilter');
-    const yearFilter = document.getElementById('yearFilter');
-    const monthFilter = document.getElementById('monthFilter');
-    
-    const debouncedApply = () => {
+// 2. НАСТРОЙКА ФИЛЬТРОВ
+// ========================
+const companyFilter = document.getElementById('companyFilter');
+const yearFilter = document.getElementById('yearFilter');
+const monthFilter = document.getElementById('monthFilter');
+const channelFilter = document.getElementById('channelFilter');  // ДОБАВИТЬ
+
+const debouncedApply = () => {
     if (companyFilter) currentFilters.company = companyFilter.value;
     if (yearFilter) currentFilters.year = yearFilter.value;
     if (monthFilter) {
         currentFilters.month = Array.from(monthFilter.selectedOptions).map(o => o.value);
     }
-    
-    // ДОБАВЛЯЕМ ФИЛЬТР ПО КАНАЛУ
-    const channelFilter = document.getElementById('channelFilter');
-    if (channelFilter) currentFilters.channel = channelFilter.value;
+    if (channelFilter) currentFilters.channel = channelFilter.value;  // ДОБАВИТЬ
     
     currentData = applyFilters(originalData, currentFilters);
     renderDashboard();
     renderCashBlock();
     updateDashboardAIAnalytics();
 };
-    
-    if (companyFilter) companyFilter.onchange = debouncedApply;
-    if (yearFilter) yearFilter.onchange = debouncedApply;
-    if (monthFilter) monthFilter.onchange = debouncedApply;
 
-    const channelFilter = document.getElementById('channelFilter');
-    if (channelFilter) {
-    channelFilter.onchange = debouncedApply;
-    }
+if (companyFilter) companyFilter.onchange = debouncedApply;
+if (yearFilter) yearFilter.onchange = debouncedApply;
+if (monthFilter) monthFilter.onchange = debouncedApply;
+if (channelFilter) channelFilter.onchange = debouncedApply;  // ДОБАВИТЬ
     
     // ========================
     // 3. НАСТРОЙКА ТЕМЫ (СВЕТЛАЯ/ТЕМНАЯ)
@@ -289,7 +283,7 @@ function setupFloatingFilterButton() {
     const modalCompanyFilter = document.getElementById('modalCompanyFilter');
     const modalYearFilter = document.getElementById('modalYearFilter');
     const modalMonthFilter = document.getElementById('modalMonthFilter');
-    const modalChannelFilter = document.getElementById('modalChannelFilter');  // ДОБАВИТЬ
+    const modalChannelFilter = document.getElementById('modalChannelFilter');
     
     if (!floatingBtn || !filterModal) return;
     
@@ -300,7 +294,7 @@ function setupFloatingFilterButton() {
         const realCompanyFilter = document.getElementById('companyFilter');
         const realYearFilter = document.getElementById('yearFilter');
         const realMonthFilter = document.getElementById('monthFilter');
-        const realChannelFilter = document.getElementById('channelFilter');  // ДОБАВИТЬ
+        const realChannelFilter = document.getElementById('channelFilter');
         
         if (modalCompanyFilter && realCompanyFilter) {
             modalCompanyFilter.value = realCompanyFilter.value;
@@ -313,13 +307,12 @@ function setupFloatingFilterButton() {
                 opt.selected = Array.from(realMonthFilter.selectedOptions).some(o => o.value === opt.value);
             });
         }
-        // ДОБАВИТЬ КОПИРОВАНИЕ КАНАЛА
         if (modalChannelFilter && realChannelFilter) {
             modalChannelFilter.value = realChannelFilter.value;
         }
     };
     
-    // Закрытие модального окна
+    // Закрытие
     if (modalCloseBtn) {
         modalCloseBtn.onclick = () => filterModal.classList.remove('active');
     }
@@ -334,7 +327,7 @@ function setupFloatingFilterButton() {
             const realCompanyFilter = document.getElementById('companyFilter');
             const realYearFilter = document.getElementById('yearFilter');
             const realMonthFilter = document.getElementById('monthFilter');
-            const realChannelFilter = document.getElementById('channelFilter');  // ДОБАВИТЬ
+            const realChannelFilter = document.getElementById('channelFilter');
             
             if (realCompanyFilter) realCompanyFilter.value = modalCompanyFilter.value;
             if (realYearFilter) realYearFilter.value = modalYearFilter.value;
@@ -343,14 +336,13 @@ function setupFloatingFilterButton() {
                     opt.selected = Array.from(modalMonthFilter.selectedOptions).some(o => o.value === opt.value);
                 });
             }
-            // ДОБАВИТЬ ПРИМЕНЕНИЕ КАНАЛА
             if (realChannelFilter) realChannelFilter.value = modalChannelFilter.value;
             
-            // Применяем фильтры
-            if (realCompanyFilter) realCompanyFilter.onchange?.();
-            if (realYearFilter) realYearFilter.onchange?.();
-            if (realMonthFilter) realMonthFilter.onchange?.();
-            if (realChannelFilter) realChannelFilter.onchange?.();  // ДОБАВИТЬ
+            // Принудительно вызываем обновление
+            if (realCompanyFilter) realCompanyFilter.dispatchEvent(new Event('change'));
+            if (realYearFilter) realYearFilter.dispatchEvent(new Event('change'));
+            if (realMonthFilter) realMonthFilter.dispatchEvent(new Event('change'));
+            if (realChannelFilter) realChannelFilter.dispatchEvent(new Event('change'));
             
             filterModal.classList.remove('active');
         };
@@ -364,7 +356,7 @@ function setupFloatingFilterButton() {
             if (modalMonthFilter) {
                 Array.from(modalMonthFilter.options).forEach(o => o.selected = false);
             }
-            if (modalChannelFilter) modalChannelFilter.value = '';  // ДОБАВИТЬ
+            if (modalChannelFilter) modalChannelFilter.value = '';
             
             modalApplyBtn.click();
         };
