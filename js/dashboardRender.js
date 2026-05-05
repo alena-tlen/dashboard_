@@ -1970,6 +1970,332 @@ function initTabs() {
     }, 200);
 }
 
+// ========================
+// ФУНКЦИИ ДЛЯ ОТРИСОВКИ МИНИ-ГРАФИКОВ
+// ========================
+
+function renderNetRevenueMiniChart() {
+    const canvas = document.getElementById('netRevenueMiniChart');
+    if (!canvas) return;
+    
+    // Получаем данные для графика чистой выручки
+    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const monthlyNetRevenue = {};
+    
+    // Инициализируем
+    for (let i = 0; i < monthsOrder.length; i++) {
+        monthlyNetRevenue[monthsOrder[i]] = 0;
+    }
+    
+    // Собираем данные по месяцам
+    const data = window.currentData || [];
+    for (let i = 0; i < data.length; i++) {
+        const d = data[i];
+        if (d && d.месяц && d.тип === 'Доход') {
+            // Считаем НДС исходящий для этого месяца
+            let ndsOut = 0;
+            for (let j = 0; j < data.length; j++) {
+                const row = data[j];
+                if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                    ndsOut += (row.сумма || 0);
+                }
+            }
+            monthlyNetRevenue[d.месяц] += (d.сумма || 0) - ndsOut;
+        }
+    }
+    
+    // Формируем массивы для графика (только месяцы с данными)
+    const labels = [];
+    const values = [];
+    for (let i = 0; i < monthsOrder.length; i++) {
+        const month = monthsOrder[i];
+        const val = monthlyNetRevenue[month];
+        if (val !== 0 && val !== undefined) {
+            labels.push(month.slice(0, 3)); // Первые 3 буквы месяца
+            values.push(val / 1000); // Переводим в тысячи
+        }
+    }
+    
+    if (labels.length === 0) return;
+    
+    // Уничтожаем старый график если есть
+    if (window.netRevenueMiniChartInstance) {
+        try {
+            if (typeof window.netRevenueMiniChartInstance.destroy === 'function') {
+                window.netRevenueMiniChartInstance.destroy();
+            }
+        } catch(e) {}
+        window.netRevenueMiniChartInstance = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    const isDarkMode = document.body.classList.contains('dark');
+    const areaColor = isDarkMode ? 'rgba(72, 187, 120, 0.08)' : 'rgba(72, 187, 120, 0.05)';
+    const lineColor = values[values.length - 1] >= values[0] ? '#48bb78' : '#f56565';
+    
+    window.netRevenueMiniChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                borderColor: lineColor,
+                backgroundColor: areaColor,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { enabled: false } 
+            },
+            scales: { 
+                x: { display: false }, 
+                y: { display: false } 
+            }
+        }
+    });
+}
+
+function renderProfitMiniChart() {
+    const canvas = document.getElementById('profitMiniChart');
+    if (!canvas) return;
+    
+    // Получаем данные для графика прибыли по месяцам
+    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const monthlyProfit = {};
+    
+    // Инициализируем
+    for (let i = 0; i < monthsOrder.length; i++) {
+        monthlyProfit[monthsOrder[i]] = 0;
+    }
+    
+    // Собираем данные по месяцам
+    const data = window.currentData || [];
+    const monthlyRevenue = {};
+    const monthlyExpenses = {};
+    const monthlyNdsOut = {};
+    
+    for (let i = 0; i < monthsOrder.length; i++) {
+        monthlyRevenue[monthsOrder[i]] = 0;
+        monthlyExpenses[monthsOrder[i]] = 0;
+        monthlyNdsOut[monthsOrder[i]] = 0;
+    }
+    
+    for (let i = 0; i < data.length; i++) {
+        const d = data[i];
+        if (d && d.месяц && monthsOrder.includes(d.месяц)) {
+            if (d.тип === 'Доход') {
+                monthlyRevenue[d.месяц] += d.сумма || 0;
+            }
+            if (d.тип === 'Расход') {
+                monthlyExpenses[d.месяц] += Math.abs(d.сумма || 0);
+            }
+            if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') {
+                monthlyNdsOut[d.месяц] += d.сумма || 0;
+            }
+        }
+    }
+    
+    // Считаем прибыль
+    for (let i = 0; i < monthsOrder.length; i++) {
+        const month = monthsOrder[i];
+        const netRevenue = monthlyRevenue[month] - monthlyNdsOut[month];
+        monthlyProfit[month] = netRevenue - monthlyExpenses[month];
+    }
+    
+    // Формируем массивы для графика (только месяцы с данными)
+    const labels = [];
+    const values = [];
+    for (let i = 0; i < monthsOrder.length; i++) {
+        const month = monthsOrder[i];
+        const val = monthlyProfit[month];
+        if (val !== 0 && val !== undefined) {
+            labels.push(month.slice(0, 3)); // Первые 3 буквы месяца
+            values.push(val / 1000); // Переводим в тысячи
+        }
+    }
+    
+    if (labels.length === 0) return;
+    
+    // Уничтожаем старый график если есть
+    if (window.profitMiniChartInstance) {
+        try {
+            if (typeof window.profitMiniChartInstance.destroy === 'function') {
+                window.profitMiniChartInstance.destroy();
+            }
+        } catch(e) {}
+        window.profitMiniChartInstance = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    const isDarkMode = document.body.classList.contains('dark');
+    const areaColor = isDarkMode ? 'rgba(72, 187, 120, 0.08)' : 'rgba(72, 187, 120, 0.05)';
+    const lineColor = values[values.length - 1] >= values[0] ? '#48bb78' : '#f56565';
+    
+    window.profitMiniChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                borderColor: lineColor,
+                backgroundColor: areaColor,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { enabled: false } 
+            },
+            scales: { 
+                x: { display: false }, 
+                y: { display: false } 
+            }
+        }
+    });
+}
+
+function renderMonthlyLineChart(labels, revenues) {
+    const canvas = document.getElementById('monthlyRevenueChart');
+    if (!canvas) return;
+    
+    if (window.monthlyLineChart) {
+        try {
+            if (typeof window.monthlyLineChart.destroy === 'function') {
+                window.monthlyLineChart.destroy();
+            }
+        } catch(e) {}
+        window.monthlyLineChart = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    window.monthlyLineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Выручка (тыс. ₽)',
+                data: revenues,
+                borderColor: '#48bb78',
+                backgroundColor: 'rgba(72,187,120,0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
+    });
+}
+
+function renderNdsToRevenueChart(labels, ndsValues, revenueValues) {
+    const canvas = document.getElementById('ndsToRevenueChart');
+    if (!canvas) return;
+    
+    if (window.ndsToRevenueChart) {
+        try {
+            if (typeof window.ndsToRevenueChart.destroy === 'function') {
+                window.ndsToRevenueChart.destroy();
+            }
+        } catch(e) {}
+        window.ndsToRevenueChart = null;
+    }
+    
+    const ndsPercentages = ndsValues.map((nds, idx) => {
+        const revenue = revenueValues[idx] || 0;
+        return revenue > 0 ? (Math.abs(nds) / revenue) * 100 : 0;
+    });
+    
+    const ctx = canvas.getContext('2d');
+    window.ndsToRevenueChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'НДС (% от выручки)',
+                data: ndsPercentages,
+                backgroundColor: ndsPercentages.map(p => p > 20 ? '#f56565' : p > 15 ? '#ed8936' : p > 10 ? '#fbbf24' : '#48bb78'),
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: { y: { title: { display: true, text: '%' } } }
+        }
+    });
+}
+
+function renderNdsStatsCard(ndsPercent, ndsAmount, revenue) {
+    const container = document.getElementById('ndsStatsCard');
+    if (!container) return;
+    
+    let status = '', color = '';
+    if (ndsPercent > 20) { status = 'Критичная нагрузка'; color = '#f56565'; }
+    else if (ndsPercent > 15) { status = 'Высокая нагрузка'; color = '#ed8936'; }
+    else if (ndsPercent > 10) { status = 'Средняя нагрузка'; color = '#fbbf24'; }
+    else { status = 'Нормальная нагрузка'; color = '#48bb78'; }
+    
+    container.innerHTML = `
+        <div style="margin-top: 16px; padding: 12px; background: ${color}15; border-radius: 12px; border-left: 3px solid ${color};">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <div style="font-size: 12px;">НДС к уплате</div>
+                    <div style="font-size: 20px; font-weight: 700;">${formatCurrency(Math.abs(ndsAmount))}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 12px;">% от выручки</div>
+                    <div style="font-size: 20px; font-weight: 700; color: ${color};">${ndsPercent.toFixed(1)}%</div>
+                    <div style="font-size: 10px;">${status}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSalesChart(labels, salesData) {
+    const canvas = document.getElementById('salesChart');
+    if (!canvas) return;
+    
+    if (window.salesChart) {
+        try {
+            if (typeof window.salesChart.destroy === 'function') {
+                window.salesChart.destroy();
+            }
+        } catch(e) {}
+        window.salesChart = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    window.salesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Продажи (шт)',
+                data: salesData,
+                backgroundColor: '#60a5fa',
+                borderRadius: 8,
+                barPercentage: 0.7
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     renderDashboard();
 });
