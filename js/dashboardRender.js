@@ -178,6 +178,10 @@ function renderDashboard() {
         const profitChange = fPrev ? getChangePercent(f.profit, fPrev.profit) : null;
         const profitabilityChange = fPrev ? getChangePercent(f.profitability, fPrev.profitability) : null;
         const ndsChange = fPrev ? getChangePercent(f.totalNDS, fPrev.totalNDS) : null;
+        const salesChange = fPrev ? getChangePercent(totalSalesQuantity, fPrev.totalSalesQuantity) : null;
+        const avgCheckChange = fPrev ? getChangePercent(avgCheck, fPrev.avgCheck) : null;
+        const costChange = fPrev ? getChangePercent(costData, fPrev.costData) : null;
+        const avgCostChange = fPrev ? getChangePercent(avgCost, fPrev.avgCost) : null;
 
         // ========================
         // 5. СЕБЕСТОИМОСТЬ
