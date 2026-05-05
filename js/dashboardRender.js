@@ -916,15 +916,20 @@ function renderMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
     if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) return;
     
+    // Безопасное уничтожение старого графика
+    if (miniRevenueChart) {
+        try {
+            if (typeof miniRevenueChart.destroy === 'function') {
+                miniRevenueChart.destroy();
+            }
+        } catch(e) {}
+        miniRevenueChart = null;
+    }
+    
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     const areaColor = isDarkMode ? 'rgba(72, 187, 120, 0.08)' : 'rgba(72, 187, 120, 0.05)';
     const lineColor = data[data.length-1] >= data[0] ? '#48bb78' : '#f56565';
-    
-    if (miniRevenueChart) {
-        miniRevenueChart.destroy();
-        miniRevenueChart = null;
-    }
     
     miniRevenueChart = new Chart(ctx, {
         type: 'line',
@@ -945,8 +950,7 @@ function renderMiniChartJS(elementId, labels, data, color) {
             responsive: true,
             maintainAspectRatio: true,
             plugins: { legend: { display: false }, tooltip: { enabled: false } },
-            scales: { x: { display: false }, y: { display: false } },
-            elements: { point: { radius: 0 } }
+            scales: { x: { display: false }, y: { display: false } }
         }
     });
 }
@@ -955,14 +959,18 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
     if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) return;
     
+    if (miniExpenseChart) {
+        try {
+            if (typeof miniExpenseChart.destroy === 'function') {
+                miniExpenseChart.destroy();
+            }
+        } catch(e) {}
+        miniExpenseChart = null;
+    }
+    
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     const areaColor = isDarkMode ? 'rgba(245, 101, 101, 0.08)' : 'rgba(245, 101, 101, 0.05)';
-    
-    if (miniExpenseChart) {
-        miniExpenseChart.destroy();
-        miniExpenseChart = null;
-    }
     
     miniExpenseChart = new Chart(ctx, {
         type: 'line',
@@ -1375,7 +1383,14 @@ function renderMonthlyLineChart(labels, revenues) {
     const canvas = document.getElementById('monthlyRevenueChart');
     if (!canvas) return;
     
-    if (window.monthlyLineChart) window.monthlyLineChart.destroy();
+    if (window.monthlyLineChart) {
+        try {
+            if (typeof window.monthlyLineChart.destroy === 'function') {
+                window.monthlyLineChart.destroy();
+            }
+        } catch(e) {}
+        window.monthlyLineChart = null;
+    }
     
     const ctx = canvas.getContext('2d');
     window.monthlyLineChart = new Chart(ctx, {
@@ -1400,7 +1415,17 @@ function renderNdsToRevenueChart(labels, ndsValues, revenueValues) {
     const canvas = document.getElementById('ndsToRevenueChart');
     if (!canvas) return;
     
-    if (window.ndsToRevenueChart) window.ndsToRevenueChart.destroy();
+    // Безопасное уничтожение старого графика
+    if (window.ndsToRevenueChart) {
+        try {
+            if (typeof window.ndsToRevenueChart.destroy === 'function') {
+                window.ndsToRevenueChart.destroy();
+            }
+        } catch(e) {
+            console.warn('Ошибка при уничтожении графика:', e);
+        }
+        window.ndsToRevenueChart = null;
+    }
     
     const ndsPercentages = ndsValues.map((nds, idx) => {
         const revenue = revenueValues[idx] || 0;
@@ -1419,7 +1444,11 @@ function renderNdsToRevenueChart(labels, ndsValues, revenueValues) {
                 borderRadius: 8
             }]
         },
-        options: { responsive: true, maintainAspectRatio: true, scales: { y: { title: { display: true, text: '%' } } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: { y: { title: { display: true, text: '%' } } }
+        }
     });
 }
 
@@ -1454,7 +1483,14 @@ function renderSalesChart(labels, salesData) {
     const canvas = document.getElementById('salesChart');
     if (!canvas) return;
     
-    if (window.salesChart) window.salesChart.destroy();
+    if (window.salesChart) {
+        try {
+            if (typeof window.salesChart.destroy === 'function') {
+                window.salesChart.destroy();
+            }
+        } catch(e) {}
+        window.salesChart = null;
+    }
     
     const ctx = canvas.getContext('2d');
     window.salesChart = new Chart(ctx, {
