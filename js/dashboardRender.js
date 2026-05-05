@@ -777,7 +777,7 @@ function generateTabsPanel() {
         const isPositive = percent >= 0;
         return {
             class: isPositive ? 'trend-positive' : 'trend-negative',
-            html: `<span class="trend-arrow">${isPositive ? '↑' : '↓'}</span> <span class="trend-value">${Math.abs(percent).toFixed(1)}%</span> <span class="trend-text">к предыдущему периоду</span>`
+            html: `<span class="trend-arrow">${isPositive ? '↑' : '↓'}</span> <span class="trend-value">${Math.abs(percent).toFixed(1)}%</span>`
         };
     }
     
@@ -817,25 +817,26 @@ function generateTabsPanel() {
         }
     ];
     
-    // Генерируем HTML для вкладок
+    // Генерируем HTML для вкладок (без стилей, они в CSS)
     let tabsHtml = `
         <div class="modern-tabs-container">
             <div class="tabs-header" id="tabsHeader">
                 ${tabs.map((tab, idx) => `
-                    <div class="tab-btn ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}" data-index="${idx}">
+                    <button class="tab-btn ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}" data-index="${idx}">
                         <span class="tab-icon">${tab.icon}</span>
                         <span class="tab-title">${tab.title}</span>
-                    </div>
+                    </button>
                 `).join('')}
             </div>
-            <div class="tabs-indicator" id="tabsIndicator"></div>
             <div class="tabs-content" id="tabsContent">
                 ${tabs.map((tab, idx) => `
                     <div class="tab-pane ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}">
                         <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>
-                        <div class="tab-trend ${tab.trend.class}">
-                            ${tab.trend.html}
-                        </div>
+                        ${tab.trend.html ? `
+                            <div class="tab-trend ${tab.trend.class}">
+                                ${tab.trend.html} <span style="margin-left: 4px; opacity: 0.7;">к предыдущему периоду</span>
+                            </div>
+                        ` : ''}
                         <div class="tab-chart-container">
                             <canvas id="tabChart_${tab.id}" style="height: 80px; width: 100%;"></canvas>
                         </div>
@@ -843,7 +844,7 @@ function generateTabsPanel() {
                             <span class="breakdown-title">📊 Детализация по каналам</span>
                             <span class="breakdown-toggle">▼</span>
                         </div>
-                        <div class="tab-breakdown-content" id="breakdown_${tab.id}" style="display: none;">
+                        <div class="tab-breakdown-content" id="breakdown_${tab.id}">
                             ${tab.id === 'netRevenue' ? generateSimpleBreakdown(netRevenueByChannel, 'value', true) : 
                               tab.id === 'sales' ? generateSimpleBreakdown(salesByChannel, 'sales', false, ' шт') :
                               tab.id === 'avgCheck' ? generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true) :
