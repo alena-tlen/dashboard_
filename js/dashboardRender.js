@@ -846,94 +846,151 @@ function generateTabsPanel() {
 
 // Вспомогательные функции для получения данных по месяцам
 function getMonthlyNetRevenueData() {
+    const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const monthly = {};
-    MONTHS_ORDER.forEach(month => { monthly[month] = 0; });
     
-    currentData.forEach(d => {
-        if (d.месяц && MONTHS_ORDER.includes(d.месяц) && d.тип === 'Доход') {
-            const ndsOut = currentData.filter(row => 
-                row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий'
-            ).reduce((sum, row) => sum + (row.сумма || 0), 0);
-            monthly[d.месяц] += (d.сумма || 0) - ndsOut;
+    for (let i = 0; i < months.length; i++) {
+        monthly[months[i]] = 0;
+    }
+    
+    if (currentData && currentData.length > 0) {
+        for (let i = 0; i < currentData.length; i++) {
+            const d = currentData[i];
+            if (d && d.месяц && months.includes(d.месяц) && d.тип === 'Доход') {
+                let ndsOut = 0;
+                for (let j = 0; j < currentData.length; j++) {
+                    const row = currentData[j];
+                    if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                        ndsOut += (row.сумма || 0);
+                    }
+                }
+                monthly[d.месяц] += (d.сумма || 0) - ndsOut;
+            }
         }
-    });
+    }
     
-    return MONTHS_ORDER.filter(m => monthly[m] !== 0).map(m => monthly[m] / 1000);
+    const result = [];
+    for (let i = 0; i < months.length; i++) {
+        if (monthly[months[i]] !== 0) {
+            result.push(monthly[months[i]] / 1000);
+        }
+    }
+    
+    return result.length ? result : [0];
 }
 
 function getMonthlySalesData() {
+    // Прямое определение массива месяцев внутри функции
+    const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const monthly = {};
-    MONTHS_ORDER.forEach(month => { monthly[month] = 0; });
     
-    currentData.forEach(d => {
-        if (d.месяц && MONTHS_ORDER.includes(d.месяц)) {
-            const article = (d.статья || '').toLowerCase();
-            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
-                monthly[d.месяц] += Math.abs(d.сумма || 0);
+    // Инициализация
+    for (let i = 0; i < months.length; i++) {
+        monthly[months[i]] = 0;
+    }
+    
+    // Заполнение данными
+    if (currentData && currentData.length > 0) {
+        for (let i = 0; i < currentData.length; i++) {
+            const d = currentData[i];
+            if (d && d.месяц && months.includes(d.месяц)) {
+                const article = (d.статья || '').toLowerCase();
+                if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                    monthly[d.месяц] += Math.abs(d.сумма || 0);
+                }
             }
         }
-    });
+    }
     
-    return MONTHS_ORDER.filter(m => monthly[m] !== 0).map(m => monthly[m]);
+    // Сбор результата
+    const result = [];
+    for (let i = 0; i < months.length; i++) {
+        if (monthly[months[i]] !== 0) {
+            result.push(monthly[months[i]]);
+        }
+    }
+    
+    return result.length ? result : [0];
 }
 
 function getMonthlyAvgCheckData() {
-    const monthlyRevenue = {};
-    const monthlySales = {};
-    MONTHS_ORDER.forEach(month => {
-        monthlyRevenue[month] = 0;
-        monthlySales[month] = 0;
-    });
+    const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const revenue = {};
+    const sales = {};
     
-    currentData.forEach(d => {
-        if (d.месяц && MONTHS_ORDER.includes(d.месяц)) {
-            if (d.тип === 'Доход') {
-                const ndsOut = currentData.filter(row => 
-                    row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий'
-                ).reduce((sum, row) => sum + (row.сумма || 0), 0);
-                monthlyRevenue[d.месяц] += (d.сумма || 0) - ndsOut;
-            }
-            const article = (d.статья || '').toLowerCase();
-            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
-                monthlySales[d.месяц] += Math.abs(d.сумма || 0);
+    for (let i = 0; i < months.length; i++) {
+        revenue[months[i]] = 0;
+        sales[months[i]] = 0;
+    }
+    
+    if (currentData && currentData.length > 0) {
+        for (let i = 0; i < currentData.length; i++) {
+            const d = currentData[i];
+            if (d && d.месяц && months.includes(d.месяц)) {
+                if (d.тип === 'Доход') {
+                    let ndsOut = 0;
+                    for (let j = 0; j < currentData.length; j++) {
+                        const row = currentData[j];
+                        if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                            ndsOut += (row.сумма || 0);
+                        }
+                    }
+                    revenue[d.месяц] += (d.сумма || 0) - ndsOut;
+                }
+                const article = (d.статья || '').toLowerCase();
+                if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                    sales[d.месяц] += Math.abs(d.сумма || 0);
+                }
             }
         }
-    });
+    }
     
-    const months = MONTHS_ORDER.filter(m => monthlyRevenue[m] !== 0 && monthlySales[m] !== 0);
-    return months.map(m => monthlyRevenue[m] / monthlySales[m]);
+    const result = [];
+    for (let i = 0; i < months.length; i++) {
+        if (revenue[months[i]] !== 0 && sales[months[i]] !== 0) {
+            result.push(revenue[months[i]] / sales[months[i]]);
+        }
+    }
+    
+    return result.length ? result : [0];
 }
 
 function getMonthlyEfficiencyData() {
+    const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const monthly = {};
-    MONTHS_ORDER.forEach(month => {
-        monthly[month] = { revenue: 0, ndsOut: 0, expenses: 0 };
-    });
     
-    currentData.forEach(d => {
-        if (d.месяц && MONTHS_ORDER.includes(d.месяц)) {
-            if (d.тип === 'Доход') {
-                monthly[d.месяц].revenue += d.сумма || 0;
-            }
-            if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') {
-                monthly[d.месяц].ndsOut += d.сумма || 0;
-            }
-            if (d.тип === 'Расход') {
-                monthly[d.месяц].expenses += Math.abs(d.сумма || 0);
+    for (let i = 0; i < months.length; i++) {
+        monthly[months[i]] = { revenue: 0, ndsOut: 0, expenses: 0 };
+    }
+    
+    if (currentData && currentData.length > 0) {
+        for (let i = 0; i < currentData.length; i++) {
+            const d = currentData[i];
+            if (d && d.месяц && months.includes(d.месяц)) {
+                if (d.тип === 'Доход') {
+                    monthly[d.месяц].revenue += d.сумма || 0;
+                }
+                if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') {
+                    monthly[d.месяц].ndsOut += d.сумма || 0;
+                }
+                if (d.тип === 'Расход') {
+                    monthly[d.месяц].expenses += Math.abs(d.сумма || 0);
+                }
             }
         }
-    });
+    }
     
-    const months = MONTHS_ORDER.filter(m => {
+    const result = [];
+    for (let i = 0; i < months.length; i++) {
+        const m = months[i];
         const netRev = monthly[m].revenue - monthly[m].ndsOut;
-        return netRev !== 0 && monthly[m].expenses !== 0;
-    });
+        if (netRev !== 0 && monthly[m].expenses !== 0) {
+            const profit = netRev - monthly[m].expenses;
+            result.push(profit / (monthly[m].expenses || 1));
+        }
+    }
     
-    return months.map(m => {
-        const netRev = monthly[m].revenue - monthly[m].ndsOut;
-        const profit = netRev - monthly[m].expenses;
-        return profit / (monthly[m].expenses || 1);
-    });
+    return result.length ? result : [0];
 }
 
 function getTrend(currentValue, previousValue) {
