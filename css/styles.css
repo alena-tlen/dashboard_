@@ -2410,4 +2410,130 @@ body.dark .tab-chart-container {
     }
 }
 
+/* ========================
+   АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ
+   ======================== */
+
+/* Планшеты и маленькие ноутбуки */
+@media (max-width: 1024px) {
+    .metrics-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    
+    .metrics-grid > div {
+        width: 100%;
+    }
+}
+
+/* Смартфоны */
+@media (max-width: 768px) {
+    /* Основная сетка дашборда */
+    .metrics-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* Карточки */
+    .metric-card {
+        padding: 16px !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* Заголовки карточек */
+    .metric-title {
+        font-size: 14px !important;
+    }
+    
+    /* Значения метрик */
+    .metric-value {
+        font-size: 24px !important;
+    }
+    
+    /* Верхняя панель с состоянием компании */
+    .top-panel {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+    }
+    
+    /* Рекомендации */
+    .top-panel .flex-wrap {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    
+    /* Период анализа */
+    .top-panel .text-right {
+        text-align: left !important;
+        width: 100%;
+    }
+}
+
+/* Очень маленькие смартфоны */
+@media (max-width: 480px) {
+    /* Карточки с внутренними flex-контейнерами */
+    .metric-card > div[style*="display: flex"] {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+    
+    /* Блок с иконкой состояния компании */
+    .metric-card .flex-wrap {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    
+    /* Разделитель */
+    .metric-card .width-1px {
+        display: none;
+    }
+    
+    /* Кнопки в карточках */
+    .metric-card button {
+        font-size: 10px !important;
+        padding: 4px 8px !important;
+    }
+    
+    /* Таблицы и списки */
+    .channel-item {
+        margin-bottom: 16px !important;
+    }
+    
+    .channel-header {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    
+    .channel-total {
+        font-size: 12px !important;
+    }
+    
+    .sub-item > div {
+        flex-direction: column !important;
+        gap: 6px !important;
+    }
+}
+
+/* Специально для грида с доходами и вкладками */
+@media (max-width: 1024px) {
+    /* Контейнер с двумя колонками (Доходы + Вкладки) */
+    .metrics-grid[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+    
+    /* Блок доходов */
+    .metrics-grid > div:first-child {
+        height: auto !important;
+    }
+    
+    /* Блок с вкладками */
+    .metrics-grid > div:last-child {
+        margin-top: 0;
+    }
+}
+
 </style>
