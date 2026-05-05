@@ -845,6 +845,282 @@ function initOddsFilters() {
     });
 }
 
+// ========================
+// ОСНОВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ОДДС
+// ========================
+
+function renderOddsPage() {
+    // Обновляем операции перед рендером
+    oddsOperations = collectOddsOperations();
+    
+    const container = document.getElementById('oddsMainContent');
+    if (!container) return;
+    
+    if (!originalData || originalData.length === 0) {
+        container.innerHTML = '<div class="loading" style="text-align: center; padding: 60px;">📊 Загрузите данные для отображения ОДДС</div>';
+        return;
+    }
+    
+    // Фильтрация по датам
+    let filteredOps = oddsOperations;
+    if (oddsDateRange.startDate && oddsDateRange.endDate) {
+        filteredOps = oddsOperations.filter(op => op.date >= oddsDateRange.startDate && op.date <= oddsDateRange.endDate);
+    }
+    
+    // Фильтр по валюте
+    const currencyFiltered = filteredOps.filter(op => op.currency === currentCurrency && !op.isTechnical);
+    const incomes = currencyFiltered.filter(op => op.type === 'income');
+    const expenses = currencyFiltered.filter(op => op.type === 'expense');
+    
+    const topIncomes = incomes.slice(0, 5);
+    const topExpenses = expenses.slice(0, 5);
+    
+    const totalIncome = incomes.reduce((s, o) => s + o.amount, 0);
+    const totalExpense = expenses.reduce((s, o) => s + o.amount, 0);
+    const netFlow = totalIncome - totalExpense;
+    
+    // Расчет начального остатка
+    let initialBalance = 0;
+    originalData.forEach(row => {
+        if (row.статья === 'Начальный остаток') {
+            const account = row.Счет || row['Счет'] || '';
+            if (detectCurrency(account) === currentCurrency) {
+                initialBalance += parseFloat(row.сумма) || 0;
+            }
+        }
+    });
+    
+    const startDate = oddsDateRange.startDate;
+    let cumulativeBalance = initialBalance;
+    
+    if (startDate) {
+        const opsBeforeStart = oddsOperations.filter(op => {
+            if (op.currency !== currentCurrency) return false;
+            if (op.isTechnical) return false;
+            return op.date < startDate;
+        });
+        
+        opsBeforeStart.forEach(op => {
+            if (op.type === 'income') cumulativeBalance += op.amount;
+            else if (op.type === 'expense') cumulativeBalance -= op.amount;
+        });
+    }
+    
+    let startBalance = cumulativeBalance;
+    
+    // Расчет дневных остатков
+    const sortedOps = [...currencyFiltered].sort((a, b) => a.date - b.date);
+    const dailyMap = new Map();
+    
+    sortedOps.forEach(op => {
+        const key = op.date.toISOString().split('T')[0];
+        if (!dailyMap.has(key)) {
+            dailyMap.set(key, { date: op.date, income: 0, expense: 0, balance: 0 });
+        }
+        const day = dailyMap.get(key);
+        if (op.type === 'income') day.income += op.amount;
+        else day.expense += op.amount;
+    });
+    
+    const dailyData = Array.from(dailyMap.values()).sort((a, b) => a.date - b.date);
+    let runningBalance = startBalance;
+    dailyData.forEach(day => {
+        runningBalance += day.income - day.expense;
+        day.balance = runningBalance;
+    });
+    
+    currentBalance = dailyData.length > 0 ? dailyData[dailyData.length - 1].balance : startBalance;
+    const balanceChartData = dailyData.map(d => ({ date: d.date, balance: d.balance / 1000 }));
+    
+    // Постоянные и переменные расходы
+    const { fixedTotal, variableTotal } = splitExpensesByType(filteredOps, currentCurrency);
+    const revenue = incomes.reduce((s, o) => s + o.amount, 0);
+    const { contributionMargin, contributionMarginRatio, breakEvenRevenue, safetyMargin, safetyMarginAbsolute } = calculateBreakEvenPoint(fixedTotal, variableTotal, revenue);
+    
+    // CCC
+    const cccData = calculateCCC(filteredOps, currentCurrency);
+    
+    // Рекомендации
+    const recommendations = getLiquidityRecommendations(currentBalance, cccData.ccc, safetyMargin, breakEvenRevenue, revenue);
+    
+    // Форматирование валюты
+    const formatCurrencyWithCurrency = (amount, currency) => {
+        const symbols = { RUB: '₽', USD: '$', EUR: '€', CNY: '¥' };
+        const symbol = symbols[currency] || currency;
+        const formatter = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        return `${formatter.format(Math.abs(amount))} ${symbol}`;
+    };
+    
+    const formatDateRange = (date) => date ? `${date.getDate()}.${date.getMonth()+1}.${date.getFullYear()}` : '';
+    
+    // HTML
+    const html = `
+        <!-- Переключатель валюты -->
+        <div class="metrics-grid" style="margin-bottom: 20px;">
+            <div class="metric-card" style="padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <span style="font-weight: 600;">💱 Валюта анализа:</span>
+                    <select id="oddsCurrencySelect" style="padding: 8px 16px; border-radius: 8px; background: rgba(102,126,234,0.1); border: none;">
+                        <option value="RUB" ${currentCurrency === 'RUB' ? 'selected' : ''}>RUB</option>
+                        <option value="USD" ${currentCurrency === 'USD' ? 'selected' : ''}>USD</option>
+                        <option value="EUR" ${currentCurrency === 'EUR' ? 'selected' : ''}>EUR</option>
+                        <option value="CNY" ${currentCurrency === 'CNY' ? 'selected' : ''}>CNY</option>
+                    </select>
+                    <div style="margin-left: auto; font-size: 12px;">
+                        📅 ${oddsDateRange.startDate ? formatDateRange(oddsDateRange.startDate) : '—'} — ${oddsDateRange.endDate ? formatDateRange(oddsDateRange.endDate) : '—'}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Основные показатели -->
+        <div class="metrics-grid" style="margin-bottom: 24px;">
+            <div class="metric-card">
+                <div class="metric-title">💰 Остаток на ${oddsDateRange.endDate ? formatDateRange(oddsDateRange.endDate) : 'конец периода'}</div>
+                <div class="metric-value ${currentBalance >= 0 ? 'positive' : 'negative'}">${formatCurrencyWithCurrency(currentBalance, currentCurrency)}</div>
+                <div class="metric-sub">на начало: ${formatCurrencyWithCurrency(startBalance, currentCurrency)}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">📥 Поступления</div>
+                <div class="metric-value positive">+${formatCurrencyWithCurrency(totalIncome, currentCurrency)}</div>
+                <div class="metric-sub">${incomes.length} операций</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">📤 Списания</div>
+                <div class="metric-value negative">-${formatCurrencyWithCurrency(totalExpense, currentCurrency)}</div>
+                <div class="metric-sub">${expenses.length} операций</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">📊 Чистый поток</div>
+                <div class="metric-value ${netFlow >= 0 ? 'positive' : 'negative'}">${netFlow >= 0 ? '+' : ''}${formatCurrencyWithCurrency(netFlow, currentCurrency)}</div>
+            </div>
+        </div>
+        
+        <!-- Вкладки -->
+        <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid rgba(102,126,234,0.2);">
+            <button class="odds-tab-btn" data-tab="0" style="padding: 8px 20px; background: none; border: none; cursor: pointer; ${activeOddsTab === 0 ? 'border-bottom: 2px solid #667eea; color: #667eea;' : 'color: #a0aec0;'}">Основной анализ</button>
+            <button class="odds-tab-btn" data-tab="1" style="padding: 8px 20px; background: none; border: none; cursor: pointer; ${activeOddsTab === 1 ? 'border-bottom: 2px solid #667eea; color: #667eea;' : 'color: #a0aec0;'}">Прогноз и планы</button>
+            <button class="odds-tab-btn" data-tab="2" style="padding: 8px 20px; background: none; border: none; cursor: pointer; ${activeOddsTab === 2 ? 'border-bottom: 2px solid #667eea; color: #667eea;' : 'color: #a0aec0;'}">Кредитный калькулятор</button>
+        </div>
+        
+        <!-- Вкладка 0: Основной анализ -->
+        <div id="oddsTab0" class="odds-tab-content" style="${activeOddsTab === 0 ? '' : 'display: none;'}">
+            <div class="metrics-grid" style="margin-bottom: 24px;">
+                <div class="metric-card" style="grid-column: span 2;">
+                    <div class="metric-title">📈 Динамика остатка</div>
+                    <canvas id="balanceTrendChart" style="height: 250px; width: 100%;"></canvas>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">💰 Резервный фонд</div>
+                    <div class="metric-value" style="color: #4299e1;">${formatCurrencyWithCurrency(fixedTotal * 3, currentCurrency)}</div>
+                    <div class="metric-sub">3 месяца постоянных расходов</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">⚖️ Точка безубыточности</div>
+                    <div class="metric-value">${formatCurrencyWithCurrency(breakEvenRevenue, currentCurrency)}</div>
+                    <div class="metric-sub">Запас прочности: ${safetyMargin.toFixed(1)}%</div>
+                </div>
+            </div>
+            
+            <div class="metrics-grid" style="margin-bottom: 24px;">
+                <div class="metric-card">
+                    <div class="metric-title">📊 Денежный цикл (CCC)</div>
+                    <canvas id="cccChart" style="height: 200px; width: 100%;"></canvas>
+                    <div class="metric-sub">${cccData.ccc} дней</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">📅 Сезонность</div>
+                    <canvas id="seasonalityChart" style="height: 200px; width: 100%;"></canvas>
+                </div>
+            </div>
+            
+            <div class="metrics-grid" style="margin-bottom: 24px;">
+                <div class="metric-card">
+                    <div class="metric-title">🏆 ТОП-5 поступлений</div>
+                    ${topIncomes.length > 0 ? topIncomes.map((op, i) => `
+                        <div style="margin-bottom: 8px; padding: 6px; background: rgba(72,187,120,0.1); border-radius: 6px;">
+                            ${i+1}. ${op.article.substring(0, 35)}<br>
+                            <span style="color: #48bb78;">+${formatCurrencyWithCurrency(op.amount, currentCurrency)}</span>
+                        </div>
+                    `).join('') : '<div style="padding: 20px; text-align: center;">Нет данных</div>'}
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">⚠️ ТОП-5 списаний</div>
+                    ${topExpenses.length > 0 ? topExpenses.map((op, i) => `
+                        <div style="margin-bottom: 8px; padding: 6px; background: rgba(245,101,101,0.1); border-radius: 6px;">
+                            ${i+1}. ${op.article.substring(0, 35)}<br>
+                            <span style="color: #f56565;">-${formatCurrencyWithCurrency(op.amount, currentCurrency)}</span>
+                        </div>
+                    `).join('') : '<div style="padding: 20px; text-align: center;">Нет данных</div>'}
+                </div>
+            </div>
+            
+            <div class="odds-section-card">
+                <div class="metric-title">💡 Рекомендации</div>
+                ${recommendations.map(rec => `<div style="margin-bottom: 8px; padding: 8px; background: rgba(102,126,234,0.1); border-radius: 8px;">${rec.text}</div>`).join('')}
+            </div>
+        </div>
+        
+        <!-- Вкладка 1: Прогноз и планы -->
+        <div id="oddsTab1" class="odds-tab-content" style="${activeOddsTab === 1 ? '' : 'display: none;'}">
+            <div class="metric-card" style="margin-bottom: 20px;">
+                <div class="metric-title">📋 Плановые значения</div>
+                <div id="plannedExpensesContainer"></div>
+            </div>
+            <div class="odds-section-card">
+                <div class="metric-title">📊 Анализ расходов</div>
+                <div style="display: flex; gap: 20px; margin-top: 12px;">
+                    <div style="flex: 1; padding: 16px; background: rgba(66,153,225,0.1); border-radius: 12px;">
+                        <div style="font-size: 12px;">🏢 Постоянные расходы</div>
+                        <div style="font-size: 24px; font-weight: 700;">${formatCurrencyWithCurrency(fixedTotal, currentCurrency)}</div>
+                    </div>
+                    <div style="flex: 1; padding: 16px; background: rgba(237,137,54,0.1); border-radius: 12px;">
+                        <div style="font-size: 12px;">📦 Переменные расходы</div>
+                        <div style="font-size: 24px; font-weight: 700;">${formatCurrencyWithCurrency(variableTotal, currentCurrency)}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Вкладка 2: Кредитный калькулятор -->
+        <div id="oddsTab2" class="odds-tab-content" style="${activeOddsTab === 2 ? '' : 'display: none;'}">
+            <div id="creditCalculator"></div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    
+    // Отрисовка графиков
+    setTimeout(() => {
+        renderBalanceTrendChart(balanceChartData);
+        renderCCCChart(cccData);
+        renderSeasonalityChart(filteredOps, currentCurrency);
+        renderCreditCalculator(currentBalance);
+        renderPlannedExpenses();
+        
+        // Переключатель валюты
+        document.getElementById('oddsCurrencySelect')?.addEventListener('change', (e) => {
+            currentCurrency = e.target.value;
+            renderOddsPage();
+        });
+        
+        // Переключатель вкладок
+        document.querySelectorAll('.odds-tab-btn').forEach((btn, idx) => {
+            btn.onclick = () => {
+                activeOddsTab = parseInt(btn.dataset.tab);
+                document.querySelectorAll('.odds-tab-content').forEach((c, i) => {
+                    c.style.display = i === activeOddsTab ? '' : 'none';
+                });
+                document.querySelectorAll('.odds-tab-btn').forEach((b, i) => {
+                    b.style.borderBottom = i === activeOddsTab ? '2px solid #667eea' : 'none';
+                    b.style.color = i === activeOddsTab ? '#667eea' : '#a0aec0';
+                });
+            };
+        });
+    }, 100);
+}
+
+
 /**
  * Очищает кэш ОДДС при переключении страницы
  */
@@ -862,4 +1138,12 @@ function clearOddsCache() {
         try { window.seasonalityChart.destroy(); } catch(e) {}
         window.seasonalityChart = null;
     }
+}
+
+function formatDateForInput(date) {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
