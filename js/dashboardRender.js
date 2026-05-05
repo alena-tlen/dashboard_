@@ -1808,48 +1808,6 @@ function initTabs() {
     function switchToTab(index) {
         if (index === activeTabIndex) return;
         
-        // Обновляем активные классы
-        tabBtns.forEach((btn, i) => {
-            btn.classList.toggle('active', i === index);
-        });
-        tabPanes.forEach((pane, i) => {
-            pane.classList.toggle('active', i === index);
-        });
-        
-        // Обновляем индикатор
-        if (indicator && tabBtns[index]) {
-            const btn = tabBtns[index];
-            indicator.style.width = btn.offsetWidth + 'px';
-            indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
-        }
-        
-        activeTabIndex = index;
-        
-        // Отрисовываем график для активной вкладки
-        renderTabChart(activeTabIndex);
-    }
-    
-    // Отрисовка графика для вкладки
-   function initTabs() {
-    const tabsContainer = document.querySelector('.modern-tabs-container');
-    if (!tabsContainer) {
-        console.log('Контейнер вкладок не найден');
-        return;
-    }
-    
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-    const indicator = document.getElementById('tabsIndicator');
-    
-    if (tabBtns.length === 0) {
-        console.log('Кнопки вкладок не найдены');
-        return;
-    }
-    
-    // Функция переключения вкладки
-    function switchToTab(index) {
-        if (index === activeTabIndex) return;
-        
         tabBtns.forEach((btn, i) => {
             if (i === index) {
                 btn.classList.add('active');
@@ -2010,3 +1968,7 @@ function initTabs() {
         startAutoSwitch();
     }, 200);
 }
+
+// ========================
+// КОНЕЦ ФАЙЛА
+// ========================
