@@ -2130,4 +2130,284 @@ body.dark .tab-breakdown-content {
     border-radius: 12px;
 }
 
+/* ========================
+   СТИЛИ ДЛЯ ВКЛАДОК (TABS)
+   ======================== */
+
+.modern-tabs-container {
+    background: transparent;
+    border-radius: 16px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.tabs-header {
+    display: flex;
+    gap: 8px;
+    background: rgba(102, 126, 234, 0.08);
+    padding: 6px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    font-size: 13px;
+    color: #4a5568;
+    background: transparent;
+    border: none;
+    position: relative;
+}
+
+.tab-btn .tab-icon {
+    font-size: 16px;
+    transition: transform 0.2s;
+}
+
+.tab-btn .tab-title {
+    white-space: nowrap;
+}
+
+.tab-btn.active {
+    background: white;
+    color: #2d3748;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.tab-btn.active .tab-icon {
+    transform: scale(1.1);
+}
+
+.tab-btn:hover:not(.active) {
+    background: rgba(102, 126, 234, 0.15);
+    transform: translateY(-1px);
+}
+
+.tabs-indicator {
+    display: none;
+}
+
+.tabs-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tab-main-value {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+
+.tab-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.tab-trend.trend-positive {
+    background: rgba(72, 187, 120, 0.12);
+    color: #48bb78;
+}
+
+.tab-trend.trend-negative {
+    background: rgba(245, 101, 101, 0.12);
+    color: #f56565;
+}
+
+.trend-arrow {
+    font-size: 12px;
+}
+
+.trend-value {
+    font-weight: 700;
+}
+
+.tab-chart-container {
+    margin: 16px 0;
+    padding: 12px 0;
+    border-top: 1px solid rgba(102, 126, 234, 0.1);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.tab-breakdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: #667eea;
+    border-top: 1px solid rgba(102, 126, 234, 0.1);
+    transition: all 0.2s;
+}
+
+.tab-breakdown-header:hover {
+    color: #5a67d8;
+}
+
+.breakdown-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.breakdown-toggle {
+    font-size: 12px;
+    transition: transform 0.3s;
+}
+
+.tab-breakdown-header.open .breakdown-toggle {
+    transform: rotate(180deg);
+}
+
+.tab-breakdown-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-breakdown-content.show {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.breakdown-list {
+    padding: 12px 0;
+}
+
+/* Стили для чисел */
+.positive {
+    color: #48bb78;
+}
+
+.negative {
+    color: #f56565;
+}
+
+/* ========================
+   ТЕМНАЯ ТЕМА ДЛЯ ВКЛАДОК
+   ======================== */
+
+body.dark .tab-btn {
+    color: #cbd5e0;
+}
+
+body.dark .tab-btn.active {
+    background: #2d3748;
+    color: #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body.dark .tab-btn:hover:not(.active) {
+    background: rgba(102, 126, 234, 0.25);
+}
+
+body.dark .tab-trend.trend-positive {
+    background: rgba(72, 187, 120, 0.2);
+}
+
+body.dark .tab-trend.trend-negative {
+    background: rgba(245, 101, 101, 0.2);
+}
+
+body.dark .tab-main-value {
+    color: #edf2f7;
+}
+
+body.dark .breakdown-title {
+    color: #a0aec0;
+}
+
+body.dark .tab-breakdown-header {
+    color: #a0aec0;
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .tab-breakdown-header:hover {
+    color: #cbd5e0;
+}
+
+body.dark .tab-chart-container {
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ========================
+   АДАПТАЦИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ
+   ======================== */
+
+@media (max-width: 768px) {
+    .tabs-header {
+        gap: 4px;
+        padding: 4px;
+    }
+    
+    .tab-btn {
+        padding: 8px 4px;
+        font-size: 11px;
+    }
+    
+    .tab-btn .tab-icon {
+        font-size: 14px;
+    }
+    
+    .tab-main-value {
+        font-size: 24px;
+    }
+    
+    /* Скрываем текст на кнопках, оставляем только иконки на очень маленьких экранах */
+    @media (max-width: 480px) {
+        .tab-btn .tab-title {
+            display: none;
+        }
+        
+        .tab-btn {
+            padding: 8px;
+        }
+        
+        .tab-btn .tab-icon {
+            font-size: 18px;
+        }
+    }
+}
+
 </style>
