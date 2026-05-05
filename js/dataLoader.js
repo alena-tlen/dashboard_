@@ -308,6 +308,11 @@ async function loadFile(file) {
         originalData = data;
         currentData = [...data];
         
+        // ========== ДОБАВЬТЕ ЭТИ СТРОКИ ==========
+        window.originalData = originalData;
+        window.currentData = currentData;
+        // ==========================================
+        
         showNotification(`✅ Данные успешно загружены! (${data.length} записей)`, 'success');
         
         updateFilters();
@@ -323,3 +328,16 @@ async function loadFile(file) {
         showNotification('Ошибка: ' + error.message, 'error');
     }
 }
+
+// ========================
+// ПРИВЯЗКА К ГЛОБАЛЬНОМУ ОБЪЕКТУ WINDOW
+// ========================
+
+window.originalData = originalData;
+window.currentData = currentData;
+window.currentFilters = currentFilters;
+window.applyFilters = applyFilters;
+window.loadFile = loadFile;
+window.updateFilters = updateFilters;
+
+console.log('✅ dataLoader.js: данные привязаны к window');
