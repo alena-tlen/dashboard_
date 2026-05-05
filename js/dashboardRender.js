@@ -358,16 +358,14 @@ function renderDashboard() {
         const dashboardHtml = `
     ${topPanelHtml}
     
-    <div class="metrics-grid" style="margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div style="height: 100%;">${revenueHtml}</div>
-        <div class="metric-card" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
-            ${tabsPanel}
-        </div>
+    <div class="dashboard-two-columns">
+        <div class="dashboard-col">${revenueHtml}</div>
+        <div class="dashboard-col">${tabsPanel}</div>
     </div>
     
-    <div style="margin-bottom: 24px;">${expensesHtml}</div>
+    <div class="dashboard-full-width">${expensesHtml}</div>
     
-    <div class="metrics-grid" style="margin-top: 24px;">
+    <div class="dashboard-metrics-grid">
         ${ndsHtml}
         ${netRevenueHtml}
         ${profitHtml}
@@ -376,27 +374,27 @@ function renderDashboard() {
         ${costHtml}
         ${avgCostHtml}
     </div>
-            
-            <div class="metrics-grid" style="margin-top: 24px;">
-                <div class="metric-card" style="grid-column: span 4;">
-                    <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                        <span style="font-size: 18px;">⚖️</span>
-                        <span>Точка безубыточности</span>
-                    </div>
-                    ${renderBreakEvenAnalysisHtml(currentData, f, totalSalesQuantity)}
-                </div>
+    
+    <div class="dashboard-full-width">
+        <div class="metric-card">
+            <div class="metric-title">
+                <span style="font-size: 18px;">⚖️</span>
+                <span>Точка безубыточности</span>
             </div>
-            
-            <div class="metrics-grid" style="margin-top: 24px;">
-                <div class="metric-card" style="grid-column: span 4;">
-                    <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                        <span style="font-size: 18px;">📈</span>
-                        <span>Анализ трендов</span>
-                    </div>
-                    ${renderTrendsAnalysisHtml(currentData, f, totalSalesQuantity)}
-                </div>
+            ${renderBreakEvenAnalysisHtml(currentData, f, totalSalesQuantity)}
+        </div>
+    </div>
+    
+    <div class="dashboard-full-width">
+        <div class="metric-card">
+            <div class="metric-title">
+                <span style="font-size: 18px;">📈</span>
+                <span>Анализ трендов</span>
             </div>
-        `;
+            ${renderTrendsAnalysisHtml(currentData, f, totalSalesQuantity)}
+        </div>
+    </div>
+`;
         
         // Вставляем в DOM
         document.getElementById('dashboardMetrics').innerHTML = dashboardHtml;
