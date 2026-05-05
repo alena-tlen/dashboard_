@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -238,6 +238,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" charset="utf-8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js не загрузился, загружаем резервный...');
+        var script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+        script.onload = function() { console.log('Chart.js загружен с резервного CDN'); };
+        document.head.appendChild(script);
+    }
+</script>
     
     <!-- Подключение модулей приложения (порядок ВАЖЕН!) -->
     <script src="js/config.js"></script>
