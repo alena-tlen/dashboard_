@@ -9,11 +9,10 @@ let miniExpenseChart = null;       // Мини-график расходов
 let netRevenueMiniChart = null;    // Мини-график чистой выручки
 let profitMiniChart = null;        // Мини-график прибыли
 
-// Ссылки на глобальные данные из dataLoader.js
-let originalData = window.originalData || [];
-let currentData = window.currentData || [];
-let currentFilters = window.currentFilters || { company: '', year: '', month: [], channel: '' };
-// ==========================================
+// Просто создаём ссылки (без let/const/var)
+originalData = window.originalData || [];
+currentData = window.currentData || [];
+currentFilters = window.currentFilters || { company: '', year: '', month: [], channel: '' };
 
 // Функция для синхронизации данных с window
 function syncGlobalData() {
