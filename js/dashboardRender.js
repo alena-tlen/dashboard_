@@ -793,6 +793,118 @@ function generateSimpleBreakdown(data, valueKey, isCurrency = true, suffix = '')
 }
 
 // ========================
+// ГЕНЕРАЦИЯ БЛОКА НДС ПО КАНАЛАМ
+// ========================
+
+function generateNDSBreakdown(data) {
+    const ndsByChannel = {};
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+        const ndsIn = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС входящий').reduce((sum, d) => sum + d.сумма, 0);
+        const total = ndsOut - ndsIn;
+        
+        if (ndsOut !== 0 || ndsIn !== 0 || total !== 0) {
+            ndsByChannel[channel] = { ndsOut: ndsOut, ndsIn: ndsIn, total: total };
+        }
+    });
+    
+    const channelsList = Object.entries(ndsByChannel)
+        .filter(([_, d]) => d.total !== 0)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([name, d]) => ({ name, ndsOut: d.ndsOut, ndsIn: d.ndsIn, total: d.total }));
+    
+    const totalOut = channelsList.reduce((sum, ch) => sum + ch.ndsOut, 0);
+    const totalIn = channelsList.reduce((sum, ch) => sum + ch.ndsIn, 0);
+    const totalNDS = totalOut - totalIn;
+    
+    if (channelsList.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
+    }
+    
+    let html = '<div class="nds-channels-list">';
+    html += '<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(102,126,234,0.2);">';
+    html += '<span style="font-size: 12px; font-weight: 600; color: #667eea;">РАЗБИВКА НДС ПО КАНАЛАМ</span>';
+    html += '<span style="font-size: 11px; margin-left: 8px;">(нажмите на канал для деталей)</span>';
+    html += '</div>';
+    
+    for (let idx = 0; idx < channelsList.length; idx++) {
+        const channel = channelsList[idx];
+        const outPercent = totalOut > 0 ? (channel.ndsOut / totalOut) * 100 : 0;
+        const inPercent = totalIn > 0 ? (channel.ndsIn / totalIn) * 100 : 0;
+        const totalPercent = totalNDS !== 0 ? (Math.abs(channel.total) / Math.abs(totalNDS)) * 100 : 0;
+        const formattedOut = formatCurrency(channel.ndsOut);
+        const formattedIn = formatCurrency(channel.ndsIn);
+        const formattedTotal = formatCurrency(channel.total);
+        const totalClass = channel.total >= 0 ? 'negative' : 'positive';
+        
+        html += '<div class="nds-channel-item" data-channel="' + channel.name + '" style="margin-bottom: 16px; border-bottom: 1px solid rgba(102,126,234,0.2); padding-bottom: 12px;">';
+        html += '<div class="nds-channel-header" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 8px 0; border-radius: 8px;">';
+        html += '<div style="display: flex; align-items: center; gap: 10px;">';
+        html += '<span class="nds-expand-icon" style="font-size: 12px; transition: transform 0.3s; display: inline-block;">▶</span>';
+        html += '<span style="font-weight: 600; font-size: 15px;">' + channel.name + '</span>';
+        html += '</div>';
+        html += '<div style="display: flex; align-items: center; gap: 12px;">';
+        html += '<span class="' + totalClass + '" style="font-weight: 700; font-size: 14px;">' + formattedTotal + '</span>';
+        html += '<span style="font-size: 11px; background: rgba(102,126,234,0.15); padding: 2px 8px; border-radius: 12px;">' + totalPercent.toFixed(1) + '%</span>';
+        html += '</div></div>';
+        
+        html += '<div class="nds-channel-details" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; padding-left: 20px;">';
+        html += '<div style="padding-top: 8px; padding-bottom: 8px;">';
+        
+        html += '<div style="margin-bottom: 8px;">';
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        html += '<span style="font-size: 12px;">Исходящий</span>';
+        html += '<div style="display: flex; align-items: center; gap: 12px;">';
+        html += '<span style="font-size: 13px; font-weight: 600; color: #f56565;">' + formattedOut + '</span>';
+        html += '<span style="font-size: 11px; background: rgba(102,126,234,0.1); padding: 2px 8px; border-radius: 12px;">' + outPercent.toFixed(1) + '%</span>';
+        html += '</div></div>';
+        html += '<div style="background: rgba(245,101,101,0.2); height: 4px; border-radius: 2px; overflow: hidden;">';
+        html += '<div style="width: ' + outPercent + '%; height: 100%; background: #f56565; border-radius: 2px;"></div>';
+        html += '</div></div>';
+        
+        html += '<div>';
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        html += '<span style="font-size: 12px;">Входящий</span>';
+        html += '<div style="display: flex; align-items: center; gap: 12px;">';
+        html += '<span style="font-size: 13px; font-weight: 600; color: #48bb78;">' + formattedIn + '</span>';
+        html += '<span style="font-size: 11px; background: rgba(102,126,234,0.1); padding: 2px 8px; border-radius: 12px;">' + inPercent.toFixed(1) + '%</span>';
+        html += '</div></div>';
+        html += '<div style="background: rgba(72,187,120,0.2); height: 4px; border-radius: 2px; overflow: hidden;">';
+        html += '<div style="width: ' + inPercent + '%; height: 100%; background: #48bb78; border-radius: 2px;"></div>';
+        html += '</div></div>';
+        
+        html += '</div></div></div>';
+    }
+    
+    html += '</div>';
+    
+    // Добавляем обработчики кликов через setTimeout после вставки в DOM
+    setTimeout(function() {
+        document.querySelectorAll('.nds-channel-header').forEach(function(header) {
+            if (header.hasClickListener) return;
+            header.hasClickListener = true;
+            header.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var channelItem = header.closest('.nds-channel-item');
+                var details = channelItem.querySelector('.nds-channel-details');
+                var expandIcon = header.querySelector('.nds-expand-icon');
+                if (details.style.maxHeight && details.style.maxHeight !== '0px') {
+                    details.style.maxHeight = '0';
+                    if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
+                } else {
+                    details.style.maxHeight = details.scrollHeight + 'px';
+                    if (expandIcon) expandIcon.style.transform = 'rotate(90deg)';
+                }
+            });
+        });
+    }, 100);
+    
+    return html;
+}
+
+// ========================
 // МИНИ-ГРАФИКИ (CHART.JS)
 // ========================
 
