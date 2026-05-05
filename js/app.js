@@ -53,23 +53,30 @@ function initApp() {
     const monthFilter = document.getElementById('monthFilter');
     
     const debouncedApply = () => {
-        if (companyFilter) currentFilters.company = companyFilter.value;
-        if (yearFilter) currentFilters.year = yearFilter.value;
-        if (monthFilter) {
-            currentFilters.month = Array.from(monthFilter.selectedOptions).map(o => o.value);
-        }
-        
-        currentData = applyFilters(originalData, currentFilters);
-        renderDashboard();
-        renderCashBlock();
-        
-        // Обновляем AI аналитику на дашборде
-        updateDashboardAIAnalytics();
-    };
+    if (companyFilter) currentFilters.company = companyFilter.value;
+    if (yearFilter) currentFilters.year = yearFilter.value;
+    if (monthFilter) {
+        currentFilters.month = Array.from(monthFilter.selectedOptions).map(o => o.value);
+    }
+    
+    // ДОБАВЛЯЕМ ФИЛЬТР ПО КАНАЛУ
+    const channelFilter = document.getElementById('channelFilter');
+    if (channelFilter) currentFilters.channel = channelFilter.value;
+    
+    currentData = applyFilters(originalData, currentFilters);
+    renderDashboard();
+    renderCashBlock();
+    updateDashboardAIAnalytics();
+};
     
     if (companyFilter) companyFilter.onchange = debouncedApply;
     if (yearFilter) yearFilter.onchange = debouncedApply;
     if (monthFilter) monthFilter.onchange = debouncedApply;
+
+    const channelFilter = document.getElementById('channelFilter');
+    if (channelFilter) {
+    channelFilter.onchange = debouncedApply;
+    }
     
     // ========================
     // 3. НАСТРОЙКА ТЕМЫ (СВЕТЛАЯ/ТЕМНАЯ)
