@@ -7,21 +7,16 @@ let currentData = [];       // Текущие данные (с учетом фи
 let currentFilters = {      // Активные фильтры
     company: '',            // Выбранная компания
     year: '',               // Выбранный год
-    month: []               // Выбранные месяцы (массив)
+    month: [],              // Выбранные месяцы (массив)
+    channel: ''             // Выбранный канал
 };
 
 // ========================
 // ОСНОВНАЯ ФУНКЦИЯ ЧТЕНИЯ EXCEL
 // ========================
 
-/**
- * Читает Excel файл и преобразует в массив объектов
- * @param {File} file - выбранный файл
- * @returns {Promise<Array>} - массив записей
- */
 function readExcelFile(file) {
     return new Promise((resolve, reject) => {
-        // Проверяем, загружена ли библиотека XLSX
         if (typeof XLSX === 'undefined') {
             reject(new Error('XLSX библиотека не загружена'));
             return;
@@ -31,30 +26,15 @@ function readExcelFile(file) {
         
         reader.onload = function(e) {
             try {
-                // 1. Получаем бинарные данные
                 const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellFormula: false, cellText: false });
+                const allProcessed = [];
                 
-                // 2. Читаем Excel
-                const workbook = XLSX.read(data, { 
-                    type: 'array', 
-                    cellFormula: false, 
-                    cellText: false 
-                });
-                
-                const allProcessed = [];  // Массив для всех обработанных записей
-                
-                // 3. Обрабатываем каждый лист Excel
                 for (const sheetName of workbook.SheetNames) {
                     const sheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet, { 
-                        defval: "",      // Пустые ячейки → ""
-                        raw: true,       // Читаем как есть
-                        blankrows: false // Пропускаем пустые строки
-                    });
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true, blankrows: false });
                     
-                    // 4. Обрабатываем каждую строку
                     for (const row of jsonData) {
-                        // Извлекаем данные из разных возможных названий колонок
                         let company = row['компания'] || row['Компания'] || '';
                         let year = row['год'] || row['Год'] || '';
                         let month = row['месяц'] || row['Месяц'] || '';
@@ -65,7 +45,6 @@ function readExcelFile(file) {
                         let amount = parseFloat(row['сумма'] || row['Сумма'] || 0);
                         let account = row['Счет'] || row['счет'] || '';
                         
-                        // Нормализуем данные (убираем пробелы, приводим к единому формату)
                         company = String(company).trim().toUpperCase();
                         year = String(year).trim();
                         month = String(month).trim().toLowerCase();
@@ -74,11 +53,9 @@ function readExcelFile(file) {
                         subCategory = String(subCategory).trim();
                         account = String(account).trim();
                         
-                        // Пропускаем пустые строки
                         if (!type && !account) continue;
                         if (amount === 0 && type !== 'Начальный остаток') continue;
                         
-                        // Определяем тип записи
                         let mappedType = '';
                         if (type === 'Доход') mappedType = 'Доход';
                         else if (type === 'Расход') mappedType = 'Расход';
@@ -99,16 +76,13 @@ function readExcelFile(file) {
                         else if (type === 'Получение займа от контрагента') mappedType = 'Справочная';
                         else if (type === 'Приобретение иностранной валюты') mappedType = 'Справочная';
                         
-                        // Если тип не определился - пропускаем
                         if (!mappedType) continue;
                         
-                        // Для начальных остатков очищаем даты
                         if (type === 'Начальный остаток') {
                             year = '';
                             month = '';
                         }
                         
-                        // Добавляем запись в массив
                         allProcessed.push({ 
                             компания: company || 'A', 
                             год: year, 
@@ -124,53 +98,29 @@ function readExcelFile(file) {
                     }
                 }
                 
-                // ========================
-                // 5. ОБРАБОТКА НДС
-                // ========================
-                // Группируем НДС исходящий и входящий
+                // Обработка НДС
                 const ndsPairs = new Map();
-                
                 for (const row of allProcessed) {
-                    if (row.статья === 'НДС' && 
-                        (row.подканал === 'НДС исходящий' || row.подканал === 'НДС входящий')) {
-                        
+                    if (row.статья === 'НДС' && (row.подканал === 'НДС исходящий' || row.подканал === 'НДС входящий')) {
                         const key = `${row.компания}|${row.год}|${row.месяц}|${row.канал}`;
-                        
-                        if (!ndsPairs.has(key)) {
-                            ndsPairs.set(key, { исходящий: 0, входящий: 0 });
-                        }
-                        
+                        if (!ndsPairs.has(key)) ndsPairs.set(key, { исходящий: 0, входящий: 0 });
                         const ndsData = ndsPairs.get(key);
-                        if (row.подканал === 'НДС исходящий') {
-                            ndsData.исходящий += row.сумма;
-                        }
-                        if (row.подканал === 'НДС входящий') {
-                            ndsData.входящий += row.сумма;
-                        }
+                        if (row.подканал === 'НДС исходящий') ndsData.исходящий += row.сумма;
+                        if (row.подканал === 'НДС входящий') ndsData.входящий += row.сумма;
                     }
                 }
                 
-                // Создаем записи для рассчитанного НДС
                 for (const [key, ndsData] of ndsPairs.entries()) {
                     const calculatedNds = ndsData.исходящий - ndsData.входящий;
-                    
                     if (calculatedNds !== 0) {
                         const [company, year, month, channel] = key.split('|');
                         allProcessed.push({
-                            компания: company, 
-                            год: year, 
-                            месяц: month, 
-                            статья: 'НДС К УПЛАТЕ/ВОЗМЕЩЕНИЮ',
-                            канал: channel, 
-                            подканал: 'НДС', 
-                            тип: 'НДС', 
-                            сумма: calculatedNds,
-                            Счет: ''
+                            компания: company, год: year, месяц: month, статья: 'НДС К УПЛАТЕ/ВОЗМЕЩЕНИЮ',
+                            канал: channel, подканал: 'НДС', тип: 'НДС', сумма: calculatedNds, Счет: ''
                         });
                     }
                 }
                 
-                // 6. Проверяем, есть ли данные
                 if (allProcessed.length === 0) {
                     reject(new Error('Не найдено данных для анализа'));
                 } else {
@@ -197,12 +147,6 @@ function readExcelFile(file) {
 // ПРИМЕНЕНИЕ ФИЛЬТРОВ
 // ========================
 
-/**
- * Применяет фильтры к данным
- * @param {Array} data - массив данных
- * @param {Object} filters - объект с фильтрами
- * @returns {Array} - отфильтрованный массив
- */
 function applyFilters(data, filters = null) {
     const activePage = document.querySelector('.page-content.active')?.id;
     if (activePage === 'page-odds') {
@@ -218,8 +162,6 @@ function applyFilters(data, filters = null) {
         if (f.company && row.компания !== f.company) return false;
         if (f.year && row.год !== f.year) return false;
         if (f.month && f.month.length > 0 && !f.month.includes(row.месяц)) return false;
-        
-        // ДОБАВЛЯЕМ ФИЛЬТРАЦИЮ ПО КАНАЛУ
         if (f.channel && row.канал !== f.channel) return false;
         
         return true;
@@ -230,138 +172,114 @@ function applyFilters(data, filters = null) {
 // ОБНОВЛЕНИЕ ФИЛЬТРОВ
 // ========================
 
-/**
- * Обновляет выпадающие списки фильтров на основе данных
- */
 function updateFilters() {
+    console.log('updateFilters вызвана, данных:', originalData.length);
+    
     const companies = [...new Set(originalData.map(d => d.компания))].filter(c => c);
-    
-    // Получаем все годы из данных (включая 2026)
-    const years = [...new Set(originalData.map(d => d.год))]
-        .filter(y => y && y !== '')
-        .sort((a, b) => {
-            // Сортируем как числа
-            const numA = parseInt(a);
-            const numB = parseInt(b);
-            if (isNaN(numA)) return 1;
-            if (isNaN(numB)) return -1;
-            return numA - numB;
-        });
-    
-    const months = [...new Set(originalData.map(d => d.месяц))]
-        .filter(m => m && m !== '')
+    const years = [...new Set(originalData.map(d => d.год))].filter(y => y && y !== '').sort((a, b) => parseInt(a) - parseInt(b));
+    const months = [...new Set(originalData.map(d => d.месяц))].filter(m => m && m !== '')
         .sort((a, b) => MONTHS_ORDER.indexOf(a) - MONTHS_ORDER.indexOf(b));
+    const channels = [...new Set(originalData.map(d => d.канал))].filter(c => c && c !== '');
     
-    // Получаем все каналы продаж
-    const channels = [...new Set(originalData.map(d => d.канал))]
-        .filter(c => c && c !== '');
+    console.log('Годы:', years);
+    console.log('Каналы:', channels);
     
-    // Обновляем фильтр компаний
-    const companyFilter = document.getElementById('companyFilter');
-    if (companyFilter) {
-        companyFilter.innerHTML = '<option value="">Все компании</option>' + 
-            companies.map(c => `<option value="${c}">${c}</option>`).join('');
-        companyFilter.value = '';
+    // Создаём СКРЫТЫЙ фильтр компаний
+    let companyFilter = document.getElementById('companyFilter');
+    if (!companyFilter) {
+        companyFilter = document.createElement('select');
+        companyFilter.id = 'companyFilter';
+        companyFilter.style.display = 'none';
+        document.body.appendChild(companyFilter);
+    }
+    companyFilter.innerHTML = '<option value="">Все компании</option>' + companies.map(c => `<option value="${c}">${c}</option>`).join('');
+    companyFilter.value = '';
+    
+    // Создаём СКРЫТЫЙ фильтр годов
+    let yearFilter = document.getElementById('yearFilter');
+    if (!yearFilter) {
+        yearFilter = document.createElement('select');
+        yearFilter.id = 'yearFilter';
+        yearFilter.style.display = 'none';
+        document.body.appendChild(yearFilter);
+    }
+    yearFilter.innerHTML = '<option value="">Все годы</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+    if (years.length > 0) {
+        const earliestYear = Math.min(...years.map(y => parseInt(y)));
+        yearFilter.value = earliestYear.toString();
+        currentFilters.year = earliestYear.toString();
+        console.log('Выбран год:', earliestYear);
     }
     
-    // Обновляем фильтр годов
-    const yearFilter = document.getElementById('yearFilter');
-    if (yearFilter) {
-        yearFilter.innerHTML = '<option value="">Все годы</option>' + 
-            years.map(y => `<option value="${y}">${y}</option>`).join('');
-        
-        // Автоматически выбираем самый РАННИЙ год (минимальный)
-        if (years.length > 0) {
-            const numericYears = years.map(y => parseInt(y)).filter(y => !isNaN(y));
-            if (numericYears.length > 0) {
-                const earliestYear = Math.min(...numericYears);
-                yearFilter.value = earliestYear.toString();
-                // Обновляем currentFilters
-                currentFilters.year = earliestYear.toString();
-            }
-        }
-    }
-    
-    // Обновляем фильтр месяцев
-    const monthFilter = document.getElementById('monthFilter');
-    if (monthFilter) {
-        monthFilter.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+    // Создаём СКРЫТЫЙ фильтр месяцев
+    let monthFilter = document.getElementById('monthFilter');
+    if (!monthFilter) {
+        monthFilter = document.createElement('select');
+        monthFilter.id = 'monthFilter';
+        monthFilter.style.display = 'none';
         monthFilter.setAttribute('multiple', 'multiple');
-        monthFilter.size = 6;
-        Array.from(monthFilter.options).forEach(opt => opt.selected = false);
+        document.body.appendChild(monthFilter);
     }
+    monthFilter.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+    Array.from(monthFilter.options).forEach(opt => opt.selected = false);
     
-    // ========== ДОБАВЛЯЕМ ФИЛЬТР ПО КАНАЛАМ ==========
+    // Создаём СКРЫТЫЙ фильтр каналов
     let channelFilter = document.getElementById('channelFilter');
     if (!channelFilter) {
-        // Создаём фильтр, если его нет
-        const filtersContainer = document.querySelector('.filters-sidebar-content') || 
-                                 document.querySelector('.filter-group-sidebar')?.parentNode;
-        if (filtersContainer) {
-            const channelFilterHtml = `
-                <div class="filter-group-sidebar">
-                    <label>📢 Канал продаж</label>
-                    <select id="channelFilter">
-                        <option value="">Все каналы</option>
-                        ${channels.map(c => `<option value="${c}">${c}</option>`).join('')}
-                    </select>
-                </div>
-            `;
-            filtersContainer.insertAdjacentHTML('beforeend', channelFilterHtml);
-            channelFilter = document.getElementById('channelFilter');
-        }
-    } else {
-        channelFilter.innerHTML = '<option value="">Все каналы</option>' + 
-            channels.map(c => `<option value="${c}">${c}</option>`).join('');
-        channelFilter.value = '';
+        channelFilter = document.createElement('select');
+        channelFilter.id = 'channelFilter';
+        channelFilter.style.display = 'none';
+        document.body.appendChild(channelFilter);
     }
+    channelFilter.innerHTML = '<option value="">Все каналы</option>' + channels.map(c => `<option value="${c}">${c}</option>`).join('');
+    channelFilter.value = '';
     
-    // Обновляем модальные фильтры
+    // Добавляем обработчик для канала
+    channelFilter.onchange = () => {
+        currentFilters.channel = channelFilter.value;
+        currentData = applyFilters(originalData, currentFilters);
+        renderDashboard();
+        renderCashBlock();
+    };
+    
+    // Обновляем модальное окно
     updateModalFilters();
 }
 
-/**
- * Обновляет фильтры в модальном окне
- */
+// ========================
+// ОБНОВЛЕНИЕ МОДАЛЬНЫХ ФИЛЬТРОВ
+// ========================
+
 function updateModalFilters() {
     const modalCompanyFilter = document.getElementById('modalCompanyFilter');
     const modalYearFilter = document.getElementById('modalYearFilter');
     const modalMonthFilter = document.getElementById('modalMonthFilter');
     const modalChannelFilter = document.getElementById('modalChannelFilter');
     
-    // Получаем реальные фильтры (скрытые)
     const realCompanyFilter = document.getElementById('companyFilter');
     const realYearFilter = document.getElementById('yearFilter');
     const realMonthFilter = document.getElementById('monthFilter');
     const realChannelFilter = document.getElementById('channelFilter');
     
-    // Копируем компании
     if (modalCompanyFilter && realCompanyFilter) {
         modalCompanyFilter.innerHTML = realCompanyFilter.innerHTML;
         modalCompanyFilter.value = realCompanyFilter.value;
     }
     
-    // Копируем годы
     if (modalYearFilter && realYearFilter) {
         modalYearFilter.innerHTML = realYearFilter.innerHTML;
         modalYearFilter.value = realYearFilter.value;
     }
     
-    // Копируем месяцы
     if (modalMonthFilter && realMonthFilter) {
         modalMonthFilter.innerHTML = realMonthFilter.innerHTML;
-        Array.from(modalMonthFilter.options).forEach(opt => {
-            opt.selected = false;
+        Array.from(modalMonthFilter.options).forEach(opt => opt.selected = false);
+        Array.from(realMonthFilter.selectedOptions).forEach(selectedOpt => {
+            const optToSelect = Array.from(modalMonthFilter.options).find(o => o.value === selectedOpt.value);
+            if (optToSelect) optToSelect.selected = true;
         });
-        if (realMonthFilter) {
-            Array.from(realMonthFilter.selectedOptions).forEach(selectedOpt => {
-                const optToSelect = Array.from(modalMonthFilter.options).find(o => o.value === selectedOpt.value);
-                if (optToSelect) optToSelect.selected = true;
-            });
-        }
     }
     
-    // Копируем каналы
     if (modalChannelFilter && realChannelFilter) {
         modalChannelFilter.innerHTML = realChannelFilter.innerHTML;
         modalChannelFilter.value = realChannelFilter.value;
@@ -372,35 +290,22 @@ function updateModalFilters() {
 // ЗАГРУЗКА ФАЙЛА
 // ========================
 
-/**
- * Загружает файл и обновляет глобальные данные
- * @param {File} file - выбранный файл
- */
 async function loadFile(file) {
     try {
         const data = await readExcelFile(file);
         originalData = data;
-        currentData = [...data];  // Копируем данные
+        currentData = [...data];
         
         showNotification(`✅ Данные успешно загружены! (${data.length} записей)`, 'success');
         
-        // Обновляем фильтры на основе новых данных
         updateFilters();
-        
-        // Перерисовываем дашборд
         renderDashboard();
         
-        // Показываем блок с денежными средствами
         const cashSidebarBlock = document.getElementById('cashSidebarBlock');
-        if (cashSidebarBlock) {
-            cashSidebarBlock.style.display = 'block';
-        }
+        if (cashSidebarBlock) cashSidebarBlock.style.display = 'block';
         
-        // Скрываем область загрузки
         const uploadArea = document.getElementById('uploadArea');
-        if (uploadArea) {
-            uploadArea.style.display = 'none';
-        }
+        if (uploadArea) uploadArea.style.display = 'none';
         
     } catch (error) { 
         showNotification('Ошибка: ' + error.message, 'error');
