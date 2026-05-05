@@ -156,21 +156,23 @@ function applyFilters(data, filters = null) {
     const f = filters || currentFilters;
     if (!f) return data;
     
-    console.log('Применяем фильтры:', f);  // ДОБАВИТЬ
+    console.log('applyFilters получил месяцы:', f.month);
     
-    const filtered = data.filter(row => {
+    return data.filter(row => {
         if (row.статья === 'Начальный остаток') return true;
         
         if (f.company && row.компания !== f.company) return false;
         if (f.year && row.год !== f.year) return false;
-        if (f.month && f.month.length > 0 && !f.month.includes(row.месяц)) return false;
+        
+        // ВАЖНО: фильтрация по месяцам
+        if (f.month && f.month.length > 0 && !f.month.includes(row.месяц)) {
+            return false;
+        }
+        
         if (f.channel && row.канал !== f.channel) return false;
         
         return true;
     });
-    
-    console.log('Отфильтровано записей:', filtered.length);  // ДОБАВИТЬ
-    return filtered;
 }
 
 // ========================
