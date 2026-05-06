@@ -1124,6 +1124,421 @@ function renderTabChart(index) {
 }
 
 // ========================
+// ПОЛНЫЕ РАЗБИВКИ ДЛЯ ВКЛАДОК (ИДЕНТИЧНЫ БЛОКАМ НИЖЕ)
+// ========================
+
+/**
+ * Полная разбивка по каналам (как в блоке чистой выручки)
+ */
+function generateFullChannelBreakdown(title, channels, isCurrency = true, suffix = '') {
+    if (!channels || channels.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
+    }
+    
+    const total = channels.reduce((sum, ch) => sum + (ch.value || 0), 0);
+    
+    let html = `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(102,126,234,0.2);">
+        <span style="font-size: 12px; font-weight: 600; color: #667eea;">${title}</span>
+    </div>`;
+    
+    channels.forEach((channel, idx) => {
+        const value = channel.value || 0;
+        const percent = total > 0 ? (value / total) * 100 : 0;
+        const formattedValue = isCurrency ? formatCurrency(value) : value.toLocaleString('ru-RU') + suffix;
+        
+        html += `
+            <div class="breakdown-channel-item" style="margin-bottom: 16px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${idx * 0.05}s;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 2;">
+                        <span style="font-weight: 600; font-size: 14px;">${channel.name}</span>
+                        <span style="font-weight: 700; font-size: 13px;">${formattedValue}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1; justify-content: flex-end;">
+                        <span style="font-size: 11px; background: rgba(102,126,234,0.15); padding: 2px 8px; border-radius: 12px;">${percent.toFixed(1)}%</span>
+                    </div>
+                </div>
+                <div style="background: rgba(102,126,234,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div class="breakdown-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px;"></div>
+                </div>
+            </div>
+        `;
+    });
+    
+    setTimeout(() => {
+        document.querySelectorAll('#tabsContent .breakdown-progress-bar').forEach((bar, i) => {
+            const targetPercent = channels[i] ? (channels[i].value / total) * 100 : 0;
+            setTimeout(() => { bar.style.width = Math.min(targetPercent, 100) + '%'; }, 100);
+        });
+        document.querySelectorAll('#tabsContent .breakdown-channel-item').forEach((item, i) => {
+            setTimeout(() => { item.style.opacity = '1'; item.style.transform = 'translateX(0)'; }, i * 50);
+        });
+    }, 200);
+    
+    return html;
+}
+
+/**
+ * Полная разбивка продаж по каналам (как в блоке продаж)
+ */
+function generateFullSalesBreakdown(data) {
+    let salesByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        let sales = data.filter(d => {
+            const article = d.статья?.toLowerCase() || '';
+            return d.канал === channel && (article.includes('продажи') && (article.includes('шт') || article.includes('штук')));
+        }).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        const salesRef = data.filter(d => d.канал === channel && d.тип === 'Справочная' && (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи'))).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        const totalSales = sales + salesRef;
+        if (totalSales > 0) {
+            salesByChannel.push({ name: channel, sales: totalSales });
+        }
+    });
+    
+    if (salesByChannel.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по продажам</div>';
+    }
+    
+    salesByChannel.sort((a, b) => b.sales - a.sales);
+    const totalSales = salesByChannel.reduce((sum, ch) => sum + ch.sales, 0);
+    
+    let html = `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(102,126,234,0.2);">
+        <span style="font-size: 12px; font-weight: 600; color: #667eea;">ПРОДАЖИ ПО КАНАЛАМ (ШТ)</span>
+    </div>`;
+    
+    salesByChannel.forEach((channel, idx) => {
+        const percent = (channel.sales / totalSales) * 100;
+        html += `
+            <div class="sales-channel-item" style="margin-bottom: 16px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${idx * 0.05}s;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 2;">
+                        <span style="font-weight: 600; font-size: 14px;">${channel.name}</span>
+                        <span style="font-weight: 700; font-size: 13px;">${new Intl.NumberFormat('ru-RU').format(channel.sales)} шт</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1; justify-content: flex-end;">
+                        <span style="font-size: 11px; background: rgba(102,126,234,0.15); padding: 2px 8px; border-radius: 12px;">${percent.toFixed(1)}%</span>
+                    </div>
+                </div>
+                <div style="background: rgba(102,126,234,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div class="sales-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4299e1, #667eea); border-radius: 4px;"></div>
+                </div>
+            </div>
+        `;
+    });
+    
+    setTimeout(() => {
+        document.querySelectorAll('#tabsContent .sales-progress-bar').forEach((bar, i) => {
+            const targetWidth = salesByChannel[i] ? (salesByChannel[i].sales / totalSales) * 100 : 0;
+            setTimeout(() => { bar.style.width = targetWidth + '%'; }, 100);
+        });
+        document.querySelectorAll('#tabsContent .sales-channel-item').forEach((item, i) => {
+            setTimeout(() => { item.style.opacity = '1'; item.style.transform = 'translateX(0)'; }, i * 50);
+        });
+    }, 200);
+    
+    return html;
+}
+
+/**
+ * Полная разбивка среднего чека по каналам (как в блоке среднего чека)
+ */
+function generateFullAverageCheckBreakdown(data) {
+    let avgCheckByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    let totalNetRevenue = 0;
+    let totalSales = 0;
+    
+    allChannels.forEach(channel => {
+        const revenue = data.filter(d => d.канал === channel && d.тип === 'Доход').reduce((sum, d) => sum + d.сумма, 0);
+        const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+        let sales = data.filter(d => {
+            const article = d.статья?.toLowerCase() || '';
+            return d.канал === channel && (article.includes('продажи') && (article.includes('шт') || article.includes('штук')));
+        }).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        const salesRef = data.filter(d => d.канал === channel && d.тип === 'Справочная' && (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи'))).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        const totalSalesChannel = sales + salesRef;
+        const netRevenue = revenue - ndsOut;
+        const avgCheck = totalSalesChannel > 0 ? netRevenue / totalSalesChannel : 0;
+        if (netRevenue > 0 && totalSalesChannel > 0) {
+            avgCheckByChannel.push({ name: channel, avgCheck: avgCheck, netRevenue: netRevenue, sales: totalSalesChannel, revenuePercent: 0 });
+            totalNetRevenue += netRevenue;
+            totalSales += totalSalesChannel;
+        }
+    });
+    
+    const overallAvgCheck = totalSales > 0 ? totalNetRevenue / totalSales : 0;
+    avgCheckByChannel.forEach(channel => { channel.revenuePercent = totalNetRevenue > 0 ? (channel.netRevenue / totalNetRevenue) * 100 : 0; });
+    avgCheckByChannel.sort((a, b) => b.avgCheck - a.avgCheck);
+    
+    if (avgCheckByChannel.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
+    }
+    
+    const topChannel = avgCheckByChannel[0];
+    const forecastAvgCheck = overallAvgCheck * 1.05;
+    
+    let html = `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(102,126,234,0.2);">
+        <span style="font-size: 12px; font-weight: 600; color: #667eea;">СРЕДНИЙ ЧЕК ПО КАНАЛАМ</span>
+        <span style="font-size: 11px; margin-left: 8px;">(сортировка по убыванию)</span>
+    </div>
+    <div style="margin-bottom: 16px; padding: 12px; background: rgba(102,126,234,0.1); border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <div style="font-size: 12px;">Общий средний чек</div>
+                <div style="font-size: 24px; font-weight: 700;">${formatCurrency(overallAvgCheck)}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px;">🏆 Лидер по чеку</div>
+                <div style="font-size: 16px; font-weight: 600;">${topChannel.name} <span style="font-size: 14px; color: #667eea;">${formatCurrency(topChannel.avgCheck)}</span></div>
+            </div>
+            <div>
+                <div style="font-size: 12px;">📈 Прогноз на след. месяц</div>
+                <div style="font-size: 16px; font-weight: 600; color: #48bb78;">${formatCurrency(forecastAvgCheck)}</div>
+                <div style="font-size: 10px;">+5% оптимистичный</div>
+            </div>
+        </div>
+    </div>`;
+    
+    avgCheckByChannel.forEach((channel, idx) => {
+        const deviation = ((channel.avgCheck - overallAvgCheck) / overallAvgCheck) * 100;
+        const deviationClass = deviation >= 0 ? 'positive' : 'negative';
+        const deviationText = deviation >= 0 ? `↑ ${deviation.toFixed(1)}% выше среднего` : `↓ ${Math.abs(deviation).toFixed(1)}% ниже среднего`;
+        let medal = '';
+        if (idx === 0) medal = '🥇';
+        else if (idx === 1) medal = '🥈';
+        else if (idx === 2) medal = '🥉';
+        
+        html += `
+            <div class="avgcheck-channel-item" style="margin-bottom: 20px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${idx * 0.05}s;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 18px;">${medal}</span>
+                        <span style="font-weight: 600; font-size: 15px;">${channel.name}</span>
+                        <span style="font-weight: 700; font-size: 16px; color: #667eea;">${formatCurrency(channel.avgCheck)}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="${deviationClass}" style="font-size: 12px; font-weight: 500;">${deviationText}</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 12px;">
+                    <span>📊 Доля в выручке: ${channel.revenuePercent.toFixed(1)}%</span>
+                    <span>📦 Продажи: ${new Intl.NumberFormat('ru-RU').format(channel.sales)} шт</span>
+                    <span>💰 Выручка: ${formatCurrency(channel.netRevenue)}</span>
+                </div>
+                <div style="background: rgba(102,126,234,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div class="avgcheck-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px;"></div>
+                </div>
+            </div>
+        `;
+    });
+    
+    setTimeout(() => {
+        document.querySelectorAll('#tabsContent .avgcheck-progress-bar').forEach((bar, i) => {
+            const targetWidth = avgCheckByChannel[i] ? Math.min((avgCheckByChannel[i].avgCheck / (overallAvgCheck * 2)) * 100, 100) : 0;
+            setTimeout(() => { bar.style.width = targetWidth + '%'; }, 100);
+        });
+        document.querySelectorAll('#tabsContent .avgcheck-channel-item').forEach((item, i) => {
+            setTimeout(() => { item.style.opacity = '1'; item.style.transform = 'translateX(0)'; }, i * 50);
+        });
+    }, 200);
+    
+    return html;
+}
+
+/**
+ * Полная разбивка эффективности по каналам (как в блоке эффективности)
+ */
+function generateFullEfficiencyBreakdown(data) {
+    let efficiencyByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        const revenue = data.filter(d => d.канал === channel && d.тип === 'Доход').reduce((sum, d) => sum + d.сумма, 0);
+        const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+        const expenses = data.filter(d => d.канал === channel && d.тип === 'Расход').reduce((sum, d) => sum + Math.abs(d.сумма), 0);
+        const netRevenue = revenue - ndsOut;
+        const profit = netRevenue - expenses;
+        const efficiency = expenses > 0 ? profit / expenses : 0;
+        if (netRevenue > 0 && expenses > 0) {
+            efficiencyByChannel.push({ name: channel, profit: profit, expenses: expenses, efficiency: efficiency, efficiencyPercent: (efficiency * 100).toFixed(1) });
+        }
+    });
+    
+    efficiencyByChannel.sort((a, b) => b.efficiency - a.efficiency);
+    const avgEfficiency = efficiencyByChannel.length > 0 ? efficiencyByChannel.reduce((sum, ch) => sum + ch.efficiency, 0) / efficiencyByChannel.length : 0;
+    
+    if (efficiencyByChannel.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
+    }
+    
+    let html = `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(102,126,234,0.2);">
+        <span style="font-size: 12px; font-weight: 600; color: #667eea;">ЭФФЕКТИВНОСТЬ ПО КАНАЛАМ</span>
+        <span style="font-size: 11px; margin-left: 8px;">(прибыль на 1₽ расходов)</span>
+    </div>`;
+    
+    efficiencyByChannel.forEach((channel, idx) => {
+        const efficiencyClass = channel.efficiency >= 1 ? 'positive' : 'negative';
+        const vsAvg = channel.efficiency - avgEfficiency;
+        const vsAvgText = vsAvg > 0 ? `+${(vsAvg * 100).toFixed(1)}% выше среднего` : vsAvg < 0 ? `${(vsAvg * 100).toFixed(1)}% ниже среднего` : 'на уровне среднего';
+        const vsAvgClass = vsAvg > 0 ? 'positive' : vsAvg < 0 ? 'negative' : '';
+        let medal = '';
+        if (idx === 0) medal = '🥇 ';
+        else if (idx === 1) medal = '🥈 ';
+        else if (idx === 2) medal = '🥉 ';
+        
+        html += `
+            <div class="efficiency-channel-item" style="margin-bottom: 20px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${idx * 0.05}s;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 18px;">${medal}</span>
+                        <span style="font-weight: 600; font-size: 14px;">${channel.name}</span>
+                        <span class="${efficiencyClass}" style="font-weight: 700; font-size: 13px;">${channel.efficiency.toFixed(2)} ₽</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 11px;">прибыли на 1₽ расходов</span>
+                        <span style="font-size: 11px; background: rgba(102,126,234,0.15); padding: 2px 8px; border-radius: 12px;">${channel.efficiencyPercent}%</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                        <span>💰 Прибыль: ${formatCurrency(channel.profit)}</span>
+                        <span>📉 Расходы: ${formatCurrency(channel.expenses)}</span>
+                    </div>
+                </div>
+                <div style="background: rgba(102,126,234,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div class="efficiency-progress-bar" style="width: 0%; height: 100%; background: ${channel.efficiency >= 1 ? 'linear-gradient(90deg, #48bb78, #38a169)' : 'linear-gradient(90deg, #f56565, #ed8936)'}; border-radius: 3px;"></div>
+                </div>
+                <div style="margin-top: 4px;">
+                    <span class="${vsAvgClass}" style="font-size: 10px;">${vsAvgText}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(102,126,234,0.2); text-align: center;">
+        <span style="font-size: 11px;">Средняя эффективность: <strong>${avgEfficiency.toFixed(2)} ₽</strong> прибыли на 1₽ расходов</span>
+    </div>`;
+    
+    setTimeout(() => {
+        document.querySelectorAll('#tabsContent .efficiency-progress-bar').forEach((bar, i) => {
+            const targetWidth = efficiencyByChannel[i] ? Math.min(Math.abs(efficiencyByChannel[i].efficiency) * 50, 100) : 0;
+            setTimeout(() => { bar.style.width = targetWidth + '%'; }, 100);
+        });
+        document.querySelectorAll('#tabsContent .efficiency-channel-item').forEach((item, i) => {
+            setTimeout(() => { item.style.opacity = '1'; item.style.transform = 'translateX(0)'; }, i * 50);
+        });
+    }, 200);
+    
+    return html;
+}
+
+/**
+ * Генерирует разбивку НДС по каналам
+ */
+function generateNDSBreakdown(data) {
+    const ndsByChannel = {};
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+        const ndsIn = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС входящий').reduce((sum, d) => sum + d.сумма, 0);
+        const total = ndsOut - ndsIn;
+        if (ndsOut !== 0 || ndsIn !== 0 || total !== 0) {
+            ndsByChannel[channel] = { ndsOut: ndsOut, ndsIn: ndsIn, total: total };
+        }
+    });
+    
+    const channelsList = Object.entries(ndsByChannel).filter(([_, d]) => d.total !== 0).sort((a, b) => b[1].total - a[1].total).map(([name, d]) => ({ name, ndsOut: d.ndsOut, ndsIn: d.ndsIn, total: d.total }));
+    const totalOut = channelsList.reduce((sum, ch) => sum + ch.ndsOut, 0);
+    const totalIn = channelsList.reduce((sum, ch) => sum + ch.ndsIn, 0);
+    const totalNDS = totalOut - totalIn;
+    
+    if (channelsList.length === 0) {
+        return '<div style="text-align: center; padding: 16px;">Нет данных по каналам</div>';
+    }
+    
+    let html = '<div class="nds-channels-list">';
+    html += '<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(102,126,234,0.2);">';
+    html += '<span style="font-size: 12px; font-weight: 600; color: #667eea;">РАЗБИВКА НДС ПО КАНАЛАМ</span>';
+    html += '<span style="font-size: 11px; margin-left: 8px;">(нажмите на канал для деталей)</span>';
+    html += '</div>';
+    
+    for (let idx = 0; idx < channelsList.length; idx++) {
+        const channel = channelsList[idx];
+        const outPercent = totalOut > 0 ? (channel.ndsOut / totalOut) * 100 : 0;
+        const inPercent = totalIn > 0 ? (channel.ndsIn / totalIn) * 100 : 0;
+        const totalPercent = totalNDS !== 0 ? (Math.abs(channel.total) / Math.abs(totalNDS)) * 100 : 0;
+        const formattedOut = formatCurrency(channel.ndsOut);
+        const formattedIn = formatCurrency(channel.ndsIn);
+        const formattedTotal = formatCurrency(channel.total);
+        const totalClass = channel.total >= 0 ? 'negative' : 'positive';
+        
+        html += '<div class="nds-channel-item" data-channel="' + channel.name + '" style="margin-bottom: 16px; border-bottom: 1px solid rgba(102,126,234,0.2); padding-bottom: 12px;">';
+        html += '<div class="nds-channel-header" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 8px 0; border-radius: 8px;">';
+        html += '<div style="display: flex; align-items: center; gap: 10px;">';
+        html += '<span class="nds-expand-icon" style="font-size: 12px; transition: transform 0.3s; display: inline-block;">▶</span>';
+        html += '<span style="font-weight: 600; font-size: 15px;">' + channel.name + '</span>';
+        html += '</div>';
+        html += '<div style="display: flex; align-items: center; gap: 12px;">';
+        html += '<span class="' + totalClass + '" style="font-weight: 700; font-size: 14px;">' + formattedTotal + '</span>';
+        html += '<span style="font-size: 11px; background: rgba(102,126,234,0.15); padding: 2px 8px; border-radius: 12px;">' + totalPercent.toFixed(1) + '%</span>';
+        html += '</div></div>';
+        
+        html += '<div class="nds-channel-details" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; padding-left: 20px;">';
+        html += '<div style="padding-top: 8px; padding-bottom: 8px;">';
+        
+        html += '<div style="margin-bottom: 8px;">';
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        html += '<span style="font-size: 12px;">Исходящий</span>';
+        html += '<div style="display: flex; align-items: center; gap: 12px;">';
+        html += '<span style="font-size: 13px; font-weight: 600; color: #f56565;">' + formattedOut + '</span>';
+        html += '<span style="font-size: 11px; background: rgba(102,126,234,0.1); padding: 2px 8px; border-radius: 12px;">' + outPercent.toFixed(1) + '%</span>';
+        html += '</div></div>';
+        html += '<div style="background: rgba(245,101,101,0.2); height: 4px; border-radius: 2px; overflow: hidden;">';
+        html += '<div style="width: ' + outPercent + '%; height: 100%; background: #f56565; border-radius: 2px;"></div>';
+        html += '</div></div>';
+        
+        html += '<div>';
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+        html += '<span style="font-size: 12px;">Входящий</span>';
+        html += '<div style="display: flex; align-items: center; gap: 12px;">';
+        html += '<span style="font-size: 13px; font-weight: 600; color: #48bb78;">' + formattedIn + '</span>';
+        html += '<span style="font-size: 11px; background: rgba(102,126,234,0.1); padding: 2px 8px; border-radius: 12px;">' + inPercent.toFixed(1) + '%</span>';
+        html += '</div></div>';
+        html += '<div style="background: rgba(72,187,120,0.2); height: 4px; border-radius: 2px; overflow: hidden;">';
+        html += '<div style="width: ' + inPercent + '%; height: 100%; background: #48bb78; border-radius: 2px;"></div>';
+        html += '</div></div>';
+        
+        html += '</div></div></div>';
+    }
+    
+    html += '</div>';
+    
+    setTimeout(function() {
+        document.querySelectorAll('.nds-channel-header').forEach(function(header) {
+            if (header.hasClickListener) return;
+            header.hasClickListener = true;
+            header.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var channelItem = header.closest('.nds-channel-item');
+                var details = channelItem.querySelector('.nds-channel-details');
+                var expandIcon = header.querySelector('.nds-expand-icon');
+                if (details.style.maxHeight && details.style.maxHeight !== '0px') {
+                    details.style.maxHeight = '0';
+                    if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
+                } else {
+                    details.style.maxHeight = details.scrollHeight + 'px';
+                    if (expandIcon) expandIcon.style.transform = 'rotate(90deg)';
+                }
+            });
+        });
+    }, 100);
+    
+    return html;
+}
+
+// ========================
 // РАЗБИВКИ ДЛЯ ВКЛАДОК
 // ========================
 
