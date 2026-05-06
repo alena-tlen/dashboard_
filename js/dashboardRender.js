@@ -1,5 +1,5 @@
 // ========================
-// dashboardRender.js - ОТРИСОВКА ДАШБОРДА
+// dashboardRender.js - ПОЛНАЯ ОТРИСОВКА ДАШБОРДА
 // ========================
 
 // Глобальные переменные для графиков
@@ -10,7 +10,7 @@ let netRevenueMiniChart = null;
 let profitMiniChart = null;
 let isRendering = false;
 
-// НЕ ОБЪЯВЛЯЕМ переменные, используем глобальные из window
+// Синхронизация глобальных данных
 function syncGlobalData() {
     window.originalData = window.originalData || [];
     window.currentData = window.currentData || [];
@@ -22,6 +22,7 @@ function syncGlobalData() {
 // ========================
 
 function formatCurrency(value) {
+    if (value === undefined || value === null) return '0 ₽';
     return new Intl.NumberFormat('ru-RU', { 
         style: 'currency', 
         currency: 'RUB', 
@@ -65,7 +66,61 @@ function getPreviousMonths(months, count = 1) {
 }
 
 // ========================
-// МИНИ-ГРАФИКИ
+// ФУНКЦИЯ ДЛЯ ПОКАЗА УВЕДОМЛЕНИЙ
+// ========================
+
+function showNotification(message, type = 'success') {
+    const oldNotification = document.getElementById('temporaryNotification');
+    if (oldNotification) oldNotification.remove();
+    
+    const notification = document.createElement('div');
+    notification.id = 'temporaryNotification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 10000;
+        padding: 14px 24px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        animation: slideInRight 0.3s ease-out;
+        backdrop-filter: blur(10px);
+        cursor: pointer;
+    `;
+    
+    const styles = {
+        success: { background: 'linear-gradient(135deg, #48bb78, #38a169)', icon: '✅' },
+        error: { background: 'linear-gradient(135deg, #f56565, #e53e3e)', icon: '❌' },
+        info: { background: 'linear-gradient(135deg, #667eea, #764ba2)', icon: 'ℹ️' }
+    };
+    
+    const style = styles[type] || styles.success;
+    notification.style.background = style.background;
+    notification.style.color = 'white';
+    notification.innerHTML = `<span style="font-size: 20px;">${style.icon}</span><span>${message}</span><span style="margin-left: 8px; opacity: 0.7; font-size: 12px;">×</span>`;
+    
+    document.body.appendChild(notification);
+    
+    notification.onclick = () => {
+        notification.style.animation = 'fadeOutRight 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    };
+    
+    setTimeout(() => {
+        if (notification && notification.parentNode) {
+            notification.style.animation = 'fadeOutRight 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 4000);
+}
+
+// ========================
+// МИНИ-ГРАФИКИ (CHART.JS)
 // ========================
 
 function renderMiniChartJS(elementId, labels, data, color) {
@@ -84,8 +139,27 @@ function renderMiniChartJS(elementId, labels, data, color) {
     
     miniRevenueChart = new Chart(ctx, {
         type: 'line',
-        data: { labels: labels, datasets: [{ data: data, borderColor: lineColor, backgroundColor: areaColor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0.4, fill: true }] },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                data: data, 
+                borderColor: lineColor, 
+                backgroundColor: areaColor, 
+                borderWidth: 2, 
+                pointRadius: 0, 
+                pointHoverRadius: 5, 
+                tension: 0.4, 
+                fill: true,
+                cubicInterpolationMode: 'monotone'
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: true, 
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
+            scales: { x: { display: false }, y: { display: false } },
+            layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
+        }
     });
 }
 
@@ -104,8 +178,27 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
     
     miniExpenseChart = new Chart(ctx, {
         type: 'line',
-        data: { labels: labels, datasets: [{ data: data, borderColor: '#f56565', backgroundColor: areaColor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0.4, fill: true }] },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                data: data, 
+                borderColor: '#f56565', 
+                backgroundColor: areaColor, 
+                borderWidth: 2, 
+                pointRadius: 0, 
+                pointHoverRadius: 5, 
+                tension: 0.4, 
+                fill: true,
+                cubicInterpolationMode: 'monotone'
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: true, 
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
+            scales: { x: { display: false }, y: { display: false } },
+            layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
+        }
     });
 }
 
@@ -157,8 +250,25 @@ function renderNetRevenueMiniChart() {
     
     window.netRevenueMiniChartInstance = new Chart(ctx, {
         type: 'line',
-        data: { labels: labels, datasets: [{ data: values, borderColor: lineColor, backgroundColor: areaColor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0.4, fill: true }] },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                data: values, 
+                borderColor: lineColor, 
+                backgroundColor: areaColor, 
+                borderWidth: 2, 
+                pointRadius: 0, 
+                pointHoverRadius: 5, 
+                tension: 0.4, 
+                fill: true 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: true, 
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
+            scales: { x: { display: false }, y: { display: false } } 
+        }
     });
 }
 
@@ -216,8 +326,25 @@ function renderProfitMiniChart() {
     
     window.profitMiniChartInstance = new Chart(ctx, {
         type: 'line',
-        data: { labels: labels, datasets: [{ data: values, borderColor: lineColor, backgroundColor: areaColor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0.4, fill: true }] },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                data: values, 
+                borderColor: lineColor, 
+                backgroundColor: areaColor, 
+                borderWidth: 2, 
+                pointRadius: 0, 
+                pointHoverRadius: 5, 
+                tension: 0.4, 
+                fill: true 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: true, 
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
+            scales: { x: { display: false }, y: { display: false } } 
+        }
     });
 }
 
@@ -226,22 +353,124 @@ function renderMonthlyLineChart(labels, revenues) {
     if (!canvas) return;
     if (window.monthlyLineChart) { try { window.monthlyLineChart.destroy(); } catch(e) {} window.monthlyLineChart = null; }
     const ctx = canvas.getContext('2d');
+    const isDarkMode = document.body.classList.contains('dark');
+    const textColor = isDarkMode ? '#e2e8f0' : '#4a5568';
+    
     window.monthlyLineChart = new Chart(ctx, {
         type: 'line',
-        data: { labels: labels, datasets: [{ label: 'Выручка (тыс. ₽)', data: revenues, borderColor: '#48bb78', backgroundColor: 'rgba(72,187,120,0.1)', borderWidth: 2, fill: true, tension: 0.4 }] },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                label: 'Выручка (тыс. ₽)', 
+                data: revenues, 
+                borderColor: '#48bb78', 
+                backgroundColor: 'rgba(72,187,120,0.1)', 
+                borderWidth: 3, 
+                pointRadius: 4, 
+                pointHoverRadius: 8, 
+                pointBackgroundColor: '#48bb78',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                fill: true, 
+                tension: 0.4 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: true, 
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
+                    titleColor: textColor,
+                    bodyColor: textColor,
+                    borderColor: '#48bb78',
+                    borderWidth: 1,
+                    callbacks: { label: function(context) { return `💰 ${context.parsed.y.toFixed(0)} тыс. ₽`; } }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' }, maxRotation: 45, minRotation: 45 } },
+                y: { grid: { color: isDarkMode ? '#2d3748' : '#e2e8f0' }, ticks: { color: textColor } }
+            }
+        }
     });
 }
 
 function renderSalesChart(labels, salesData) {
     const canvas = document.getElementById('salesChart');
-    if (!canvas) return;
+    if (!canvas || !labels || labels.length === 0 || !salesData || salesData.length === 0) return;
     if (window.salesChart) { try { window.salesChart.destroy(); } catch(e) {} window.salesChart = null; }
+    
     const ctx = canvas.getContext('2d');
+    const isDarkMode = document.body.classList.contains('dark');
+    const maxSales = Math.max(...salesData);
+    const minSales = Math.min(...salesData);
+    
+    const createGradient = (colorStart, colorEnd, colorMiddle = null) => {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, colorStart);
+        if (colorMiddle) gradient.addColorStop(0.5, colorMiddle);
+        gradient.addColorStop(1, colorEnd);
+        return gradient;
+    };
+    
+    const gradients = salesData.map((value) => {
+        if (value === maxSales && maxSales > 0) {
+            return createGradient('#6ee7b7', '#48bb78', '#38a169');
+        } else if (value === minSales && salesData.length > 1 && minSales !== maxSales) {
+            return createGradient('#fc8181', '#f56565', '#e53e3e');
+        } else {
+            return createGradient('#93c5fd', '#60a5fa', '#3b82f6');
+        }
+    });
+    
     window.salesChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels: labels, datasets: [{ label: 'Продажи (шт)', data: salesData, backgroundColor: '#60a5fa', borderRadius: 8, barPercentage: 0.7 }] },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                label: 'Продажи (шт)', 
+                data: salesData, 
+                backgroundColor: gradients, 
+                borderColor: '#ffffff',
+                borderWidth: 1,
+                borderRadius: 10,
+                barPercentage: 0.7,
+                categoryPercentage: 0.85
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: true, 
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
+                    titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    borderColor: '#667eea',
+                    borderWidth: 1,
+                    callbacks: {
+                        title: function(context) { return context[0].label; },
+                        label: function(context) { return `📦 Продажи: ${context.parsed.y.toFixed(0)} шт`; },
+                        afterBody: function(context) {
+                            const value = context[0].parsed.y;
+                            if (value === maxSales && maxSales > 0) return '🏆 Лучший месяц! 🎉';
+                            if (value === minSales && salesData.length > 1 && minSales !== maxSales) return '⚠️ Худший месяц. Требуется анализ.';
+                            return '';
+                        }
+                    }
+                }
+            },
+            scales: { x: { display: false }, y: { display: false } },
+            layout: { padding: { top: 15, bottom: 5, left: 5, right: 5 } },
+            animation: { duration: 1000, easing: 'easeOutQuart' }
+        }
     });
 }
 
@@ -249,33 +478,95 @@ function renderNdsToRevenueChart(labels, ndsValues, revenueValues) {
     const canvas = document.getElementById('ndsToRevenueChart');
     if (!canvas) return;
     if (window.ndsToRevenueChart) { try { window.ndsToRevenueChart.destroy(); } catch(e) {} window.ndsToRevenueChart = null; }
+    
+    const isDarkMode = document.body.classList.contains('dark');
     const ndsPercentages = ndsValues.map((nds, idx) => { const revenue = revenueValues[idx] || 0; return revenue > 0 ? (Math.abs(nds) / revenue) * 100 : 0; });
+    const barColors = ndsPercentages.map(percent => {
+        if (percent > 20) return '#f56565';
+        if (percent > 15) return '#ed8936';
+        if (percent > 10) return '#fbbf24';
+        return '#48bb78';
+    });
+    
     const ctx = canvas.getContext('2d');
     window.ndsToRevenueChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels: labels, datasets: [{ label: 'НДС (% от выручки)', data: ndsPercentages, backgroundColor: ndsPercentages.map(p => p > 20 ? '#f56565' : p > 15 ? '#ed8936' : p > 10 ? '#fbbf24' : '#48bb78'), borderRadius: 8 }] },
-        options: { responsive: true, maintainAspectRatio: true, scales: { y: { title: { display: true, text: '%' } } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                label: 'НДС (% от чистой выручки)', 
+                data: ndsPercentages, 
+                backgroundColor: barColors,
+                borderColor: barColors,
+                borderRadius: 10,
+                barPercentage: 0.65,
+                categoryPercentage: 0.8,
+                borderWidth: 1
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: true, 
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
+                    titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    borderColor: '#667eea',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            const idx = context.dataIndex;
+                            const percent = context.parsed.y;
+                            const nds = ndsValues[idx];
+                            const netRevenue = revenueValues[idx];
+                            return [`📊 НДС: ${percent.toFixed(1)}% от чистой выручки`, `💰 НДС: ${formatCurrency(Math.abs(nds))}`, `📈 Чистая выручка: ${formatCurrency(netRevenue)}`];
+                        }
+                    }
+                }
+            },
+            scales: { 
+                x: { ticks: { color: isDarkMode ? '#e2e8f0' : '#4a5568', maxRotation: 45, minRotation: 45 }, grid: { display: false } },
+                y: { title: { display: true, text: 'НДС (% от чистой выручки)', color: isDarkMode ? '#e2e8f0' : '#4a5568', font: { size: 10 } }, ticks: { color: isDarkMode ? '#e2e8f0' : '#4a5568', callback: (value) => value + '%' }, grid: { color: isDarkMode ? '#2d3748' : '#e2e8f0' }, min: 0, max: 30 }
+            },
+            layout: { padding: { top: 10, bottom: 10, left: 5, right: 5 } },
+            animation: { duration: 1000, easing: 'easeOutQuart' }
+        }
     });
 }
 
 function renderNdsStatsCard(ndsPercent, ndsAmount, revenue) {
     const container = document.getElementById('ndsStatsCard');
     if (!container) return;
-    let status = '', color = '';
-    if (ndsPercent > 20) { status = 'Критичная нагрузка'; color = '#f56565'; }
-    else if (ndsPercent > 15) { status = 'Высокая нагрузка'; color = '#ed8936'; }
-    else if (ndsPercent > 10) { status = 'Средняя нагрузка'; color = '#fbbf24'; }
-    else { status = 'Нормальная нагрузка'; color = '#48bb78'; }
-    container.innerHTML = `<div style="margin-top: 16px; padding: 12px; background: ${color}15; border-radius: 12px; border-left: 3px solid ${color};">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div><div style="font-size: 12px;">НДС к уплате</div><div style="font-size: 20px; font-weight: 700;">${formatCurrency(Math.abs(ndsAmount))}</div></div>
-            <div style="text-align: right;"><div style="font-size: 12px;">% от выручки</div><div style="font-size: 20px; font-weight: 700; color: ${color};">${ndsPercent.toFixed(1)}%</div><div style="font-size: 10px;">${status}</div></div>
+    
+    let status = { color: '#48bb78', text: 'Оптимально', icon: '✅', recommendation: 'Нормальная налоговая нагрузка. Хороший показатель!' };
+    if (ndsPercent > 20) status = { color: '#f56565', text: 'Критично', icon: '🔴', recommendation: 'Срочно оптимизируйте налоги! Рассмотрите возможность увеличения входящего НДС через закупки у плательщиков НДС.' };
+    else if (ndsPercent > 15) status = { color: '#ed8936', text: 'Высокая', icon: '⚠️', recommendation: 'Высокая налоговая нагрузка. Проверьте возможность применения налоговых вычетов и работу с поставщиками на ОСНО.' };
+    else if (ndsPercent > 10) status = { color: '#fbbf24', text: 'Средняя', icon: '📊', recommendation: 'Средний уровень. Можно оптимизировать через увеличение входящего НДС.' };
+    else if (ndsPercent > 5) status = { color: '#48bb78', text: 'Низкая', icon: '✅', recommendation: 'Хороший показатель! Поддерживайте текущий уровень.' };
+    else status = { color: '#48bb78', text: 'Минимальная', icon: '🎯', recommendation: 'Отличный результат! Вы эффективно управляете налоговой нагрузкой.' };
+    
+    container.innerHTML = `<div class="nds-stats-card" style="background: ${status.color}15; border-radius: 16px; padding: 14px; margin-top: 16px; border: 1px solid ${status.color}30;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+            <div style="font-size: 32px;">${status.icon}</div>
+            <div><div style="font-size: 13px; font-weight: 600; color: ${status.color};">${status.text} нагрузка</div><div style="font-size: 22px; font-weight: 700;">${ndsPercent.toFixed(1)}%</div></div>
+            <div style="margin-left: auto; text-align: right;"><div style="font-size: 10px; opacity: 0.7;">НДС / Выручка</div><div style="font-size: 12px; font-weight: 500;">${formatCurrency(Math.abs(ndsAmount))} / ${formatCurrency(revenue)}</div></div>
         </div>
+        <div style="background: rgba(0,0,0,0.05); border-radius: 8px; padding: 10px; font-size: 12px; line-height: 1.4;">💡 ${status.recommendation}</div>
+        <div style="margin-top: 12px;"><div style="font-size: 10px; opacity: 0.6; margin-bottom: 6px;">📊 Шкала налоговой нагрузки:</div>
+        <div style="display: flex; gap: 2px;">
+            <div style="flex: 1; height: 6px; background: #48bb78; border-radius: 3px 0 0 3px;" class="nds-scale"></div>
+            <div style="flex: 1; height: 6px; background: #fbbf24;" class="nds-scale"></div>
+            <div style="flex: 1; height: 6px; background: #ed8936;" class="nds-scale"></div>
+            <div style="flex: 1; height: 6px; background: #f56565; border-radius: 0 3px 3px 0;" class="nds-scale"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 9px; margin-top: 4px;"><span>0-5%</span><span>5-10%</span><span>10-15%</span><span>15%+</span></div></div>
     </div>`;
 }
 
 // ========================
-// СЦЕНАРНЫЙ АНАЛИЗ (из монолита)
+// СЦЕНАРНЫЙ АНАЛИЗ С ПОЛЗУНКАМИ (из монолита)
 // ========================
 
 let currentScenario = { revenueGrowth: 0, expenseGrowth: 0, ndsGrowth: 0, priceChange: 0, volumeChange: 0 };
@@ -354,21 +645,12 @@ function renderScenarioAnalysis(f, totalSalesQuantity, avgCheck, avgCost, costDa
     `;
     
     let recommendationText = '';
-    if (scenarioProfit > baseProfit * 1.2) {
-        recommendationText = '🚀 Отличный сценарий! Прибыль выросла более чем на 20%. Рассмотрите возможность увеличения маркетингового бюджета.';
-    } else if (scenarioProfit > baseProfit) {
-        recommendationText = '📈 Положительная динамика. Продолжайте в том же духе, но следите за расходами.';
-    } else if (scenarioProfit > baseProfit * 0.9) {
-        recommendationText = '⚠️ Прибыль немного снизилась. Проанализируйте структуру расходов.';
-    } else {
-        recommendationText = '🔴 Критическое снижение прибыли! Требуется немедленная оптимизация затрат или повышение цен.';
-    }
-    if (currentScenario.priceChange > 10 && currentScenario.volumeChange < -5) {
-        recommendationText += ' Внимание: повышение цены привело к падению продаж. Возможно, стоит пересмотреть ценовую политику.';
-    }
-    if (currentScenario.expenseGrowth > 20) {
-        recommendationText += ' Расходы выросли слишком сильно. Ищите точки оптимизации.';
-    }
+    if (scenarioProfit > baseProfit * 1.2) recommendationText = '🚀 Отличный сценарий! Прибыль выросла более чем на 20%. Рассмотрите возможность увеличения маркетингового бюджета.';
+    else if (scenarioProfit > baseProfit) recommendationText = '📈 Положительная динамика. Продолжайте в том же духе, но следите за расходами.';
+    else if (scenarioProfit > baseProfit * 0.9) recommendationText = '⚠️ Прибыль немного снизилась. Проанализируйте структуру расходов.';
+    else recommendationText = '🔴 Критическое снижение прибыли! Требуется немедленная оптимизация затрат или повышение цен.';
+    if (currentScenario.priceChange > 10 && currentScenario.volumeChange < -5) recommendationText += ' Внимание: повышение цены привело к падению продаж. Возможно, стоит пересмотреть ценовую политику.';
+    if (currentScenario.expenseGrowth > 20) recommendationText += ' Расходы выросли слишком сильно. Ищите точки оптимизации.';
     
     const recommendationHtml = `<div style="margin-top: 16px; padding: 12px; background: rgba(102,126,234,0.1); border-radius: 12px;"><div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">💡 Рекомендация</div><div style="font-size: 12px; line-height: 1.4;">${recommendationText}</div></div>`;
     
@@ -412,7 +694,7 @@ function initScenarioHandlers(f, totalSalesQuantity, avgCheck, avgCost, costData
 }
 
 // ========================
-// АНОМАЛИИ (из монолита)
+// АНОМАЛИИ И ВЫБРОСЫ (из монолита)
 // ========================
 
 function renderAnomaliesBlock(data, f, totalSalesQuantity, avgCheck) {
@@ -557,7 +839,7 @@ function renderQuadrantMatrix(data, f) {
             <div style="background: rgba(245,101,101,0.15); border-left: 3px solid #f56565; border-radius: 8px; padding: 10px;"><div style="font-size: 12px; font-weight: 600;">⚠️ Проблемные</div><div style="font-size: 11px; opacity: 0.8;">Низкая маржа + низкие продажи</div><div style="font-size: 11px; margin-top: 4px; color: #f56565;">${channelData.filter(c => c.quadrant === 'problem').map(c => c.name).join(', ') || '—'}</div></div>
         </div>
         <div style="margin-top: 16px; overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <thead><tr style="background: rgba(102,126,234,0.1);"><th style="padding: 10px; text-align: left;">Канал</th><th style="padding: 10px; text-align: right;">Маржинальность</th><th style="padding: 10px; text-align: right;">Продажи (шт)</th><th style="padding: 10px; text-align: right;">Выручка</th><th style="padding: 10px; text-align: left;">Стратегия</th></tr></thead>
+            <thead><tr style="background: rgba(102,126,234,0.1);"><th style="padding: 10px; text-align: left;">Канал</th><th style="padding: 10px; text-align: right;">Маржинальность</th><th style="padding: 10px; text-align: right;">Продажи (шт)</th><th style="padding: 10px; text-align: right;">Выручка</th><th style="padding: 10px; text-align: left;">Стратегия</th> </tr></thead>
             <tbody>${channelData.map(channel => {
                 let strategy = '', strategyColor = '';
                 switch(channel.quadrant) {
@@ -572,9 +854,9 @@ function renderQuadrantMatrix(data, f) {
                     <td style="padding: 10px; text-align: right;">${new Intl.NumberFormat('ru-RU').format(channel.sales)} шт</td>
                     <td style="padding: 10px; text-align: right;">${formatCurrency(channel.netRevenue)}</td>
                     <td style="padding: 10px; color: ${strategyColor};">${strategy}</td>
-                </tr>`;
+                 </tr>`;
             }).join('')}</tbody>
-        </table></div>
+         </table></div>
         <div style="padding: 16px; background: rgba(102,126,234,0.1); border-radius: 12px;">
             <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">💡 Рекомендации</div>
             <div style="font-size: 13px; line-height: 1.5;">${(() => {
@@ -596,7 +878,7 @@ function renderQuadrantMatrix(data, f) {
 }
 
 // ========================
-// ВОДОПАДНАЯ ДИАГРАММА (из монолита)
+// ВОДОПАДНАЯ ДИАГРАММА SVG (из монолита)
 // ========================
 
 function renderWaterfallSVG(containerId, f) {
@@ -623,13 +905,14 @@ function renderWaterfallSVG(containerId, f) {
     const barWidth = (chartWidth - (steps.length - 1) * 10) / steps.length;
     
     let svgHtml = `<svg width="${width}" height="${height}" style="background: transparent; font-family: inherit;">
-        <defs><linearGradient id="waterfallGrad1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#4299e1;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#3182ce;stop-opacity:0.7"/></linearGradient>
-        <linearGradient id="waterfallGrad2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#ed8936;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#dd6b20;stop-opacity:0.7"/></linearGradient>
-        <linearGradient id="waterfallGrad3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#f56565;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#e53e3e;stop-opacity:0.7"/></linearGradient>
-        <linearGradient id="waterfallGrad4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#48bb78;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#38a169;stop-opacity:0.7"/></linearGradient>
-        <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/></filter>
-    </defs>
-    <text x="${width/2}" y="25" text-anchor="middle" font-size="14" font-weight="600" fill="#667eea">💰 От выручки к чистой прибыли</text>`;
+        <defs>
+            <linearGradient id="waterfallGrad1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#4299e1;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#3182ce;stop-opacity:0.7"/></linearGradient>
+            <linearGradient id="waterfallGrad2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#ed8936;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#dd6b20;stop-opacity:0.7"/></linearGradient>
+            <linearGradient id="waterfallGrad3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#f56565;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#e53e3e;stop-opacity:0.7"/></linearGradient>
+            <linearGradient id="waterfallGrad4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#48bb78;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#38a169;stop-opacity:0.7"/></linearGradient>
+            <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/></filter>
+        </defs>
+        <text x="${width/2}" y="25" text-anchor="middle" font-size="14" font-weight="600" fill="#667eea">💰 От выручки к чистой прибыли</text>`;
     
     steps.forEach((step, i) => {
         const x = padding.left + i * (barWidth + 10);
@@ -653,7 +936,7 @@ function renderWaterfallSVG(containerId, f) {
 }
 
 // ========================
-// ТЕПЛОВАЯ КАРТА (из монолита)
+// ТЕПЛОВАЯ КАРТА HTML/CSS (из монолита)
 // ========================
 
 function renderHeatmapTable(containerId, data) {
@@ -662,10 +945,11 @@ function renderHeatmapTable(containerId, data) {
     
     const channels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
     const monthMap = new Map();
+    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     
     data.forEach(row => {
         if (!row.месяц || !row.год) return;
-        const monthIndex = MONTHS_ORDER.indexOf(row.месяц);
+        const monthIndex = monthsOrder.indexOf(row.месяц);
         if (monthIndex === -1) return;
         const key = `${row.год}-${monthIndex}`;
         if (!monthMap.has(key)) monthMap.set(key, { year: row.год, month: row.месяц, index: monthIndex, profits: {} });
@@ -741,16 +1025,53 @@ function renderHeatmapTable(containerId, data) {
 }
 
 // ========================
-// ВКЛАДКИ ВМЕСТО КАРУСЕЛИ
+// КОЛЛАПСИБЕЛЬНЫЙ БЛОК (с анимацией)
+// ========================
+
+function createCollapsibleBlock(title, icon, total, totalChange, channels, isExpense = false, monthlyDataMap = null, monthlyLabelsParam = null, monthlyValues = null, totalRevenue = null) {
+    const channelItemsHtml = channels.map((channel, channelIdx) => {
+        const channelPercent = (channel.total / total) * 100;
+        const sortedItems = [...channel.items].sort((a, b) => b.amount - a.amount);
+        const itemsHtml = sortedItems.map((item, itemIdx) => {
+            const itemPercentOfChannel = (item.amount / channel.total) * 100;
+            const gradient = isExpense ? 'linear-gradient(90deg, #f56565, #ed8936)' : 'linear-gradient(90deg, #48bb78, #8dd934)';
+            return `<div class="sub-item" style="margin-bottom: 12px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${itemIdx * 0.03}s;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;"><span style="font-size: 13px; font-weight: 500;">${item.name}</span><div style="display: flex; gap: 12px;"><span style="font-size: 13px; font-weight: 600;">${formatCurrency(item.amount)}</span></div></div>
+                <div style="background: rgba(102,126,234,0.15); height: 6px; border-radius: 3px; overflow: hidden;"><div class="sub-progress-bar" style="width: ${itemPercentOfChannel}%; height: 100%; background: ${gradient}; border-radius: 3px;"></div></div>
+            </div>`;
+        }).join('');
+        const channelGradient = isExpense ? 'linear-gradient(90deg, #f56565, #ed8936)' : 'linear-gradient(90deg, #48bb78, #8dd934)';
+        return `<div class="channel-item" data-channel-name="${channel.name}" style="margin-bottom: 20px; border-bottom: 1px solid rgba(102,126,234,0.2); padding-bottom: 16px;">
+            <div class="channel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                <div style="display: flex; align-items: center; gap: 10px;"><span class="channel-icon" style="font-size: 20px;">${getChannelIcon(channel.name)}</span><span style="font-weight: 700; font-size: 15px;">${channel.name}</span></div>
+                <div style="display: flex; align-items: center; gap: 12px;"><span class="channel-total" style="font-size: 14px; font-weight: 600;">${formatCurrency(channel.total)}</span><span class="expand-icon" style="font-size: 14px; transition: transform 0.3s; cursor: pointer;">▶</span></div>
+            </div>
+            <div style="background: rgba(102,126,234,0.1); height: 8px; border-radius: 4px; margin-bottom: 12px; overflow: hidden;"><div class="channel-progress-bar" style="width: ${channelPercent}%; height: 100%; background: ${channelGradient}; border-radius: 4px;"></div></div>
+            <div class="channel-details" style="max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);"><div style="padding-top: 12px; padding-left: 30px;">${itemsHtml}</div></div>
+        </div>`;
+    }).join('');
+    
+    const chartHtml = (monthlyValues && monthlyValues.length > 0) ? `<div class="revenue-chart-wrapper" style="margin-top: 16px;"><canvas id="${isExpense ? 'expenseMiniChartNew' : 'revenueMiniChartNew'}" style="height: 100px; width: 100%; display: block;"></canvas></div>` : '';
+    
+    return `<div class="metric-card" style="overflow: hidden; padding: 20px; height: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 20px;">${icon}</span><span style="font-size: 16px; font-weight: 700;">${title}</span></div>
+        <button class="toggle-channels-${isExpense ? 'expense' : 'revenue'}-btn" style="background: rgba(102,126,234,0.15); border: none; border-radius: 20px; padding: 4px 12px; font-size: 11px; color: #667eea; cursor: pointer;"><span class="toggle-icon-main">▶</span> Показать каналы</button></div>
+        <div style="margin-bottom: 20px;"><div class="metric-value" style="font-size: 32px;">${formatCurrency(total)}</div>${getChangeHtml(totalChange, isExpense)}</div>
+        <div class="channels-${isExpense ? 'expense' : 'revenue'}-container" style="max-height: 0; opacity: 0; overflow-y: auto; transition: max-height 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;">${channelItemsHtml}<button class="toggle-all-channels-btn" style="margin-top: 16px; background: none; border: none; color: #667eea; cursor: pointer;"><span>▶</span> Раскрыть подканалы</button></div>
+        ${chartHtml}
+    </div>`;
+}
+
+// ========================
+// ВКЛАДКИ (modern-tabs-container)
 // ========================
 
 function generateTabsPanel() {
-    if (!currentData || currentData.length === 0) {
+    if (!window.currentData || window.currentData.length === 0) {
         return '<div class="metric-card" style="padding: 40px; text-align: center;">📊 Нет данных для отображения</div>';
     }
     
-    const f = window.calculateFinancials ? window.calculateFinancials(currentData) : { netRevenue: 0, profit: 0, totalExpenses: 1 };
-    
+    const f = window.calculateFinancials ? window.calculateFinancials(window.currentData) : { netRevenue: 0, profit: 0, totalExpenses: 1 };
     const prevMonths = getPreviousMonths(currentFilters.month || [], 1);
     let prevData = [];
     if (prevMonths.length > 0 && currentFilters.year) {
@@ -763,11 +1084,10 @@ function generateTabsPanel() {
             return true;
         });
     }
-    
     const fPrev = prevData.length > 0 ? (window.calculateFinancials ? window.calculateFinancials(prevData) : null) : null;
     
     let salesFromArticle = 0, salesFromReference = 0;
-    currentData.forEach(d => {
+    window.currentData.forEach(d => {
         const article = d.статья?.toLowerCase() || '';
         if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) salesFromArticle += Math.abs(d.сумма || 0);
         if (d.тип === 'Справочная' && (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи'))) salesFromReference += Math.abs(d.сумма || 0);
@@ -776,9 +1096,9 @@ function generateTabsPanel() {
     const avgCheck = totalSalesQuantity > 0 ? f.netRevenue / totalSalesQuantity : 0;
     const efficiency = f.profit / (f.totalExpenses || 1);
     
-    const netRevenueByChannel = window.calculateNetRevenueByChannel ? window.calculateNetRevenueByChannel(currentData) : [];
-    const salesByChannel = calculateSalesByChannel(currentData);
-    const avgCheckByChannel = calculateAvgCheckByChannel(currentData);
+    const netRevenueByChannel = window.calculateNetRevenueByChannel ? window.calculateNetRevenueByChannel(window.currentData) : [];
+    const salesByChannel = calculateSalesByChannel(window.currentData);
+    const avgCheckByChannel = calculateAvgCheckByChannel(window.currentData);
     
     function getTrendValue(currentValue, previousValue) {
         if (!previousValue || previousValue === 0) return { class: '', html: '' };
@@ -799,7 +1119,7 @@ function generateTabsPanel() {
             <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>${tab.trend.html ? `<div class="tab-trend ${tab.trend.class}">${tab.trend.html} <span style="margin-left: 4px; opacity: 0.7;">к предыдущему периоду</span></div>` : ''}
             <div class="tab-chart-container"><canvas id="tabChart_${tab.id}" style="height: 80px; width: 100%;"></canvas></div>
             <div class="tab-breakdown-header" data-tab="${tab.id}"><span class="breakdown-title">📊 Детализация по каналам</span><span class="breakdown-toggle">▼</span></div>
-            <div class="tab-breakdown-content" id="breakdown_${tab.id}">${tab.id === 'netRevenue' ? generateSimpleBreakdown(netRevenueByChannel, 'value', true) : tab.id === 'sales' ? generateSimpleBreakdown(salesByChannel, 'sales', false, ' шт') : tab.id === 'avgCheck' ? generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true) : generateEfficiencySimpleBreakdown(currentData)}</div>
+            <div class="tab-breakdown-content" id="breakdown_${tab.id}">${tab.id === 'netRevenue' ? generateSimpleBreakdown(netRevenueByChannel, 'value', true) : tab.id === 'sales' ? generateSimpleBreakdown(salesByChannel, 'sales', false, ' шт') : tab.id === 'avgCheck' ? generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true) : generateEfficiencySimpleBreakdown(window.currentData)}</div>
         </div>`).join('')}</div></div>`;
     
     setTimeout(() => initTabs(), 100);
@@ -1029,7 +1349,100 @@ function calculateAvgCheckByChannel(data) {
 }
 
 // ========================
-// ОСНОВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ДАШБОРДА
+// ОБРАБОТЧИКИ КОЛЛАПСИБЕЛЬНЫХ БЛОКОВ
+// ========================
+
+function setupCollapsibleHandlers() {
+    const toggleRevenueBtn = document.querySelector('.toggle-channels-revenue-btn');
+    const revenueContainer = document.querySelector('.channels-revenue-container');
+    if (toggleRevenueBtn && revenueContainer) {
+        toggleRevenueBtn.onclick = () => {
+            const isVisible = revenueContainer.style.maxHeight !== '0px';
+            if (isVisible) {
+                revenueContainer.style.maxHeight = '0';
+                revenueContainer.style.opacity = '0';
+                toggleRevenueBtn.innerHTML = '<span class="toggle-icon-main">▶</span> Показать каналы';
+            } else {
+                revenueContainer.style.maxHeight = revenueContainer.scrollHeight + 'px';
+                revenueContainer.style.opacity = '1';
+                toggleRevenueBtn.innerHTML = '<span class="toggle-icon-main">▼</span> Скрыть каналы';
+            }
+        };
+    }
+    
+    const toggleExpenseBtn = document.querySelector('.toggle-channels-expense-btn');
+    const expenseContainer = document.querySelector('.channels-expense-container');
+    if (toggleExpenseBtn && expenseContainer) {
+        toggleExpenseBtn.onclick = () => {
+            const isVisible = expenseContainer.style.maxHeight !== '0px';
+            if (isVisible) {
+                expenseContainer.style.maxHeight = '0';
+                expenseContainer.style.opacity = '0';
+                toggleExpenseBtn.innerHTML = '<span class="toggle-icon-main">▶</span> Показать каналы';
+            } else {
+                expenseContainer.style.maxHeight = expenseContainer.scrollHeight + 'px';
+                expenseContainer.style.opacity = '1';
+                toggleExpenseBtn.innerHTML = '<span class="toggle-icon-main">▼</span> Скрыть каналы';
+            }
+        };
+    }
+    
+    const toggleAllSubChannelsBtns = document.querySelectorAll('.toggle-all-channels-btn');
+    toggleAllSubChannelsBtns.forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const container = btn.closest('.channels-revenue-container, .channels-expense-container');
+            if (!container) return;
+            const allDetailsDivs = container.querySelectorAll('.channel-details');
+            const allExpandIcons = container.querySelectorAll('.expand-icon');
+            const allOpen = Array.from(allDetailsDivs).every(details => details.style.maxHeight && details.style.maxHeight !== '0px');
+            if (allOpen) {
+                allDetailsDivs.forEach(details => details.style.maxHeight = '0');
+                allExpandIcons.forEach(icon => icon.style.transform = 'rotate(0deg)');
+                btn.innerHTML = '<span>▶</span> Раскрыть подканалы';
+            } else {
+                allDetailsDivs.forEach(details => details.style.maxHeight = details.scrollHeight + 'px');
+                allExpandIcons.forEach(icon => icon.style.transform = 'rotate(90deg)');
+                btn.innerHTML = '<span>▼</span> Скрыть подканалы';
+                allDetailsDivs.forEach((details, idx) => {
+                    const items = details.querySelectorAll('.sub-item');
+                    items.forEach((item, itemIdx) => {
+                        setTimeout(() => {
+                            item.style.opacity = '1';
+                            item.style.transform = 'translateX(0)';
+                        }, idx * 50 + itemIdx * 30);
+                    });
+                });
+            }
+        };
+    });
+    
+    document.querySelectorAll('.channel-header').forEach(header => {
+        const channelDiv = header.closest('.channel-item');
+        const detailsDiv = channelDiv.querySelector('.channel-details');
+        const expandIcon = header.querySelector('.expand-icon');
+        header.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (detailsDiv.style.maxHeight && detailsDiv.style.maxHeight !== '0px') {
+                detailsDiv.style.maxHeight = '0';
+                if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
+            } else {
+                detailsDiv.style.maxHeight = detailsDiv.scrollHeight + 'px';
+                if (expandIcon) expandIcon.style.transform = 'rotate(90deg)';
+                const items = detailsDiv.querySelectorAll('.sub-item');
+                items.forEach((item, idx) => {
+                    setTimeout(() => {
+                        item.style.opacity = '1';
+                        item.style.transform = 'translateX(0)';
+                    }, idx * 30);
+                });
+            }
+        });
+    });
+}
+
+// ========================
+// ОСНОВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ДАШБОРДА (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
 function renderDashboard() {
@@ -1038,12 +1451,17 @@ function renderDashboard() {
     isRendering = true;
     
     try {
-        if (!currentData.length) { document.getElementById('dashboardMetrics').innerHTML = '<div class="loading">Нет данных</div>'; isRendering = false; return; }
+        if (!window.currentData || window.currentData.length === 0) {
+            document.getElementById('dashboardMetrics').innerHTML = '<div class="loading">Нет данных</div>';
+            isRendering = false;
+            return;
+        }
         
-        const f = window.calculateFinancials ? window.calculateFinancials(currentData) : { totalRevenue: 0, netRevenue: 0, totalNDS: 0, totalExpenses: 0, profit: 0, profitability: 0 };
+        const f = window.calculateFinancials ? window.calculateFinancials(window.currentData) : { totalRevenue: 0, netRevenue: 0, totalNDS: 0, totalExpenses: 0, profit: 0, profitability: 0 };
         
+        // Сбор доходов и расходов по каналам
         const revenueByChannel = {}, expensesByChannel = {};
-        currentData.forEach(d => {
+        window.currentData.forEach(d => {
             if (d.тип === 'Доход' && d.канал) {
                 if (!revenueByChannel[d.канал]) revenueByChannel[d.канал] = { total: 0, items: {} };
                 revenueByChannel[d.канал].total += d.сумма;
@@ -1060,8 +1478,9 @@ function renderDashboard() {
         const revenueChannelsList = Object.entries(revenueByChannel).filter(([_, data]) => data.total > 0).sort((a, b) => b[1].total - a[1].total).map(([name, data]) => ({ name, total: data.total, items: Object.entries(data.items).map(([itemName, amount]) => ({ name: itemName, amount })) }));
         const expenseChannelsList = Object.entries(expensesByChannel).filter(([_, data]) => data.total > 0).sort((a, b) => b[1].total - a[1].total).map(([name, data]) => ({ name, total: data.total, items: Object.entries(data.items).map(([itemName, amount]) => ({ name: itemName, amount })) }));
         
+        // Продажи и средний чек
         let salesFromArticle = 0, salesFromReference = 0;
-        currentData.forEach(d => {
+        window.currentData.forEach(d => {
             const article = d.статья?.toLowerCase() || '';
             if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) salesFromArticle += Math.abs(d.сумма || 0);
             if (d.тип === 'Справочная' && (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи'))) salesFromReference += Math.abs(d.сумма || 0);
@@ -1069,10 +1488,11 @@ function renderDashboard() {
         const totalSalesQuantity = salesFromArticle + salesFromReference;
         const avgCheck = totalSalesQuantity > 0 ? f.netRevenue / totalSalesQuantity : 0;
         
-        const monthlyDataMap = new Map();
+        // Месячные данные для графиков
         const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const monthlyDataMap = new Map();
         monthsOrder.forEach(month => monthlyDataMap.set(month, { revenue: 0, profit: 0, expenses: 0 }));
-        currentData.forEach(d => {
+        window.currentData.forEach(d => {
             if (d.месяц && monthsOrder.includes(d.месяц)) {
                 const monthData = monthlyDataMap.get(d.месяц);
                 if (d.тип === 'Доход') monthData.revenue += d.сумма;
@@ -1080,7 +1500,7 @@ function renderDashboard() {
             }
         });
         monthlyDataMap.forEach((data, month) => {
-            const ndsOut = currentData.filter(d => d.месяц === month && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+            const ndsOut = window.currentData.filter(d => d.месяц === month && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
             const netRev = data.revenue - ndsOut;
             data.profit = netRev - data.expenses;
             data.netRevenue = netRev;
@@ -1090,6 +1510,7 @@ function renderDashboard() {
         const monthlyRevenues = monthlyLabels.map(m => monthlyDataMap.get(m).revenue / 1000);
         const monthlyExpensesArray = monthlyLabels.map(m => (monthlyDataMap.get(m)?.expenses || 0) / 1000);
         
+        // Динамика изменений
         function getChangePercent(current, previous) {
             if (!previous || previous === 0) return null;
             const change = ((current - previous) / previous) * 100;
@@ -1116,12 +1537,14 @@ function renderDashboard() {
         const profitChange = fPrev ? getChangePercent(f.profit, fPrev.profit) : null;
         const ndsChange = fPrev ? getChangePercent(f.totalNDS, fPrev.totalNDS) : null;
         
-        let costData = currentData.filter(d => d.тип === 'Расход' && d.подканал === 'Себестоимость сырья').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        // Себестоимость
+        let costData = window.currentData.filter(d => d.тип === 'Расход' && d.подканал === 'Себестоимость сырья').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
         const avgCost = totalSalesQuantity > 0 ? costData / totalSalesQuantity : 0;
         
+        // НДС данные
         const monthlyNds = {};
         monthsOrder.forEach(month => monthlyNds[month] = 0);
-        currentData.forEach(d => {
+        window.currentData.forEach(d => {
             if (d.месяц && monthsOrder.includes(d.месяц)) {
                 if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') monthlyNds[d.месяц] += d.сумма;
                 else if (d.статья === 'НДС' && d.подканал === 'НДС входящий') monthlyNds[d.месяц] -= d.сумма;
@@ -1134,6 +1557,7 @@ function renderDashboard() {
         const totalRevenueAmount = f.totalRevenue;
         const totalNdsPercent = totalRevenueAmount > 0 ? (Math.abs(totalNdsAmount) / totalRevenueAmount) * 100 : 0;
         
+        // Состояние компании и рекомендации
         let healthStatus = { color: '#48bb78', text: 'Отлично', icon: '🚀' };
         let recommendations = [];
         if (f.profit < 0) { healthStatus = { color: '#f56565', text: 'Критично', icon: '🔴' }; recommendations.push('⚠️ Компания убыточна! Срочно оптимизируйте расходы.'); }
@@ -1143,82 +1567,64 @@ function renderDashboard() {
         if (avgCheck < 1000 && avgCheck > 0) recommendations.push('💰 Средний чек ниже 1000₽. Работайте над апселлингом.');
         else if (avgCheck > 5000) recommendations.push('💎 Высокий средний чек. Удерживайте качество обслуживания.');
         
-        const efficiency = f.profit / (f.totalExpenses || 1);
-        const revenueByChannelMap = {};
-        currentData.forEach(d => { if (d.тип === 'Доход' && d.канал) revenueByChannelMap[d.канал] = (revenueByChannelMap[d.канал] || 0) + d.сумма; });
-        const topChannelData = Object.entries(revenueByChannelMap).sort((a, b) => b[1] - a[1])[0];
-        
+        // Верхняя панель
         const topPanelHtml = `<div style="margin-bottom: 24px;"><div class="metrics-grid" style="margin-bottom: 20px;"><div class="metric-card" style="grid-column: span 4; padding: 20px;">
             <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 18px;">📊</span><span style="font-size: 14px; font-weight: 600; color: #667eea;">СОСТОЯНИЕ КОМПАНИИ</span></div>
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;"><div style="text-align: center; min-width: 100px;"><div style="font-size: 36px;">${healthStatus.icon}</div><div style="font-size: 11px; opacity: 0.7;">Статус</div><div style="font-size: 18px; font-weight: 700; color: ${healthStatus.color};">${healthStatus.text}</div></div>
-                <div style="width: 1px; height: 50px; background: rgba(102,126,234,0.2);"></div>
-                <div><div style="font-size: 11px; opacity: 0.7; margin-bottom: 6px;">💡 Ключевые рекомендации</div><div style="font-size: 13px; line-height: 1.4;">${recommendations[0] || 'Анализ данных в норме'}</div>${recommendations[1] ? `<div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${recommendations[1]}</div>` : ''}</div></div>
+                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="text-align: center; min-width: 100px;"><div style="font-size: 36px;">${healthStatus.icon}</div><div style="font-size: 11px; opacity: 0.7;">Статус</div><div style="font-size: 18px; font-weight: 700; color: ${healthStatus.color};">${healthStatus.text}</div></div>
+                    <div style="width: 1px; height: 50px; background: rgba(102,126,234,0.2);"></div>
+                    <div><div style="font-size: 11px; opacity: 0.7; margin-bottom: 6px;">💡 Ключевые рекомендации</div><div style="font-size: 13px; line-height: 1.4;">${recommendations[0] || 'Анализ данных в норме'}</div>${recommendations[1] ? `<div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${recommendations[1]}</div>` : ''}</div>
+                </div>
                 <div style="text-align: right;"><div style="font-size: 11px; opacity: 0.7;">Период анализа</div><div style="font-size: 14px; font-weight: 600;">${currentFilters.year || 'год'} ${currentFilters.month?.length ? currentFilters.month.join(', ') : 'все месяцы'}</div></div>
             </div>
         </div></div></div>`;
         
-        function createCollapsibleBlock(title, icon, total, totalChange, channels, isExpense = false, monthlyDataMap = null, monthlyLabelsParam = null, monthlyValues = null, totalRevenue = null) {
-            const channelItemsHtml = channels.map((channel, channelIdx) => {
-                const channelPercent = (channel.total / total) * 100;
-                const sortedItems = [...channel.items].sort((a, b) => b.amount - a.amount);
-                const itemsHtml = sortedItems.map((item, itemIdx) => {
-                    const itemPercentOfChannel = (item.amount / channel.total) * 100;
-                    const gradient = isExpense ? 'linear-gradient(90deg, #f56565, #ed8936)' : 'linear-gradient(90deg, #48bb78, #8dd934)';
-                    return `<div class="sub-item" style="margin-bottom: 12px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${itemIdx * 0.03}s;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;"><span style="font-size: 13px; font-weight: 500;">${item.name}</span><div style="display: flex; gap: 12px;"><span style="font-size: 13px; font-weight: 600;">${formatCurrency(item.amount)}</span></div></div>
-                        <div style="background: rgba(102,126,234,0.15); height: 6px; border-radius: 3px; overflow: hidden;"><div class="sub-progress-bar" style="width: ${itemPercentOfChannel}%; height: 100%; background: ${gradient}; border-radius: 3px;"></div></div>
-                    </div>`;
-                }).join('');
-                const channelGradient = isExpense ? 'linear-gradient(90deg, #f56565, #ed8936)' : 'linear-gradient(90deg, #48bb78, #8dd934)';
-                return `<div class="channel-item" data-channel-name="${channel.name}" style="margin-bottom: 20px; border-bottom: 1px solid rgba(102,126,234,0.2); padding-bottom: 16px;">
-                    <div class="channel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span class="channel-icon" style="font-size: 20px;">${getChannelIcon(channel.name)}</span><span style="font-weight: 700; font-size: 15px;">${channel.name}</span></div>
-                        <div style="display: flex; align-items: center; gap: 12px;"><span class="channel-total" style="font-size: 14px; font-weight: 600;">${formatCurrency(channel.total)}</span><span class="expand-icon" style="font-size: 14px; transition: transform 0.3s; cursor: pointer;">▶</span></div>
-                    </div>
-                    <div style="background: rgba(102,126,234,0.1); height: 8px; border-radius: 4px; margin-bottom: 12px; overflow: hidden;"><div class="channel-progress-bar" style="width: ${channelPercent}%; height: 100%; background: ${channelGradient}; border-radius: 4px;"></div></div>
-                    <div class="channel-details" style="max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);"><div style="padding-top: 12px; padding-left: 30px;">${itemsHtml}</div></div>
-                </div>`;
-            }).join('');
-            const chartHtml = (monthlyValues && monthlyValues.length > 0) ? `<div class="revenue-chart-wrapper" style="margin-top: 16px;"><canvas id="${isExpense ? 'expenseMiniChartNew' : 'revenueMiniChartNew'}" style="height: 100px; width: 100%; display: block;"></canvas></div>` : '';
-            return `<div class="metric-card" style="overflow: hidden; padding: 20px; height: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 20px;">${icon}</span><span style="font-size: 16px; font-weight: 700;">${title}</span></div>
-                <button class="toggle-channels-${isExpense ? 'expense' : 'revenue'}-btn" style="background: rgba(102,126,234,0.15); border: none; border-radius: 20px; padding: 4px 12px; font-size: 11px; color: #667eea; cursor: pointer;"><span class="toggle-icon-main">▶</span> Показать каналы</button></div>
-                <div style="margin-bottom: 20px;"><div class="metric-value" style="font-size: 32px;">${formatCurrency(total)}</div>${getChangeHtml(totalChange, isExpense)}</div>
-                <div class="channels-${isExpense ? 'expense' : 'revenue'}-container" style="max-height: 0; opacity: 0; overflow-y: auto; transition: max-height 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;">${channelItemsHtml}<button class="toggle-all-channels-btn" style="margin-top: 16px; background: none; border: none; color: #667eea; cursor: pointer;"><span>▶</span> Раскрыть подканалы</button></div>
-                ${chartHtml}
-            </div>`;
-        }
-        
+        // Основные блоки
         const revenueHtml = createCollapsibleBlock('Доходы по каналам', '💰', f.totalRevenue, revenueChange, revenueChannelsList, false, monthlyDataMap, monthlyLabels, monthlyRevenues, null);
         const expensesHtml = createCollapsibleBlock('Расходы по каналам', '📉', f.totalExpenses, expensesChange, expenseChannelsList, true, monthlyDataMap, monthlyLabels, monthlyExpensesArray, f.totalRevenue);
         const tabsPanel = generateTabsPanel();
         
+        // Сборка дашборда
         const dashboardHtml = `${topPanelHtml}<div class="dashboard-two-columns"><div class="dashboard-col">${revenueHtml}</div><div class="dashboard-col">${tabsPanel}</div></div><div class="dashboard-full-width">${expensesHtml}</div>`;
         document.getElementById('dashboardMetrics').innerHTML = dashboardHtml;
         
+        // Отрисовка мини-графиков
         setTimeout(() => {
             renderMiniChartJS('revenueMiniChartNew', monthlyLabels, monthlyRevenues, '#48bb78');
             renderExpenseMiniChartJS('expenseMiniChartNew', monthlyLabels, monthlyExpensesArray, '#f56565');
             renderNetRevenueMiniChart();
             renderProfitMiniChart();
+            renderMonthlyLineChart(monthlyLabels, monthlyRevenues);
+            renderNdsToRevenueChart(ndsLabels, ndsValues, revenueForNds);
+            renderNdsStatsCard(totalNdsPercent, totalNdsAmount, totalRevenueAmount);
+            renderSalesChart(monthlyLabels, getMonthlySalesData(window.currentData, monthlyLabels));
         }, 100);
         
-        // Дополнительные блоки (водопад, тепловая карта, сценарный анализ, аномалии, матрица)
+        // ========== ДОПОЛНИТЕЛЬНЫЕ БЛОКИ ==========
+        // Водопад + Тепловая карта
         let waterfallContainer = document.getElementById('waterfallChartContainer');
         let heatmapContainer = document.getElementById('heatmapContainer');
         if (!waterfallContainer && document.getElementById('dashboardMetrics')) {
-            const newSection = document.createElement('div'); newSection.id = 'newChartsSection'; newSection.className = 'metrics-grid'; newSection.style.marginTop = '24px';
+            const newSection = document.createElement('div');
+            newSection.id = 'newChartsSection';
+            newSection.className = 'metrics-grid';
+            newSection.style.marginTop = '24px';
             newSection.innerHTML = `<div class="metric-card" style="grid-column: span 2; padding: 20px;"><div id="waterfallChartContainer" style="height: 380px; width: 100%;"></div></div><div class="metric-card" style="grid-column: span 2; padding: 20px;"><div id="heatmapContainer" style="min-height: 300px;"></div></div>`;
             document.getElementById('dashboardMetrics').appendChild(newSection);
-            waterfallContainer = document.getElementById('waterfallChartContainer'); heatmapContainer = document.getElementById('heatmapContainer');
+            waterfallContainer = document.getElementById('waterfallChartContainer');
+            heatmapContainer = document.getElementById('heatmapContainer');
         }
         if (waterfallContainer) renderWaterfallSVG('waterfallChartContainer', f);
-        if (heatmapContainer) renderHeatmapTable('heatmapContainer', currentData);
+        if (heatmapContainer) renderHeatmapTable('heatmapContainer', window.currentData);
         
+        // Сценарный анализ
         let scenarioContainer = document.getElementById('scenarioAnalysisContainer');
         if (!scenarioContainer && document.getElementById('dashboardMetrics')) {
-            const scenarioSection = document.createElement('div'); scenarioSection.id = 'scenarioSection'; scenarioSection.className = 'metrics-grid'; scenarioSection.style.marginTop = '24px';
+            const scenarioSection = document.createElement('div');
+            scenarioSection.id = 'scenarioSection';
+            scenarioSection.className = 'metrics-grid';
+            scenarioSection.style.marginTop = '24px';
             scenarioSection.innerHTML = `<div class="metric-card" style="grid-column: span 4; padding: 20px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 20px;">🎯</span><span>Сценарный анализ</span><span style="font-size: 11px; color: #a0aec0; margin-left: auto;">двигайте ползунки — результаты меняются в реальном времени</span></div><div id="scenarioAnalysisContainer"></div></div>`;
             document.getElementById('dashboardMetrics').appendChild(scenarioSection);
             scenarioContainer = document.getElementById('scenarioAnalysisContainer');
@@ -1228,97 +1634,54 @@ function renderDashboard() {
             initScenarioHandlers(f, totalSalesQuantity, avgCheck, avgCost, costData);
         }
         
+        // Аномалии
         let anomaliesContainer = document.getElementById('anomaliesContainer');
         if (!anomaliesContainer && document.getElementById('dashboardMetrics')) {
-            const anomaliesSection = document.createElement('div'); anomaliesSection.id = 'anomaliesSection'; anomaliesSection.className = 'metrics-grid'; anomaliesSection.style.marginTop = '24px';
+            const anomaliesSection = document.createElement('div');
+            anomaliesSection.id = 'anomaliesSection';
+            anomaliesSection.className = 'metrics-grid';
+            anomaliesSection.style.marginTop = '24px';
             anomaliesSection.innerHTML = `<div class="metric-card" style="grid-column: span 4; padding: 20px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 20px;">🔍</span><span>Аномалии и выбросы</span><span style="font-size: 11px; color: #a0aec0; margin-left: auto;">автоматическое обнаружение отклонений</span></div><div id="anomaliesContainer"></div></div>`;
             document.getElementById('dashboardMetrics').appendChild(anomaliesSection);
             anomaliesContainer = document.getElementById('anomaliesContainer');
         }
-        if (anomaliesContainer) anomaliesContainer.innerHTML = renderAnomaliesBlock(currentData, f, totalSalesQuantity, avgCheck);
+        if (anomaliesContainer) anomaliesContainer.innerHTML = renderAnomaliesBlock(window.currentData, f, totalSalesQuantity, avgCheck);
         
+        // Матрица 4 квадрантов
         let quadrantContainer = document.getElementById('quadrantMatrixContainer');
         if (!quadrantContainer && document.getElementById('dashboardMetrics')) {
-            const quadrantSection = document.createElement('div'); quadrantSection.id = 'quadrantSection'; quadrantSection.className = 'metrics-grid'; quadrantSection.style.marginTop = '24px';
+            const quadrantSection = document.createElement('div');
+            quadrantSection.id = 'quadrantSection';
+            quadrantSection.className = 'metrics-grid';
+            quadrantSection.style.marginTop = '24px';
             quadrantSection.innerHTML = `<div class="metric-card" style="grid-column: span 4; padding: 20px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 20px;">🎯</span><span>Матрица "Маржинальность vs Оборачиваемость"</span><span style="font-size: 11px; color: #a0aec0; margin-left: auto;">4 квадранта стратегии</span></div><div id="quadrantMatrixContainer"></div></div>`;
             document.getElementById('dashboardMetrics').appendChild(quadrantSection);
             quadrantContainer = document.getElementById('quadrantMatrixContainer');
         }
-        if (quadrantContainer) quadrantContainer.innerHTML = renderQuadrantMatrix(currentData, f);
+        if (quadrantContainer) quadrantContainer.innerHTML = renderQuadrantMatrix(window.currentData, f);
         
-        // Обработчики для коллапсируемых блоков
+        // Настройка обработчиков
         setTimeout(() => {
-            const toggleRevenueBtn = document.querySelector('.toggle-channels-revenue-btn');
-            const revenueContainer = document.querySelector('.channels-revenue-container');
-            if (toggleRevenueBtn && revenueContainer) {
-                toggleRevenueBtn.onclick = () => {
-                    if (revenueContainer.style.maxHeight !== '0px') {
-                        revenueContainer.style.maxHeight = '0'; revenueContainer.style.opacity = '0';
-                        toggleRevenueBtn.innerHTML = '<span class="toggle-icon-main">▶</span> Показать каналы';
-                    } else {
-                        revenueContainer.style.maxHeight = revenueContainer.scrollHeight + 'px'; revenueContainer.style.opacity = '1';
-                        toggleRevenueBtn.innerHTML = '<span class="toggle-icon-main">▼</span> Скрыть каналы';
-                    }
-                };
-            }
-            const toggleExpenseBtn = document.querySelector('.toggle-channels-expense-btn');
-            const expenseContainer = document.querySelector('.channels-expense-container');
-            if (toggleExpenseBtn && expenseContainer) {
-                toggleExpenseBtn.onclick = () => {
-                    if (expenseContainer.style.maxHeight !== '0px') {
-                        expenseContainer.style.maxHeight = '0'; expenseContainer.style.opacity = '0';
-                        toggleExpenseBtn.innerHTML = '<span class="toggle-icon-main">▶</span> Показать каналы';
-                    } else {
-                        expenseContainer.style.maxHeight = expenseContainer.scrollHeight + 'px'; expenseContainer.style.opacity = '1';
-                        toggleExpenseBtn.innerHTML = '<span class="toggle-icon-main">▼</span> Скрыть каналы';
-                    }
-                };
-            }
-            const toggleAllSubChannelsBtns = document.querySelectorAll('.toggle-all-channels-btn');
-            toggleAllSubChannelsBtns.forEach(btn => {
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    const container = btn.closest('.channels-revenue-container, .channels-expense-container');
-                    if (!container) return;
-                    const allDetailsDivs = container.querySelectorAll('.channel-details');
-                    const allExpandIcons = container.querySelectorAll('.expand-icon');
-                    const allOpen = Array.from(allDetailsDivs).every(details => details.style.maxHeight && details.style.maxHeight !== '0px');
-                    if (allOpen) {
-                        allDetailsDivs.forEach(details => details.style.maxHeight = '0');
-                        allExpandIcons.forEach(icon => icon.style.transform = 'rotate(0deg)');
-                        btn.innerHTML = '<span>▶</span> Раскрыть подканалы';
-                    } else {
-                        allDetailsDivs.forEach(details => details.style.maxHeight = details.scrollHeight + 'px');
-                        allExpandIcons.forEach(icon => icon.style.transform = 'rotate(90deg)');
-                        btn.innerHTML = '<span>▼</span> Скрыть подканалы';
-                        allDetailsDivs.forEach((details, idx) => {
-                            const items = details.querySelectorAll('.sub-item');
-                            items.forEach((item, itemIdx) => { setTimeout(() => { item.style.opacity = '1'; item.style.transform = 'translateX(0)'; }, idx * 50 + itemIdx * 30); });
-                        });
-                    }
-                };
-            });
-            document.querySelectorAll('.channel-header').forEach(header => {
-                const channelDiv = header.closest('.channel-item');
-                const detailsDiv = channelDiv.querySelector('.channel-details');
-                const expandIcon = header.querySelector('.expand-icon');
-                header.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (detailsDiv.style.maxHeight && detailsDiv.style.maxHeight !== '0px') {
-                        detailsDiv.style.maxHeight = '0';
-                        if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
-                    } else {
-                        detailsDiv.style.maxHeight = detailsDiv.scrollHeight + 'px';
-                        if (expandIcon) expandIcon.style.transform = 'rotate(90deg)';
-                        const items = detailsDiv.querySelectorAll('.sub-item');
-                        items.forEach((item, idx) => { setTimeout(() => { item.style.opacity = '1'; item.style.transform = 'translateX(0)'; }, idx * 30); });
-                    }
-                });
-            });
+            setupCollapsibleHandlers();
+            initTabs();
         }, 200);
         
     } catch(e) { console.error('Ошибка рендера:', e); }
     finally { isRendering = false; }
+}
+
+function getMonthlySalesData(data, monthlyLabels) {
+    const salesByMonth = {};
+    monthlyLabels.forEach(month => { salesByMonth[month] = 0; });
+    data.forEach(d => {
+        if (d.месяц && monthlyLabels.includes(d.месяц)) {
+            const article = d.статья?.toLowerCase() || '';
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                salesByMonth[d.месяц] += Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    return monthlyLabels.map(m => salesByMonth[m] || 0);
 }
 
 // ========================
@@ -1328,9 +1691,9 @@ function renderDashboard() {
 function renderChannelPage(channelKey) {
     const channel = window.CHANNEL_MAPPING ? window.CHANNEL_MAPPING[channelKey] : null;
     if (!channel) return;
-    const f = window.calculateFinancials ? window.calculateFinancials(currentData, channelKey) : { totalRevenue: 0, netRevenue: 0, totalNDS: 0, totalExpenses: 0, profit: 0, profitability: 0 };
-    let sales = currentData.filter(d => d.канал === channel.displayName && d.статья === 'Продажи шт.').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
-    let costData = currentData.filter(d => d.канал === channel.displayName && d.тип === 'Расход' && d.подканал === 'Себестоимость сырья').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+    const f = window.calculateFinancials ? window.calculateFinancials(window.currentData, channelKey) : { totalRevenue: 0, netRevenue: 0, totalNDS: 0, totalExpenses: 0, profit: 0, profitability: 0 };
+    let sales = window.currentData.filter(d => d.канал === channel.displayName && d.статья === 'Продажи шт.').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+    let costData = window.currentData.filter(d => d.канал === channel.displayName && d.тип === 'Расход' && d.подканал === 'Себестоимость сырья').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
     const avgCheck = sales > 0 ? f.netRevenue / sales : 0;
     const avgCost = sales > 0 ? costData / sales : 0;
     const container = document.getElementById(`channel${channelKey.charAt(0).toUpperCase() + channelKey.slice(1)}Metrics`);
@@ -1350,8 +1713,11 @@ function renderChannelPage(channelKey) {
     }
 }
 
-// Экспортируем в window
+// Экспорт в window
 window.renderDashboard = renderDashboard;
 window.renderChannelPage = renderChannelPage;
+window.formatCurrency = formatCurrency;
+window.showNotification = showNotification;
+window.getPreviousMonths = getPreviousMonths;
 
-console.log('✅ dashboardRender.js: все функции загружены');
+console.log('✅ dashboardRender.js: ПОЛНЫЙ файл загружен (' + document.querySelectorAll('script').length + ' скриптов)');
