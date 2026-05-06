@@ -2,9 +2,10 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Финансовый дашборд - Полный анализ компании</title>
     
+    <!-- Подключение внешних библиотек -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         if (typeof XLSX === 'undefined') {
@@ -17,10 +18,21 @@
     </script>
     <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" charset="utf-8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js не загрузился, загружаем резервный...');
+            var script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+            script.onload = function() { console.log('Chart.js загружен с резервного CDN'); };
+            document.head.appendChild(script);
+        }
+    </script>
     
+    <!-- Подключение CSS -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <!-- АВТОРИЗАЦИЯ -->
     <div id="authContainer" class="auth-container">
         <div class="auth-card">
             <h2 id="authTitle">🔐 Вход в систему</h2>
@@ -35,6 +47,7 @@
         </div>
     </div>
 
+    <!-- АДМИН-ПАНЕЛЬ -->
     <div id="adminPanel" class="admin-panel">
         <div class="admin-content">
             <div class="admin-header">
@@ -43,13 +56,25 @@
             </div>
             <h3>Управление пользователями</h3>
             <table class="admin-table" id="adminTable">
-                <thead><tr><th>ФИО</th><th>Email</th><th>Статус</th><th>Действия</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>ФИО</th>
+                        <th>Email</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
                 <tbody id="adminTableBody"></tbody>
             </table>
+            <p style="margin-top: 16px; font-size: 12px; opacity: 0.6; text-align: center;">
+                ℹ️ Управление пользователями осуществляется через файл <strong>users.xlsx</strong>
+            </p>
         </div>
     </div>
 
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
     <div id="mainApp" style="display: none;">
+        <!-- ШАПКА -->
         <div class="header">
             <div class="header-content">
                 <div class="logo-section">
@@ -67,31 +92,35 @@
             </div>
         </div>
 
+        <!-- ОСНОВНОЙ КОНТЕЙНЕР -->
         <div class="container">
+            <!-- ЛЕВАЯ БОКОВАЯ ПАНЕЛЬ (НАВИГАЦИЯ) -->
             <div class="sidebar-nav">
-    <button class="sidebar-toggle-btn" id="sidebarToggleBtn">◀</button>
-    <div class="nav-title">НАВИГАЦИЯ</div>
-    <div class="nav-item has-submenu" id="dashboardMenu">
-        <span class="nav-icon">📊</span>
-        <span>Дашборд</span>
-        <span class="arrow">▶</span>
-    </div>
-    <div class="nav-submenu" id="channelsSubmenu">
-        <div class="nav-subitem" data-channel="wildberries"><span class="nav-icon">🛍️</span><span>Wildberries</span></div>
-        <div class="nav-subitem" data-channel="ozon"><span class="nav-icon">📦</span><span>Ozon</span></div>
-        <div class="nav-subitem" data-channel="detsky-mir"><span class="nav-icon">🧸</span><span>Детский мир</span></div>
-        <div class="nav-subitem" data-channel="lamoda"><span class="nav-icon">👗</span><span>Lamoda</span></div>
-    </div>
-    <div class="nav-item" data-page="odds"><span class="nav-icon">💰</span><span>ОДДС</span></div>
-    <div class="nav-item" data-page="abcxyz"><span class="nav-icon">📊</span><span>ABC/XYZ анализ</span></div>
-    <div class="nav-item" data-page="ai"><span class="nav-icon">🤖</span><span>AI Аналитик</span></div>
-    
-    <div class="theme-toggle">
-        <span class="theme-toggle-label">🌙 Темная тема</span>
-        <div class="toggle-switch" id="themeToggle"><div class="slider"></div></div>
-    </div>
-</div>
+                <div class="nav-title">НАВИГАЦИЯ</div>
+                <div class="nav-item has-submenu" id="dashboardMenu">
+                    <span class="nav-icon">📊</span>
+                    <span>Дашборд</span>
+                    <span class="arrow">▶</span>
+                </div>
+                <div class="nav-submenu" id="channelsSubmenu">
+                    <div class="nav-subitem" data-channel="wildberries"><span class="nav-icon">🛍️</span><span>Wildberries</span></div>
+                    <div class="nav-subitem" data-channel="ozon"><span class="nav-icon">📦</span><span>Ozon</span></div>
+                    <div class="nav-subitem" data-channel="detsky-mir"><span class="nav-icon">🧸</span><span>Детский мир</span></div>
+                    <div class="nav-subitem" data-channel="lamoda"><span class="nav-icon">👗</span><span>Lamoda</span></div>
+                </div>
+                <div class="nav-item" data-page="odds"><span class="nav-icon">💰</span><span>ОДДС</span></div>
+                <div class="nav-item" data-page="abcxyz"><span class="nav-icon">📊</span><span>ABC/XYZ анализ</span></div>
+                <div class="nav-item" data-page="ai"><span class="nav-icon">🤖</span><span>AI Аналитик</span></div>
+                
+                <div class="theme-toggle">
+                    <span class="theme-toggle-label">🌙 Темная тема</span>
+                    <div class="toggle-switch" id="themeToggle"><div class="slider"></div></div>
+                </div>
+            </div>
+
+            <!-- ОСНОВНОЙ КОНТЕНТ -->
             <div class="main-content">
+                <!-- ОБЛАСТЬ ЗАГРУЗКИ ФАЙЛА -->
                 <div id="uploadArea" class="upload-card">
                     <div class="upload-icon">📊</div>
                     <div class="upload-title">Загрузите Excel файл с финансовыми данными</div>
@@ -99,74 +128,87 @@
                     <input type="file" id="fileInput" accept=".xlsx,.xls">
                 </div>
                 
-                
-                
+                <!-- СТРАНИЦА ДАШБОРДА -->
                 <div id="page-dashboard" class="page-content active">
                     <div id="dashboardMetrics"></div>
                     <div id="aiInsights" class="ai-agent-card" style="margin-top: 24px;"></div>
                 </div>
+                
+                <!-- СТРАНИЦЫ КАНАЛОВ -->
                 <div id="page-channel-wildberries" class="page-content"><div id="channelWildberriesMetrics"></div></div>
                 <div id="page-channel-ozon" class="page-content"><div id="channelOzonMetrics"></div></div>
                 <div id="page-channel-detsky-mir" class="page-content"><div id="channelDetskyMirMetrics"></div></div>
                 <div id="page-channel-lamoda" class="page-content"><div id="channelLamodaMetrics"></div></div>
+                
+                <!-- СТРАНИЦА ОДДС -->
                 <div id="page-odds" class="page-content">
-    <div id="oddsPageContainer">
-        <div class="metrics-grid" style="margin-bottom: 24px;">
-            <!-- Фильтры с календарем -->
-            <div class="metric-card" style="grid-column: span 4; padding: 20px;">
-                <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
-                    <span style="font-size: 20px;">📅</span>
-                    <span>Период анализа</span>
-                    <span style="font-size: 11px; color: #a0aec0; margin-left: auto;">выберите даты для анализа движения денежных средств</span>
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;">
-                    <div style="flex: 1; min-width: 180px;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 6px; color: #667eea;">📅 С даты</label>
-                        <input type="date" id="oddsStartDate" style="width: 100%; padding: 10px 12px; border: 1px solid rgba(102,126,234,0.3); border-radius: 10px; background: transparent; font-size: 14px;">
-                    </div>
-                    <div style="flex: 1; min-width: 180px;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 6px; color: #667eea;">📅 По дату</label>
-                        <input type="date" id="oddsEndDate" style="width: 100%; padding: 10px 12px; border: 1px solid rgba(102,126,234,0.3); border-radius: 10px; background: transparent; font-size: 14px;">
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="oddsApplyDatesBtn" class="btn btn-primary" style="padding: 10px 24px;">📊 Применить</button>
-                        <button id="oddsResetDatesBtn" class="btn btn-secondary" style="padding: 10px 24px; background: #a0aec0;">🔄 Сбросить</button>
-                    </div>
-                    <div style="flex: 1; min-width: 200px;">
-                        <div style="font-size: 11px; opacity: 0.6; margin-bottom: 4px;">📌 Быстрые периоды</div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="odds-quick-btn" data-days="7" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">7 дней</button>
-                            <button class="odds-quick-btn" data-days="30" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">30 дней</button>
-                            <button class="odds-quick-btn" data-days="90" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">90 дней</button>
-                            <button class="odds-quick-btn" data-days="thisMonth" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">Этот месяц</button>
-                            <button class="odds-quick-btn" data-days="lastMonth" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">Прошлый месяц</button>
+                    <div id="oddsPageContainer">
+                        <div class="metrics-grid" style="margin-bottom: 24px;">
+                            <div class="metric-card" style="grid-column: span 4; padding: 20px;">
+                                <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                                    <span style="font-size: 20px;">📅</span>
+                                    <span>Период анализа</span>
+                                    <span style="font-size: 11px; color: #a0aec0; margin-left: auto;">выберите даты для анализа движения денежных средств</span>
+                                </div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;">
+                                    <div style="flex: 1; min-width: 180px;">
+                                        <label style="display: block; font-size: 12px; margin-bottom: 6px; color: #667eea;">📅 С даты</label>
+                                        <input type="date" id="oddsStartDate" style="width: 100%; padding: 10px 12px; border: 1px solid rgba(102,126,234,0.3); border-radius: 10px; background: transparent; font-size: 14px;">
+                                    </div>
+                                    <div style="flex: 1; min-width: 180px;">
+                                        <label style="display: block; font-size: 12px; margin-bottom: 6px; color: #667eea;">📅 По дату</label>
+                                        <input type="date" id="oddsEndDate" style="width: 100%; padding: 10px 12px; border: 1px solid rgba(102,126,234,0.3); border-radius: 10px; background: transparent; font-size: 14px;">
+                                    </div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button id="oddsApplyDatesBtn" class="btn btn-primary" style="padding: 10px 24px;">📊 Применить</button>
+                                        <button id="oddsResetDatesBtn" class="btn btn-secondary" style="padding: 10px 24px; background: #a0aec0;">🔄 Сбросить</button>
+                                    </div>
+                                    <div style="flex: 1; min-width: 200px;">
+                                        <div style="font-size: 11px; opacity: 0.6; margin-bottom: 4px;">📌 Быстрые периоды</div>
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                            <button class="odds-quick-btn" data-days="7" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">7 дней</button>
+                                            <button class="odds-quick-btn" data-days="30" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">30 дней</button>
+                                            <button class="odds-quick-btn" data-days="90" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">90 дней</button>
+                                            <button class="odds-quick-btn" data-days="thisMonth" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">Этот месяц</button>
+                                            <button class="odds-quick-btn" data-days="lastMonth" style="padding: 4px 12px; font-size: 11px; background: rgba(102,126,234,0.1); border: none; border-radius: 20px; cursor: pointer;">Прошлый месяц</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="oddsMainContent"></div>
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button id="oddsForceRefreshBtn" class="btn btn-info" style="padding: 10px 24px;">🔄 Принудительно обновить</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <!-- Основной контент ОДДС -->
-        <div id="oddsMainContent"></div>
-        <div style="display: flex; gap: 10px;">
-    <button id="oddsForceRefreshBtn" class="btn btn-info" style="padding: 10px 24px;">🔄 Принудительно обновить</button>
-</div>
-    </div>
-</div>
+                
+                <!-- СТРАНИЦА ABC/XYZ АНАЛИЗА -->
                 <div id="page-abcxyz" class="page-content">
-    <div class="abcxyz-container" id="abcxyzContainer">
-        <div class="upload-card" id="abcxyzUploadArea" style="margin-bottom: 24px; cursor: pointer;">
-            <div class="upload-icon">📦</div>
-            <div class="upload-title">Загрузите Excel файл с продажами</div>
-            <div class="upload-text">Формат: даты в столбцах, строки - товары (как в вашем файле)</div>
-            <input type="file" id="abcxyzFileInput" accept=".xlsx,.xls" style="display: none;">
-        </div>
-        <div id="abcxyzResults" style="display: none;"></div>
-    </div>
-</div>
+                    <div class="abcxyz-container" id="abcxyzContainer">
+                        <div class="upload-card" id="abcxyzUploadArea" style="margin-bottom: 24px; cursor: pointer;">
+                            <div class="upload-icon">📦</div>
+                            <div class="upload-title">Загрузите Excel файл с продажами</div>
+                            <div class="upload-text">Формат: даты в столбцах, строки - товары (как в вашем файле)</div>
+                            <input type="file" id="abcxyzFileInput" accept=".xlsx,.xls" style="display: none;">
+                        </div>
+                        <div id="abcxyzResults" style="display: none;"></div>
+                    </div>
+                </div>
+                
+                <!-- СТРАНИЦА AI АНАЛИТИКА -->
                 <div id="page-ai" class="page-content">
                     <div class="ai-agent-card">
-                        <div class="ai-header"><div class="ai-icon">🤖</div><div><div class="ai-title">AI Финансовый Аналитик</div><div class="ai-subtitle">Задайте вопрос о ваших данных или получите автоматический анализ</div></div></div>
-                        <div id="aiChatMessages" class="ai-chat-messages" style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;"><div class="ai-message assistant">👋 Здравствуйте! Я AI финансовый аналитик. Задайте вопрос о данных.</div></div>
+                        <div class="ai-header">
+                            <div class="ai-icon">🤖</div>
+                            <div>
+                                <div class="ai-title">AI Финансовый Аналитик</div>
+                                <div class="ai-subtitle">Задайте вопрос о ваших данных или получите автоматический анализ</div>
+                            </div>
+                        </div>
+                        <div id="aiChatMessages" class="ai-chat-messages" style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;">
+                            <div class="ai-message assistant">👋 Здравствуйте! Я AI финансовый аналитик. Задайте вопрос о данных.</div>
+                        </div>
                         <div class="ai-suggestions" id="aiSuggestions">
                             <span class="ai-suggestion" data-question="analyze">📊 Анализ общих показателей</span>
                             <span class="ai-suggestion" data-question="bestChannel">🏆 Самый прибыльный канал</span>
@@ -180,75 +222,117 @@
                     </div>
                 </div>
             </div>
-<!-- Правая боковая панель со статьями -->
-<!-- Правая боковая панель со статьями -->
-<div class="right-sidebar">
-    <!-- Блок денежных средств - скрыт по умолчанию, показывается только после загрузки данных -->
-    <div id="cashSidebarBlock" class="cash-sidebar" style="margin-bottom: 20px; display: none;">
-        <div class="cash-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(102,126,234,0.3);">
-            <span style="font-size: 18px;">💰</span>
-            <span style="font-weight: 600; font-size: 13px; color: #667eea;">ДЕНЕЖНЫЕ СРЕДСТВА</span>
-            <button id="toggleAccountsBtn" class="toggle-channels-profit-btn" style="margin-left: auto; background: rgba(102,126,234,0.15); border: none; border-radius: 20px; padding: 4px 12px; font-size: 11px; color: #667eea; cursor: pointer;">
-                <span class="toggle-icon-cash">▶</span> Показать все счета
-            </button>
-        </div>
-        <div id="cashTotalCard" class="cash-total-card">
-            <!-- Общая сумма будет здесь -->
-        </div>
-        <div id="cashAccountsList" class="cash-accounts-list">
-            <!-- Счета будут здесь -->
-        </div>
-    </div>
 
-        <!-- Блок депозитов -->
-    <div id="depositSidebarBlock" class="cash-sidebar" style="margin-bottom: 20px; display: none;">
-        <div class="cash-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(66,153,225,0.3);">
-            <span style="font-size: 18px;">🏦</span>
-            <span style="font-weight: 600; font-size: 13px; color: #4299e1;">ДЕПОЗИТЫ</span>
-        </div>
-        <div id="depositTotalCard" class="cash-total-card" style="background: linear-gradient(135deg, rgba(66,153,225,0.15) 0%, rgba(102,126,234,0.15) 100%);">
-            <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px;">💰 Остаток на депозите</div>
-            <div class="cash-total-value" id="depositTotalValue" style="color: #4299e1;">0 ₽</div>
-            <div style="font-size: 10px; opacity: 0.4; margin-top: 8px;">средства, размещённые в банке</div>
-        </div>
-        <div id="depositOperationsList" class="cash-accounts-list" style="margin-top: 12px;"></div>
-    </div>
+            <!-- ПРАВАЯ БОКОВАЯ ПАНЕЛЬ -->
+            <div class="right-sidebar">
+                <!-- Блок денежных средств -->
+                <div id="cashSidebarBlock" class="cash-sidebar" style="margin-bottom: 20px; display: none;">
+                    <div class="cash-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(102,126,234,0.3);">
+                        <span style="font-size: 18px;">💰</span>
+                        <span style="font-weight: 600; font-size: 13px; color: #667eea;">ДЕНЕЖНЫЕ СРЕДСТВА</span>
+                        <button id="toggleAccountsBtn" class="toggle-channels-profit-btn" style="margin-left: auto; background: rgba(102,126,234,0.15); border: none; border-radius: 20px; padding: 4px 12px; font-size: 11px; color: #667eea; cursor: pointer;">
+                            <span class="toggle-icon-cash">▶</span> Показать все счета
+                        </button>
+                    </div>
+                    <div id="cashTotalCard" class="cash-total-card"></div>
+                    <div id="cashAccountsList" class="cash-accounts-list"></div>
+                </div>
 
-    <div class="articles-sidebar">
-        <div class="articles-header">
-            <span>📚</span>
-            <span>ПОЛЕЗНЫЕ СТАТЬИ</span>
-        </div>
-        <div class="articles-carousel-container">
-            <div class="articles-carousel" id="articlesCarousel">
-                <!-- Статьи будут загружены динамически -->
+                <!-- Блок депозитов -->
+                <div id="depositSidebarBlock" class="cash-sidebar" style="margin-bottom: 20px; display: none;">
+                    <div class="cash-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(66,153,225,0.3);">
+                        <span style="font-size: 18px;">🏦</span>
+                        <span style="font-weight: 600; font-size: 13px; color: #4299e1;">ДЕПОЗИТЫ</span>
+                    </div>
+                    <div id="depositTotalCard" class="cash-total-card" style="background: linear-gradient(135deg, rgba(66,153,225,0.15) 0%, rgba(102,126,234,0.15) 100%);">
+                        <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px;">💰 Остаток на депозите</div>
+                        <div class="cash-total-value" id="depositTotalValue" style="color: #4299e1;">0 ₽</div>
+                        <div style="font-size: 10px; opacity: 0.4; margin-top: 8px;">средства, размещённые в банке</div>
+                    </div>
+                    <div id="depositOperationsList" class="cash-accounts-list" style="margin-top: 12px;"></div>
+                </div>
+
+                <!-- Блок статей -->
+                <div class="articles-sidebar">
+                    <div class="articles-header">
+                        <span>📚</span>
+                        <span>ПОЛЕЗНЫЕ СТАТЬИ</span>
+                    </div>
+                    <div class="articles-carousel-container">
+                        <div class="articles-carousel" id="articlesCarousel"></div>
+                    </div>
+                    <div class="articles-nav">
+                        <button class="articles-nav-btn" id="prevArticleBtn">◀</button>
+                        <button class="articles-nav-btn" id="nextArticleBtn">▶</button>
+                    </div>
+                    <div class="articles-dots" id="articlesDots"></div>
+                </div>
             </div>
         </div>
-        <div class="articles-nav">
-            <button class="articles-nav-btn" id="prevArticleBtn">◀</button>
-            <button class="articles-nav-btn" id="nextArticleBtn">▶</button>
-        </div>
-        <div class="articles-dots" id="articlesDots"></div>
     </div>
-</div>
+
+    <!-- ПЛАВАЮЩАЯ КНОПКА ФИЛЬТРОВ -->
+    <button class="floating-filter-btn" id="floatingFilterBtn">🔍</button>
+
+    <!-- МОДАЛЬНОЕ ОКНО ФИЛЬТРОВ -->
+    <div class="filter-modal" id="filterModal">
+        <div class="filter-modal-content">
+            <div class="filter-modal-header">
+                <h3>🔍 Фильтры</h3>
+                <button class="filter-modal-close" id="filterModalCloseBtn">×</button>
+            </div>
+            <div class="filter-modal-body">
+                <!-- Фильтр по компании -->
+                <div class="filter-group">
+                    <label>🏢 Компания</label>
+                    <select id="modalCompanyFilter">
+                        <option value="">Все компании</option>
+                    </select>
+                </div>
+                
+                <!-- Фильтр по году -->
+                <div class="filter-group">
+                    <label>📅 Год</label>
+                    <select id="modalYearFilter">
+                        <option value="">Все годы</option>
+                    </select>
+                </div>
+                
+                <!-- Фильтр по месяцам (множественный выбор) -->
+                <div class="filter-group">
+                    <label>📆 Месяц (можно выбрать несколько)</label>
+                    <select id="modalMonthFilter" multiple size="4">
+                        <option value="январь">Январь</option>
+                        <option value="февраль">Февраль</option>
+                        <option value="март">Март</option>
+                        <option value="апрель">Апрель</option>
+                        <option value="май">Май</option>
+                        <option value="июнь">Июнь</option>
+                        <option value="июль">Июль</option>
+                        <option value="август">Август</option>
+                        <option value="сентябрь">Сентябрь</option>
+                        <option value="октябрь">Октябрь</option>
+                        <option value="ноябрь">Ноябрь</option>
+                        <option value="декабрь">Декабрь</option>
+                    </select>
+                </div>
+                
+                <!-- ФИЛЬТР ПО КАНАЛАМ (ДОБАВЛЕН) -->
+                <div class="filter-group">
+                    <label>📢 Канал продаж</label>
+                    <select id="modalChannelFilter">
+                        <option value="">Все каналы</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-modal-footer">
+                <button class="filter-modal-btn filter-modal-btn-secondary" id="modalResetFiltersBtn">Сбросить</button>
+                <button class="filter-modal-btn filter-modal-btn-primary" id="modalApplyFiltersBtn">Применить</button>
+            </div>
         </div>
     </div>
 
-<!-- Подключение библиотек -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" charset="utf-8"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-    if (typeof Chart === 'undefined') {
-        console.warn('Chart.js не загрузился, загружаем резервный...');
-        var script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
-        script.onload = function() { console.log('Chart.js загружен с резервного CDN'); };
-        document.head.appendChild(script);
-    }
-</script>
-    
-    <!-- Подключение модулей приложения (порядок ВАЖЕН!) -->
+    <!-- ПОДКЛЮЧЕНИЕ МОДУЛЕЙ ПРИЛОЖЕНИЯ (порядок ВАЖЕН!) -->
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
@@ -261,64 +345,5 @@
     <script src="js/aiModule.js"></script>
     <script src="js/articlesModule.js"></script>
     <script src="js/app.js"></script>
-
-<!-- Плавающая кнопка фильтров -->
-<button class="floating-filter-btn" id="floatingFilterBtn">
-    🔍
-</button>
-
-<!-- Модальное окно фильтров -->
-<div class="filter-modal" id="filterModal">
-    <div class="filter-modal-content">
-        <div class="filter-modal-header">
-            <h3>🔍 Фильтры</h3>
-            <button class="filter-modal-close" id="filterModalCloseBtn">×</button>
-        </div>
-        <div class="filter-modal-body">
-            <div class="filter-group">
-                <label>🏢 Компания</label>
-                <select id="modalCompanyFilter">
-                    <option value="">Все компании</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>📅 Год</label>
-                <select id="modalYearFilter">
-                    <option value="">Все годы</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>📆 Месяц (можно выбрать несколько)</label>
-                <select id="modalMonthFilter" multiple size="4">
-                    <option value="январь">Январь</option>
-                    <option value="февраль">Февраль</option>
-                    <option value="март">Март</option>
-                    <option value="апрель">Апрель</option>
-                    <option value="май">Май</option>
-                    <option value="июнь">Июнь</option>
-                    <option value="июль">Июль</option>
-                    <option value="август">Август</option>
-                    <option value="сентябрь">Сентябрь</option>
-                    <option value="октябрь">Октябрь</option>
-                    <option value="ноябрь">Ноябрь</option>
-                    <option value="декабрь">Декабрь</option>
-                </select>
-            </div>
-            <!-- ДОБАВЬТЕ ЭТОТ БЛОК - ФИЛЬТР ПО КАНАЛАМ -->
-            <div class="filter-group">
-                <label>📢 Канал продаж</label>
-                <select id="modalChannelFilter">
-                    <option value="">Все каналы</option>
-                </select>
-            </div>
-            <!-- КОНЕЦ ДОБАВЛЕННОГО БЛОКА -->
-        </div>
-        <div class="filter-modal-footer">
-            <button class="filter-modal-btn filter-modal-btn-secondary" id="modalResetFiltersBtn">Сбросить</button>
-            <button class="filter-modal-btn filter-modal-btn-primary" id="modalApplyFiltersBtn">Применить</button>
-        </div>
-    </div>
-</div>
-
 </body>
 </html>
