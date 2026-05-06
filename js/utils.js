@@ -1,12 +1,18 @@
 // ========================
+// utils.js - ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (ПОЛНАЯ ВЕРСИЯ)
+// ========================
+
+// ========================
 // ФОРМАТИРОВАНИЕ ВАЛЮТЫ
 // ========================
+
 /**
  * Форматирует число в валюту (рубли)
  * @param {number} value - сумма для форматирования
  * @returns {string} отформатированная строка (например: "1 234 567 ₽")
  */
 function formatCurrency(value) { 
+    if (value === undefined || value === null || isNaN(value)) return '0 ₽';
     return new Intl.NumberFormat('ru-RU', { 
         style: 'currency', 
         currency: 'RUB', 
@@ -14,6 +20,7 @@ function formatCurrency(value) {
         maximumFractionDigits: 0
     }).format(Math.abs(value)); 
 }
+
 /**
  * Форматирует сумму с указанием валюты
  * @param {number} amount - сумма
@@ -21,6 +28,7 @@ function formatCurrency(value) {
  * @returns {string} отформатированная строка с символом валюты
  */
 function formatCurrencyWithCurrency(amount, currency = 'RUB') {
+    if (amount === undefined || amount === null || isNaN(amount)) return '0';
     const symbols = { RUB: '₽', USD: '$', EUR: '€', CNY: '¥' };
     const symbol = symbols[currency] || currency;
     const formatter = new Intl.NumberFormat('ru-RU', { 
@@ -29,9 +37,11 @@ function formatCurrencyWithCurrency(amount, currency = 'RUB') {
     });
     return `${formatter.format(Math.abs(amount))} ${symbol}`;
 }
+
 // ========================
 // СКЛОНЕНИЕ СУЩЕСТВИТЕЛЬНЫХ
 // ========================
+
 /**
  * Склоняет существительное в зависимости от числа
  * @param {number} number - число
@@ -39,37 +49,32 @@ function formatCurrencyWithCurrency(amount, currency = 'RUB') {
  * @param {string} two - форма для 2-4 (например, "счета")
  * @param {string} five - форма для 5-20 (например, "счетов")
  * @returns {string} правильная форма слова
- * 
- * Пример: declension(3, 'счет', 'счета', 'счетов') → "счета"
  */
 function declension(number, one, two, five) {
     const n = Math.abs(number) % 100;
-    // 11-19 всегда форма "five"
     if (n >= 11 && n <= 19) return five;
-    
     const lastDigit = n % 10;
     if (lastDigit === 1) return one;
     if (lastDigit >= 2 && lastDigit <= 4) return two;
     return five;
 }
+
 // ========================
 // УВЕДОМЛЕНИЯ
 // ========================
+
 /**
  * Показывает временное уведомление в правом верхнем углу
  * @param {string} message - текст уведомления
  * @param {string} type - тип: 'success', 'error', 'info'
  */
 function showNotification(message, type = 'success') {
-    // Удаляем старое уведомление
     const oldNotification = document.getElementById('temporaryNotification');
     if (oldNotification) oldNotification.remove();
     
-    // Создаем элемент
     const notification = document.createElement('div');
     notification.id = 'temporaryNotification';
     
-    // Базовые стили
     notification.style.cssText = `
         position: fixed;
         top: 80px;
@@ -88,20 +93,10 @@ function showNotification(message, type = 'success') {
         cursor: pointer;
     `;
     
-    // Цвета в зависимости от типа
     const styles = {
-        success: {
-            background: 'linear-gradient(135deg, #48bb78, #38a169)',
-            icon: '✅'
-        },
-        error: {
-            background: 'linear-gradient(135deg, #f56565, #e53e3e)',
-            icon: '❌'
-        },
-        info: {
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            icon: 'ℹ️'
-        }
+        success: { background: 'linear-gradient(135deg, #48bb78, #38a169)', icon: '✅' },
+        error: { background: 'linear-gradient(135deg, #f56565, #e53e3e)', icon: '❌' },
+        info: { background: 'linear-gradient(135deg, #667eea, #764ba2)', icon: 'ℹ️' }
     };
     
     const style = styles[type] || styles.success;
@@ -115,13 +110,11 @@ function showNotification(message, type = 'success') {
     
     document.body.appendChild(notification);
     
-    // Закрытие по клику
     notification.onclick = () => {
         notification.style.animation = 'fadeOutRight 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     };
     
-    // Автоматическое закрытие через 4 секунды
     setTimeout(() => {
         if (notification && notification.parentNode) {
             notification.style.animation = 'fadeOutRight 0.3s ease-out';
@@ -147,22 +140,19 @@ function showNotification(message, type = 'success') {
 function animateNumber(element, start, end, duration = 600, isCurrency = true, isPercent = false) {
     if (!element) return Promise.resolve();
     
-    // Отменяем предыдущую анимацию, если есть
     if (element._animationFrame) {
         cancelAnimationFrame(element._animationFrame);
     }
+    
     return new Promise((resolve) => {
         const startTime = performance.now();
         
         function update(currentTime) {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
-            // Easing function: плавное замедление в конце
             const easeOutCubic = 1 - Math.pow(1 - progress, 3);
             const currentValue = start + (end - start) * easeOutCubic;
             
-            // Обновляем отображение
             if (isPercent) {
                 element.innerHTML = currentValue.toFixed(1);
             } else if (isCurrency) {
@@ -174,7 +164,6 @@ function animateNumber(element, start, end, duration = 600, isCurrency = true, i
             if (progress < 1) {
                 element._animationFrame = requestAnimationFrame(update);
             } else {
-                // Финальное значение
                 if (isPercent) {
                     element.innerHTML = end.toFixed(1);
                 } else if (isCurrency) {
@@ -208,6 +197,7 @@ function detectCurrency(account) {
     if (accUpper.includes('EUR')) return 'EUR';
     return 'RUB';
 }
+
 // ========================
 // ФОРМАТИРОВАНИЕ ДАТ
 // ========================
@@ -334,23 +324,58 @@ function getChangeHtml(change, isExpense = false) {
 }
 
 // ========================
-// ЭКСПОРТ ФУНКЦИЙ (для модульной системы)
+// ОТРИСОВКА МИНИ-ГРАФИКОВ
 // ========================
 
-// Если используете ES6 модули, раскомментируйте:
-// export {
-//     formatCurrency,
-//     formatCurrencyWithCurrency,
-//     declension,
-//     showNotification,
-//     animateNumber,
-//     detectCurrency,
-//     formatDateForInput,
-//     formatDateShort,
-//     formatDateFull,
-//     parseDateFromRow,
-//     getPreviousMonths,
-//     getMonthIndex,
-//     getChangePercent,
-//     getChangeHtml
-// };
+/**
+ * Создает простой мини-график с помощью Plotly
+ * @param {string} elementId - ID элемента
+ * @param {Array} data - массив данных
+ * @param {string} color - цвет линии
+ */
+function renderMiniChart(elementId, data, color) {
+    if (!data || data.length === 0) return;
+    if (typeof Plotly === 'undefined') return;
+    
+    const trace = { 
+        y: data, 
+        type: 'scatter', 
+        mode: 'lines+markers', 
+        line: { color, width: 2 }, 
+        fill: 'tozeroy', 
+        fillcolor: color + '20' 
+    };
+    
+    const layout = { 
+        margin: { t: 5, l: 5, r: 5, b: 5 }, 
+        height: 40, 
+        xaxis: { showticklabels: false, showgrid: false }, 
+        yaxis: { showticklabels: false, showgrid: false }, 
+        paper_bgcolor: 'rgba(0,0,0,0)', 
+        plot_bgcolor: 'rgba(0,0,0,0)' 
+    };
+    
+    Plotly.newPlot(elementId, [trace], layout, { displayModeBar: false });
+}
+
+// ========================
+// ЭКСПОРТ ФУНКЦИЙ В WINDOW
+// ========================
+
+window.formatCurrency = formatCurrency;
+window.formatCurrencyWithCurrency = formatCurrencyWithCurrency;
+window.declension = declension;
+window.showNotification = showNotification;
+window.animateNumber = animateNumber;
+window.detectCurrency = detectCurrency;
+window.formatDateForInput = formatDateForInput;
+window.formatDateShort = formatDateShort;
+window.formatDateFull = formatDateFull;
+window.parseDateFromRow = parseDateFromRow;
+window.getPreviousMonths = getPreviousMonths;
+window.getMonthIndex = getMonthIndex;
+window.getChangePercent = getChangePercent;
+window.getChangeHtml = getChangeHtml;
+window.renderMiniChart = renderMiniChart;
+
+console.log('✅ utils.js: ПОЛНАЯ версия загружена');
