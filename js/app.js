@@ -51,7 +51,7 @@ function initApp() {
 const companyFilter = document.getElementById('companyFilter');
 const yearFilter = document.getElementById('yearFilter');
 const monthFilter = document.getElementById('monthFilter');
-const channelFilter = document.getElementById('channelFilter');  // ДОБАВИТЬ
+const channelFilter = document.getElementById('channelFilter');
 
 const debouncedApply = () => {
     if (companyFilter) currentFilters.company = companyFilter.value;
@@ -67,12 +67,21 @@ const debouncedApply = () => {
     renderDashboard();
     renderCashBlock();
     if (typeof updateDashboardAIAnalytics === 'function') updateDashboardAIAnalytics();
+    
+    // ↓↓↓ ДОБАВЬТЕ ЭТИ СТРОКИ ↓↓↓
+    // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ГРАФИКИ ВКЛАДОК
+    setTimeout(() => {
+        if (typeof renderTabChart === 'function') {
+            renderTabChart(0);
+        }
+    }, 150);
+    // ↑↑↑ КОНЕЦ ДОБАВЛЕННЫХ СТРОК ↑↑↑
 };
 
 if (companyFilter) companyFilter.onchange = debouncedApply;
 if (yearFilter) yearFilter.onchange = debouncedApply;
 if (monthFilter) monthFilter.onchange = debouncedApply;
-if (channelFilter) channelFilter.onchange = debouncedApply;  // ДОБАВИТЬ
+if (channelFilter) channelFilter.onchange = debouncedApply;
     
     // ========================
     // 3. НАСТРОЙКА ТЕМЫ (СВЕТЛАЯ/ТЕМНАЯ)
@@ -326,60 +335,69 @@ function setupFloatingFilterButton() {
     
     // ========== ПРИМЕНЕНИЕ ФИЛЬТРОВ (ИСПРАВЛЕНО) ==========
     if (modalApplyBtn) {
-        modalApplyBtn.onclick = () => {
-            const realCompanyFilter = document.getElementById('companyFilter');
-            const realYearFilter = document.getElementById('yearFilter');
-            const realMonthFilter = document.getElementById('monthFilter');
-            const realChannelFilter = document.getElementById('channelFilter');
-            
-            // Применяем компанию
-            if (realCompanyFilter) realCompanyFilter.value = modalCompanyFilter.value;
-            
-            // Применяем год
-            if (realYearFilter) realYearFilter.value = modalYearFilter.value;
-            
-            // ========== ВАЖНО: Применяем МЕСЯЦЫ ==========
-            if (realMonthFilter) {
-                // Очищаем все выбранные опции
-                Array.from(realMonthFilter.options).forEach(opt => {
-                    opt.selected = false;
-                });
-                // Выбираем те, что отмечены в модальном окне
-                Array.from(modalMonthFilter.selectedOptions).forEach(selectedOpt => {
-                    const optToSelect = Array.from(realMonthFilter.options).find(o => o.value === selectedOpt.value);
-                    if (optToSelect) optToSelect.selected = true;
-                });
+    modalApplyBtn.onclick = () => {
+        const realCompanyFilter = document.getElementById('companyFilter');
+        const realYearFilter = document.getElementById('yearFilter');
+        const realMonthFilter = document.getElementById('monthFilter');
+        const realChannelFilter = document.getElementById('channelFilter');
+        
+        // Применяем компанию
+        if (realCompanyFilter) realCompanyFilter.value = modalCompanyFilter.value;
+        
+        // Применяем год
+        if (realYearFilter) realYearFilter.value = modalYearFilter.value;
+        
+        // ========== ВАЖНО: Применяем МЕСЯЦЫ ==========
+        if (realMonthFilter) {
+            // Очищаем все выбранные опции
+            Array.from(realMonthFilter.options).forEach(opt => {
+                opt.selected = false;
+            });
+            // Выбираем те, что отмечены в модальном окне
+            Array.from(modalMonthFilter.selectedOptions).forEach(selectedOpt => {
+                const optToSelect = Array.from(realMonthFilter.options).find(o => o.value === selectedOpt.value);
+                if (optToSelect) optToSelect.selected = true;
+            });
+        }
+        
+        // Применяем канал
+        if (realChannelFilter) realChannelFilter.value = modalChannelFilter.value;
+        
+        // ========== ПРИНУДИТЕЛЬНО ВЫЗЫВАЕМ ОБНОВЛЕНИЕ ==========
+        // Собираем все фильтры
+        if (realCompanyFilter) currentFilters.company = realCompanyFilter.value;
+        if (realYearFilter) currentFilters.year = realYearFilter.value;
+        if (realMonthFilter) {
+            currentFilters.month = Array.from(realMonthFilter.selectedOptions).map(o => o.value);
+        }
+        if (realChannelFilter) currentFilters.channel = realChannelFilter.value;
+        
+        // Применяем фильтры и обновляем дашборд
+        currentData = applyFilters(originalData, currentFilters);
+        renderDashboard();
+        renderCashBlock();
+        if (typeof updateDashboardAIAnalytics === 'function') updateDashboardAIAnalytics();
+        
+        // ↓↓↓ ДОБАВЬТЕ ЭТИ СТРОКИ ↓↓↓
+        // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ГРАФИКИ ВКЛАДОК
+        setTimeout(() => {
+            if (typeof renderTabChart === 'function') {
+                renderTabChart(0);
             }
-            
-            // Применяем канал
-            if (realChannelFilter) realChannelFilter.value = modalChannelFilter.value;
-            
-            // ========== ПРИНУДИТЕЛЬНО ВЫЗЫВАЕМ ОБНОВЛЕНИЕ ==========
-            // Собираем все фильтры
-            if (realCompanyFilter) currentFilters.company = realCompanyFilter.value;
-            if (realYearFilter) currentFilters.year = realYearFilter.value;
-            if (realMonthFilter) {
-                currentFilters.month = Array.from(realMonthFilter.selectedOptions).map(o => o.value);
-            }
-            if (realChannelFilter) currentFilters.channel = realChannelFilter.value;
-            
-            // Применяем фильтры и обновляем дашборд
-            currentData = applyFilters(originalData, currentFilters);
-            renderDashboard();
-            renderCashBlock();
-            if (typeof updateDashboardAIAnalytics === 'function') updateDashboardAIAnalytics();
-            
-            // Также вызываем события change для синхронизации
-            if (realCompanyFilter) realCompanyFilter.dispatchEvent(new Event('change'));
-            if (realYearFilter) realYearFilter.dispatchEvent(new Event('change'));
-            if (realMonthFilter) realMonthFilter.dispatchEvent(new Event('change'));
-            if (realChannelFilter) realChannelFilter.dispatchEvent(new Event('change'));
-            
-            filterModal.classList.remove('active');
-            
-            console.log('Применены фильтры:', currentFilters);
-        };
-    }
+        }, 150);
+        // ↑↑↑ КОНЕЦ ДОБАВЛЕННЫХ СТРОК ↑↑↑
+        
+        // Также вызываем события change для синхронизации
+        if (realCompanyFilter) realCompanyFilter.dispatchEvent(new Event('change'));
+        if (realYearFilter) realYearFilter.dispatchEvent(new Event('change'));
+        if (realMonthFilter) realMonthFilter.dispatchEvent(new Event('change'));
+        if (realChannelFilter) realChannelFilter.dispatchEvent(new Event('change'));
+        
+        filterModal.classList.remove('active');
+        
+        console.log('Применены фильтры:', currentFilters);
+    };
+}
     
     // Сброс фильтров
     if (modalResetBtn) {
