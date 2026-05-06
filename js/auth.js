@@ -1,22 +1,18 @@
 // ========================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// auth.js - АВТОРИЗАЦИЯ И УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
-let currentUser = null;      // Текущий авторизованный пользователь
-let authUsers = [];          // Массив всех пользователей из файла
-let usersLoaded = false;     // Флаг: загружены ли пользователи
+// Глобальные переменные
+let currentUser = null;
+let authUsers = [];
+let usersLoaded = false;
 
-const USERS_FILE_PATH = 'users.xlsx';  // Путь к файлу с пользователями
-
-// ========================
-// НАСТРОЙКА РЕЖИМА ТЕСТИРОВАНИЯ
-// ========================
-
-const TEST_MODE = true; // ← МЕНЯЙТЕ ЗДЕСЬ: true = без авторизации, false = с авторизацией
+const USERS_FILE_PATH = 'users.xlsx';
 
 // ========================
-// ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ИЗ EXCEL
+// ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ИЗ EXCEL (ПОЛНАЯ ВЕРСИЯ)
 // ========================
+
 /**
  * Загружает список пользователей из Excel файла
  * @returns {Promise<boolean>} - true если загрузка успешна
@@ -26,59 +22,48 @@ async function loadUsersFromFile() {
     const authInfo = document.getElementById('authSuccess');
     
     try {
-        // 1. Загружаем файл с сервера
         const response = await fetch(USERS_FILE_PATH);
         if (!response.ok) {
             if (authError) authError.textContent = `❌ Файл ${USERS_FILE_PATH} не найден`;
             return false;
         }
         
-        // 2. Читаем как бинарные данные
         const arrayBuffer = await response.arrayBuffer();
-        
-        // 3. Парсим Excel через библиотеку XLSX
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: true });
         
-        // 4. Преобразуем строки Excel в объекты пользователей
         const users = [];
         for (const row of jsonData) {
-            // Поддерживаем разные варианты написания колонок
             let email = row['почта'] || row['email'] || row['Email'] || '';
             let password = row['пароль'] || row['password'] || row['Пароль'] || '';
             let fio = row['фио'] || row['ФИО'] || row['name'] || '';
             let access = row['доступ'] || row['access'] || row['Доступ'] || '';
             
-            // Очищаем и нормализуем данные
             email = String(email).trim().toLowerCase();
             password = String(password).trim();
             fio = String(fio).trim();
             access = String(access).trim().toLowerCase();
             
-            // Пропускаем пустые строки
             if (!email || !password) continue;
             
-            // Определяем статус блокировки
             const isBlocked = access === 'заблокирован' || access === 'blocked' || access === 'нет';
             const isAllowed = access === 'разрешён' || access === 'разрешен' || access === 'да' || access === 'yes';
             
             users.push({
                 email: email,
                 password: password,
-                fio: fio || email.split('@')[0],  // Если ФИО нет, берем часть email
-                isAdmin: false,  // Админ определяется отдельно
+                fio: fio || email.split('@')[0],
+                isAdmin: email === 'admin@example.com' || fio === 'Администратор',
                 blocked: isBlocked || (!isAllowed && access !== '')
             });
         }
         
-        // 5. Проверяем результат
         if (users.length === 0) {
             if (authError) authError.textContent = '❌ Файл не содержит данных';
             return false;
         }
         
-        // 6. Сохраняем и обновляем интерфейс
         authUsers = users;
         usersLoaded = true;
         
@@ -110,7 +95,6 @@ function updateStatusDisplay() {
     const authTitle = document.getElementById('authTitle');
     if (!authTitle) return;
     
-    // Создаем блок со статусом, если его нет
     let statusDiv = document.getElementById('autoStatusDiv');
     if (!statusDiv) {
         statusDiv = document.createElement('div');
@@ -127,7 +111,6 @@ function updateStatusDisplay() {
         authTitle.insertAdjacentElement('afterend', statusDiv);
     }
     
-    // Заполняем информацией
     if (authUsers.length > 0) {
         const activeCount = authUsers.filter(u => !u.blocked).length;
         statusDiv.innerHTML = `📁 База пользователей: ${authUsers.length} чел. (✅ ${activeCount} активных)`;
@@ -149,12 +132,10 @@ function updateStatusDisplay() {
  * @returns {Object} - Результат проверки
  */
 function login(email, password) {
-    // Проверяем, загружена ли база
     if (!usersLoaded || authUsers.length === 0) {
         return { success: false, error: 'База пользователей не загружена.' };
     }
     
-    // Ищем пользователя
     const user = authUsers.find(u => u.email === email.toLowerCase() && u.password === password);
     
     if (!user) {
@@ -187,14 +168,17 @@ function logout() {
     currentUser = null;
     localStorage.removeItem('dashboard_current_user');
     
-    // Прячем главное приложение
     document.getElementById('mainApp').style.display = 'none';
-    // Показываем форму авторизации
     document.getElementById('authContainer').style.display = 'flex';
     
-    // Очищаем поля
     document.getElementById('authEmail').value = '';
     document.getElementById('authPassword').value = '';
+    
+    // Очищаем данные
+    if (typeof originalData !== 'undefined') {
+        originalData = [];
+        currentData = [];
+    }
 }
 
 // ========================
@@ -207,8 +191,26 @@ function logout() {
 function resetAllData() {
     if (confirm('Сбросить финансовые данные? Все загруженные файлы будут удалены!')) {
         localStorage.removeItem('dashboard_financial_data');
-        alert('Финансовые данные сброшены! Страница обновится.');
-        location.reload();
+        
+        // Очищаем глобальные данные
+        if (typeof originalData !== 'undefined') {
+            originalData = [];
+            currentData = [];
+        }
+        
+        // Очищаем дашборд
+        const dashboardMetrics = document.getElementById('dashboardMetrics');
+        if (dashboardMetrics) dashboardMetrics.innerHTML = '<div class="loading">Нет данных</div>';
+        
+        // Скрываем блок денежных средств
+        const cashSidebarBlock = document.getElementById('cashSidebarBlock');
+        if (cashSidebarBlock) cashSidebarBlock.style.display = 'none';
+        
+        // Показываем область загрузки
+        const uploadArea = document.getElementById('uploadArea');
+        if (uploadArea) uploadArea.style.display = 'block';
+        
+        alert('Финансовые данные сброшены!');
     }
 }
 
@@ -216,45 +218,13 @@ function resetAllData() {
 // ИНИЦИАЛИЗАЦИЯ АВТОРИЗАЦИИ
 // ========================
 
+/**
+ * Главная функция инициализации авторизации
+ */
 async function initAuth() {
-    // ═══════════════════════════════════════════════════════════
-    // ТЕСТОВЫЙ РЕЖИМ - пропускаем авторизацию
-    // ═══════════════════════════════════════════════════════════
-    if (TEST_MODE) {
-        console.log('🔓 ТЕСТОВЫЙ РЕЖИМ: авторизация отключена');
-        
-        // Создаем тестового пользователя
-        currentUser = {
-            email: 'test@example.com',
-            fio: 'Тестовый Пользователь',
-            isAdmin: true, // true = админ, false = обычный пользователь
-            blocked: false
-        };
-        
-        // Показываем главное приложение
-        const mainApp = document.getElementById('mainApp');
-        const authContainer = document.getElementById('authContainer');
-        const userInfo = document.getElementById('userInfo');
-        const adminBtn = document.getElementById('adminBtn');
-        
-        if (mainApp) mainApp.style.display = 'block';
-        if (authContainer) authContainer.style.display = 'none';
-        if (userInfo) userInfo.innerHTML = `👤 ${currentUser.fio}`;
-        if (adminBtn) adminBtn.style.display = 'inline-block';
-        
-        // Запускаем приложение
-        initApp();
-        return; // Выходим из функции, оригинальный код не выполняется
-    }
-    
-    // ═══════════════════════════════════════════════════════════
-    // ОРИГИНАЛЬНЫЙ КОД АВТОРИЗАЦИИ (выполняется только если TEST_MODE = false)
-    // ═══════════════════════════════════════════════════════════
-    
     updateStatusDisplay();
     await loadUsersFromFile();
     
-    // Проверяем, есть ли сохраненный пользователь
     const savedUser = localStorage.getItem('dashboard_current_user');
     
     if (savedUser && usersLoaded && authUsers.length > 0) {
@@ -262,7 +232,6 @@ async function initAuth() {
             const userData = JSON.parse(savedUser);
             const currentUserData = authUsers.find(u => u.email === userData.email);
             
-            // Если пользователь существует и не заблокирован
             if (currentUserData && !currentUserData.blocked) {
                 currentUser = {
                     email: currentUserData.email,
@@ -271,21 +240,24 @@ async function initAuth() {
                     blocked: currentUserData.blocked
                 };
                 
-                // Показываем главное приложение
                 document.getElementById('mainApp').style.display = 'block';
                 document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('userInfo').innerHTML = `👤 ${currentUser.fio}`;
                 
-                // Запускаем приложение
+                // Показываем кнопку админки если пользователь администратор
+                const adminBtn = document.getElementById('adminBtn');
+                if (adminBtn && currentUser.isAdmin) {
+                    adminBtn.style.display = 'block';
+                }
+                
                 initApp();
                 return;
             }
-        } catch (e) {
+        } catch(e) {
             console.error('Ошибка восстановления сессии:', e);
         }
     }
     
-    // Если нет сохраненной сессии, показываем форму входа
     document.getElementById('mainApp').style.display = 'none';
     document.getElementById('authContainer').style.display = 'flex';
     setupAuthForms();
@@ -309,56 +281,51 @@ function setupAuthForms() {
     const authEmail = document.getElementById('authEmail');
     const authPassword = document.getElementById('authPassword');
     
-    // Скрываем форму регистрации (в данной версии только вход)
     if (authToggle) authToggle.style.display = 'none';
     if (authFio) authFio.style.display = 'none';
     if (authTitle) authTitle.textContent = '🔐 Вход в систему';
     if (authSubmitBtn) authSubmitBtn.textContent = 'Войти';
     
-    // Кнопка сброса данных
     if (resetDataBtn) resetDataBtn.onclick = resetAllData;
     
-    // Обработчик кнопки входа
     if (authSubmitBtn) {
         authSubmitBtn.onclick = () => {
             const email = authEmail.value.trim();
             const password = authPassword.value;
             
-            // Очищаем предыдущие сообщения
             if (authError) authError.textContent = '';
             if (authSuccess) authSuccess.textContent = '';
             
-            // Проверка заполнения полей
             if (!email || !password) {
                 if (authError) authError.textContent = 'Заполните все поля';
                 return;
             }
             
-            // Проверка загрузки базы
             if (!usersLoaded || authUsers.length === 0) {
                 if (authError) authError.textContent = 'База пользователей не загружена. Проверьте файл users.xlsx';
                 return;
             }
             
-            // Выполняем вход
             const result = login(email, password);
             
             if (result.success) {
                 currentUser = result.user;
                 
-                // Сохраняем сессию
                 localStorage.setItem('dashboard_current_user', JSON.stringify({ 
                     email: currentUser.email, 
                     fio: currentUser.fio, 
                     isAdmin: currentUser.isAdmin 
                 }));
                 
-                // Показываем приложение
                 document.getElementById('mainApp').style.display = 'block';
                 document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('userInfo').innerHTML = `👤 ${currentUser.fio}`;
                 
-                // Запускаем приложение
+                const adminBtn = document.getElementById('adminBtn');
+                if (adminBtn && currentUser.isAdmin) {
+                    adminBtn.style.display = 'block';
+                }
+                
                 initApp();
             } else {
                 if (authError) authError.textContent = result.error;
@@ -380,7 +347,6 @@ function showAdminPanel() {
         if (tbody) {
             tbody.innerHTML = '';
             
-            // Выводим список пользователей
             for (const user of authUsers) {
                 const row = tbody.insertRow();
                 row.insertCell(0).textContent = user.fio;
@@ -391,8 +357,6 @@ function showAdminPanel() {
                 actionCell.textContent = '📝 Редактировать в Excel';
                 actionCell.style.color = '#f59e0b';
                 actionCell.style.cursor = 'pointer';
-                
-                // Пояснение для пользователя
                 actionCell.title = 'Управление пользователями осуществляется через файл users.xlsx';
             }
         }
@@ -401,3 +365,19 @@ function showAdminPanel() {
         alert('Доступ запрещен. Только для администратора.\n\nУправление пользователями - через файл users.xlsx');
     }
 }
+
+// ========================
+// ЭКСПОРТ ФУНКЦИЙ В WINDOW
+// ========================
+
+window.currentUser = currentUser;
+window.authUsers = authUsers;
+window.usersLoaded = usersLoaded;
+window.loadUsersFromFile = loadUsersFromFile;
+window.login = login;
+window.logout = logout;
+window.resetAllData = resetAllData;
+window.initAuth = initAuth;
+window.showAdminPanel = showAdminPanel;
+
+console.log('✅ auth.js: ПОЛНАЯ версия загружена');
