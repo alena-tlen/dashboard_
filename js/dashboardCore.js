@@ -1,9 +1,22 @@
 // ========================
-// ОСНОВНЫЕ ФИНАНСОВЫЕ РАСЧЕТЫ
+// dashboardCore.js - ОСНОВНЫЕ ФИНАНСОВЫЕ РАСЧЁТЫ (ПОЛНАЯ ВЕРСИЯ)
+// ========================
+
+// Глобальная переменная для месяцев
+const MONTHS_ORDER = window.MONTHS_ORDER || ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+const CHANNEL_MAPPING = window.CHANNEL_MAPPING || {
+    'wildberries': { displayName: 'Wildberries' },
+    'ozon': { displayName: 'Ozon' },
+    'detsky-mir': { displayName: 'Детский мир' },
+    'lamoda': { displayName: 'Lamoda' }
+};
+
+// ========================
+// ОСНОВНЫЕ ФИНАНСОВЫЕ РАСЧЕТЫ (ПОЛНАЯ ВЕРСИЯ ИЗ МОНОЛИТА)
 // ========================
 
 /**
- * Рассчитывает основные финансовые показатели (полная версия из монолита)
+ * Рассчитывает основные финансовые показатели
  * @param {Array} data - массив данных
  * @param {string} channelKey - опционально, для конкретного канала
  * @returns {Object} - объект с показателями
@@ -54,6 +67,10 @@ function calculateFinancials(data, channelKey = null) {
         if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
             totalSalesQuantity += Math.abs(row.сумма || 0);
         }
+        // Дополнительная проверка для статей "Продажи шт."
+        if (row.статья === 'Продажи шт.' || row.статья === 'Продажи штук') {
+            totalSalesQuantity += Math.abs(row.сумма || 0);
+        }
     });
     
     let costData = 0;
@@ -72,8 +89,16 @@ function calculateFinancials(data, channelKey = null) {
     const avgCost = totalSalesQuantity > 0 ? costData / totalSalesQuantity : 0;
     
     return { 
-        totalRevenue, netRevenue, totalNDS, totalExpenses, profit, profitability,
-        totalSalesQuantity, costData, avgCheck, avgCost
+        totalRevenue, 
+        netRevenue, 
+        totalNDS, 
+        totalExpenses, 
+        profit, 
+        profitability,
+        totalSalesQuantity, 
+        costData, 
+        avgCheck, 
+        avgCost
     };
 }
 
@@ -83,6 +108,8 @@ function calculateFinancials(data, channelKey = null) {
 
 /**
  * Рассчитывает чистую выручку (без НДС) по каждому каналу
+ * @param {Array} data - массив данных
+ * @returns {Array} - массив объектов {name, value}
  */
 function calculateNetRevenueByChannel(data) {
     const netRevenueByChannel = {};
@@ -102,8 +129,68 @@ function calculateNetRevenueByChannel(data) {
         .map(([name, value]) => ({ name, value }));
 }
 
+/**
+ * Рассчитывает продажи по каналам (штуки)
+ * @param {Array} data - массив данных
+ * @returns {Array} - массив объектов {name, sales}
+ */
+function calculateSalesByChannel(data) {
+    const salesByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        let sales = data.filter(d => {
+            const article = d.статья?.toLowerCase() || '';
+            return d.канал === channel && (article.includes('продажи') && (article.includes('шт') || article.includes('штук')));
+        }).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        const salesRef = data.filter(d => d.канал === channel && d.тип === 'Справочная' && 
+            (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи'))).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        const totalSales = sales + salesRef;
+        if (totalSales > 0) {
+            salesByChannel.push({ name: channel, sales: totalSales });
+        }
+    });
+    
+    return salesByChannel.sort((a, b) => b.sales - a.sales);
+}
+
+/**
+ * Рассчитывает средний чек по каналам
+ * @param {Array} data - массив данных
+ * @returns {Array} - массив объектов {name, avgCheck}
+ */
+function calculateAvgCheckByChannel(data) {
+    const avgCheckByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        const revenue = data.filter(d => d.канал === channel && d.тип === 'Доход').reduce((sum, d) => sum + d.сумма, 0);
+        const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+        
+        let sales = data.filter(d => {
+            const article = d.статья?.toLowerCase() || '';
+            return d.канал === channel && (article.includes('продажи') && (article.includes('шт') || article.includes('штук')));
+        }).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        const salesRef = data.filter(d => d.канал === channel && d.тип === 'Справочная' && 
+            (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи'))).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        const totalSales = sales + salesRef;
+        const netRevenue = revenue - ndsOut;
+        const avgCheck = totalSales > 0 ? netRevenue / totalSales : 0;
+        
+        if (avgCheck > 0 && totalSales > 0) {
+            avgCheckByChannel.push({ name: channel, avgCheck: avgCheck });
+        }
+    });
+    
+    return avgCheckByChannel.sort((a, b) => b.avgCheck - a.avgCheck);
+}
+
 // ========================
-// АНАЛИЗ ТОЧКИ БЕЗУБЫТОЧНОСТИ (из монолита)
+// АНАЛИЗ ТОЧКИ БЕЗУБЫТОЧНОСТИ (ПОЛНАЯ ВЕРСИЯ ИЗ МОНОЛИТА)
 // ========================
 
 /**
@@ -121,8 +208,8 @@ function generateBreakEvenAnalysis(data, f, totalSalesQuantity) {
     let totalRevenue = 0;
     let totalSales = 0;
     
-    const fixedCostCategories = ['Логистика', 'Маркетинг', 'Аренда', 'ФОТ', 'Зарплата', 'Аутсорсинг', 'Услуги банка', 'Комиссии'];
-    const variableCostCategories = ['Себестоимость сырья', 'Себестоимость товаров', 'Закупка товаров', 'Себестоимость'];
+    const fixedCostCategories = ['Логистика', 'Маркетинг', 'Аренда', 'ФОТ', 'Зарплата', 'Аутсорсинг', 'Услуги банка', 'Комиссии', 'Бухгалтерия', 'Юридические', 'Связь', 'Интернет', 'Подписки', 'Страхование', 'Лицензии'];
+    const variableCostCategories = ['Себестоимость сырья', 'Себестоимость товаров', 'Закупка товаров', 'Себестоимость', 'Товары', 'Сырье', 'Материалы'];
     
     allChannels.forEach(channel => {
         const revenue = data.filter(d => d.канал === channel && d.тип === 'Доход').reduce((sum, d) => sum + d.сумма, 0);
@@ -134,8 +221,10 @@ function generateBreakEvenAnalysis(data, f, totalSalesQuantity) {
             const article = d.статья?.toLowerCase() || '';
             return d.канал === channel && (article.includes('продажи') && (article.includes('шт') || article.includes('штук')));
         }).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
         const salesRef = data.filter(d => d.канал === channel && d.тип === 'Справочная' && 
             (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи'))).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
         totalSales += sales + salesRef;
         
         const allExpenses = data.filter(d => d.канал === channel && d.тип === 'Расход');
@@ -163,7 +252,9 @@ function generateBreakEvenAnalysis(data, f, totalSalesQuantity) {
             }
             
             if (!isFixed && !isVariable) {
-                if (subCat.includes('себест') || article.includes('себест')) {
+                if (subCat.includes('себест') || article.includes('себест') || 
+                    subCat.includes('товар') || article.includes('товар') ||
+                    subCat.includes('закуп') || article.includes('закуп')) {
                     isVariable = true;
                 } else {
                     isFixed = true;
@@ -186,22 +277,44 @@ function generateBreakEvenAnalysis(data, f, totalSalesQuantity) {
     const currentProfit = f.profit;
     const targetProfit = currentProfit * 1.2;
     const targetUnits = contributionMarginPerUnit > 0 ? Math.ceil((totalFixedCosts + targetProfit) / contributionMarginPerUnit) : 0;
+    const targetRevenue = targetUnits * avgPrice;
     const operatingLeverage = currentProfit !== 0 ? (totalRevenue - totalVariableCosts) / currentProfit : 0;
     
+    // Запас прочности в днях
+    const avgDailyRevenue = totalRevenue / 365;
+    const safetyDays = avgDailyRevenue > 0 ? safetyMarginAbsolute / avgDailyRevenue : 0;
+    
     return {
-        breakEvenUnits, breakEvenRevenue, safetyMargin, safetyMarginAbsolute,
-        contributionMarginPerUnit, contributionMarginRatio, totalFixedCosts,
-        totalVariableCosts, totalRevenue, targetProfit, targetUnits, operatingLeverage,
-        avgPrice, avgVariableCostPerUnit, totalSales
+        breakEvenUnits,
+        breakEvenRevenue,
+        safetyMargin,
+        safetyMarginAbsolute,
+        safetyDays,
+        contributionMarginPerUnit,
+        contributionMarginRatio,
+        totalFixedCosts,
+        totalVariableCosts,
+        totalRevenue,
+        totalSales,
+        avgPrice,
+        avgVariableCostPerUnit,
+        targetProfit,
+        targetUnits,
+        targetRevenue,
+        operatingLeverage,
+        currentProfit
     };
 }
 
 // ========================
-// АНАЛИЗ ТРЕНДОВ (из монолита)
+// АНАЛИЗ ТРЕНДОВ (ПОЛНАЯ ВЕРСИЯ ИЗ МОНОЛИТА)
 // ========================
 
 /**
  * Линейная регрессия для прогнозирования
+ * @param {Array} x - массив X значений
+ * @param {Array} y - массив Y значений
+ * @returns {Object} - объект с slope и intercept
  */
 function linearRegression(x, y) {
     const n = x.length;
@@ -209,8 +322,10 @@ function linearRegression(x, y) {
     const sumY = y.reduce((a, b) => a + b, 0);
     const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
     const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+    
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
+    
     return { slope, intercept };
 }
 
@@ -222,6 +337,7 @@ function linearRegression(x, y) {
  * @returns {Object} - объект с результатами анализа
  */
 function generateTrendsAnalysis(data, f, totalSalesQuantity) {
+    // Собираем данные по месяцам
     const monthlyData = {};
     
     data.forEach(row => {
@@ -254,6 +370,7 @@ function generateTrendsAnalysis(data, f, totalSalesQuantity) {
         }
     });
     
+    // Рассчитываем прибыль по месяцам
     Object.keys(monthlyData).forEach(key => {
         const revenue = monthlyData[key].revenue;
         const ndsOut = data.filter(d => {
@@ -265,28 +382,38 @@ function generateTrendsAnalysis(data, f, totalSalesQuantity) {
         monthlyData[key].netRevenue = netRevenue;
     });
     
+    // Сортируем по дате
     const sortedMonths = Object.keys(monthlyData).sort();
     const profits = sortedMonths.map(key => monthlyData[key].profit);
     const revenues = sortedMonths.map(key => monthlyData[key].netRevenue);
     const sales = sortedMonths.map(key => monthlyData[key].sales);
     
-    // Скользящая средняя
+    // 1. Скользящая средняя за 3 и 6 месяцев
     const movingAverage3 = [];
     const movingAverage6 = [];
+    
     for (let i = 0; i < profits.length; i++) {
         if (i >= 2) {
-            movingAverage3.push(profits.slice(i-2, i+1).reduce((a, b) => a + b, 0) / 3);
+            const avg3 = profits.slice(i-2, i+1).reduce((a, b) => a + b, 0) / 3;
+            movingAverage3.push(avg3);
         } else {
             movingAverage3.push(null);
         }
+        
         if (i >= 5) {
-            movingAverage6.push(profits.slice(i-5, i+1).reduce((a, b) => a + b, 0) / 6);
+            const avg6 = profits.slice(i-5, i+1).reduce((a, b) => a + b, 0) / 6;
+            movingAverage6.push(avg6);
         } else {
             movingAverage6.push(null);
         }
     }
     
-    // Темп роста
+    const lastMovingAverage3 = movingAverage3.filter(v => v !== null).pop() || 0;
+    const lastMovingAverage6 = movingAverage6.filter(v => v !== null).pop() || 0;
+    const trend3to6 = lastMovingAverage3 > lastMovingAverage6 ? 'positive' : 'negative';
+    const trend3to6Text = lastMovingAverage3 > lastMovingAverage6 ? '↑ растущий' : '↓ падающий';
+    
+    // 2. Темп роста (месяц к месяцу)
     const growthRates = [];
     for (let i = 1; i < profits.length; i++) {
         if (profits[i-1] !== 0) {
@@ -302,7 +429,11 @@ function generateTrendsAnalysis(data, f, totalSalesQuantity) {
         }
     }
     
-    // Сезонность
+    const lastGrowth = growthRates.length > 0 ? growthRates[growthRates.length - 1] : null;
+    const avgRevenueGrowth = growthRates.length > 0 ? growthRates.reduce((sum, g) => sum + g.revenueGrowth, 0) / growthRates.length : 0;
+    const avgProfitGrowth = growthRates.length > 0 ? growthRates.reduce((sum, g) => sum + g.profitGrowth, 0) / growthRates.length : 0;
+    
+    // 3. Сезонность продаж
     const seasonalityByMonth = {};
     MONTHS_ORDER.forEach(month => {
         seasonalityByMonth[month] = { sales: 0, count: 0 };
@@ -322,7 +453,10 @@ function generateTrendsAnalysis(data, f, totalSalesQuantity) {
         seasonalityCoeff[month] = avgMonthlySales > 0 ? (avg / avgMonthlySales) : 1;
     });
     
-    // Прогноз (линейная регрессия)
+    const highSeasonMonths = MONTHS_ORDER.filter(m => seasonalityCoeff[m] > 1.2);
+    const lowSeasonMonths = MONTHS_ORDER.filter(m => seasonalityCoeff[m] < 0.8);
+    
+    // 4. Прогноз на следующий месяц (линейная регрессия)
     let forecastProfit = null;
     let forecastRevenue = null;
     let forecastSales = null;
@@ -333,17 +467,20 @@ function generateTrendsAnalysis(data, f, totalSalesQuantity) {
         const profitReg = linearRegression(x, profits);
         const revenueReg = linearRegression(x, revenues);
         const salesReg = linearRegression(x, sales);
+        
         const nextX = profits.length + 1;
         forecastProfit = profitReg.slope * nextX + profitReg.intercept;
         forecastRevenue = revenueReg.slope * nextX + revenueReg.intercept;
         forecastSales = salesReg.slope * nextX + salesReg.intercept;
         
+        // Расчет уверенности прогноза (R-squared)
         const meanProfit = profits.reduce((a, b) => a + b, 0) / profits.length;
         const totalSS = profits.reduce((sum, y) => sum + Math.pow(y - meanProfit, 2), 0);
         const residualSS = profits.reduce((sum, y, i) => sum + Math.pow(y - (profitReg.slope * (i+1) + profitReg.intercept), 2), 0);
         forecastConfidence = 1 - (residualSS / totalSS);
     }
     
+    // Дополнительные метрики
     const bestMonth = sortedMonths.reduce((best, key) => {
         return monthlyData[key].profit > (monthlyData[best]?.profit || -Infinity) ? key : best;
     }, sortedMonths[0]);
@@ -355,14 +492,35 @@ function generateTrendsAnalysis(data, f, totalSalesQuantity) {
     const totalProfitGrowth = profits.length >= 2 ? ((profits[profits.length-1] - profits[0]) / profits[0]) * 100 : 0;
     
     return {
-        profits, revenues, sales, movingAverage3, movingAverage6, growthRates,
-        seasonalityByMonth, seasonalityCoeff, forecastProfit, forecastRevenue, forecastSales,
-        forecastConfidence, bestMonth, worstMonth, totalProfitGrowth
+        profits,
+        revenues,
+        sales,
+        movingAverage3,
+        movingAverage6,
+        lastMovingAverage3,
+        lastMovingAverage6,
+        trend3to6,
+        trend3to6Text,
+        growthRates,
+        lastGrowth,
+        avgRevenueGrowth,
+        avgProfitGrowth,
+        seasonalityByMonth,
+        seasonalityCoeff,
+        highSeasonMonths,
+        lowSeasonMonths,
+        forecastProfit,
+        forecastRevenue,
+        forecastSales,
+        forecastConfidence,
+        bestMonth,
+        worstMonth,
+        totalProfitGrowth
     };
 }
 
 // ========================
-// ДЕТЕКТОР АНОМАЛИЙ (из монолита)
+// ДЕТЕКТОР АНОМАЛИЙ (ПОЛНАЯ ВЕРСИЯ ИЗ МОНОЛИТА)
 // ========================
 
 /**
@@ -376,7 +534,7 @@ function generateTrendsAnalysis(data, f, totalSalesQuantity) {
 function detectAnomalies(data, f, totalSalesQuantity, avgCheck) {
     const anomalies = [];
     
-    // Анализ выручки по месяцам
+    // 1. Анализ выручки по месяцам
     const monthlyRevenue = {};
     data.forEach(row => {
         if (row.тип === 'Доход' && row.месяц && row.год) {
@@ -406,7 +564,7 @@ function detectAnomalies(data, f, totalSalesQuantity, avgCheck) {
         });
     }
     
-    // Анализ прибыли по каналам
+    // 2. Анализ прибыли по каналам
     const channelProfits = {};
     const channels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
     
@@ -443,7 +601,77 @@ function detectAnomalies(data, f, totalSalesQuantity, avgCheck) {
         });
     }
     
-    // Отрицательная прибыль
+    // 3. Анализ рентабельности по месяцам
+    const monthlyProfitability = {};
+    data.forEach(row => {
+        if (row.месяц && row.год) {
+            const key = `${row.год}-${row.месяц}`;
+            if (!monthlyProfitability[key]) {
+                monthlyProfitability[key] = { revenue: 0, ndsOut: 0, expenses: 0 };
+            }
+            if (row.тип === 'Доход') monthlyProfitability[key].revenue += row.сумма;
+            if (row.статья === 'НДС' && row.подканал === 'НДС исходящий') monthlyProfitability[key].ndsOut += row.сумма;
+            if (row.тип === 'Расход') monthlyProfitability[key].expenses += Math.abs(row.сумма);
+        }
+    });
+    
+    const profitabilityValues = [];
+    Object.entries(monthlyProfitability).forEach(([month, data]) => {
+        const netRevenue = data.revenue - data.ndsOut;
+        const profit = netRevenue - data.expenses;
+        const profitability = netRevenue > 0 ? (profit / netRevenue) * 100 : 0;
+        if (profitability !== 0) profitabilityValues.push({ month, value: profitability });
+    });
+    
+    if (profitabilityValues.length >= 3) {
+        const meanProf = profitabilityValues.reduce((a, b) => a + b.value, 0) / profitabilityValues.length;
+        const stdDevProf = Math.sqrt(profitabilityValues.map(v => Math.pow(v.value - meanProf, 2)).reduce((a, b) => a + b, 0) / profitabilityValues.length);
+        
+        profitabilityValues.forEach(({ month, value }) => {
+            const zScore = Math.abs((value - meanProf) / stdDevProf);
+            if (zScore > 2) {
+                anomalies.push({
+                    type: 'Рентабельность',
+                    period: month,
+                    value: value,
+                    expected: meanProf,
+                    severity: zScore > 3 ? 'high' : 'medium',
+                    message: `Рентабельность ${value.toFixed(1)}% ${value > meanProf ? 'выше' : 'ниже'} среднего на ${Math.abs(value - meanProf).toFixed(1)}%`
+                });
+            }
+        });
+    }
+    
+    // 4. Анализ себестоимости по месяцам
+    const monthlyCost = {};
+    data.forEach(row => {
+        if ((row.подканал === 'Себестоимость сырья' || row.статья?.toLowerCase().includes('себестоимость')) && row.месяц && row.год) {
+            const key = `${row.год}-${row.месяц}`;
+            monthlyCost[key] = (monthlyCost[key] || 0) + Math.abs(row.сумма);
+        }
+    });
+    
+    const costValues = Object.values(monthlyCost);
+    if (costValues.length >= 3) {
+        const meanCost = costValues.reduce((a, b) => a + b, 0) / costValues.length;
+        const stdDevCost = Math.sqrt(costValues.map(v => Math.pow(v - meanCost, 2)).reduce((a, b) => a + b, 0) / costValues.length);
+        
+        Object.entries(monthlyCost).forEach(([month, cost]) => {
+            const zScore = Math.abs((cost - meanCost) / stdDevCost);
+            if (zScore > 2) {
+                anomalies.push({
+                    type: 'Себестоимость',
+                    period: month,
+                    value: cost,
+                    expected: meanCost,
+                    severity: zScore > 3 ? 'high' : 'medium',
+                    message: `Себестоимость ${formatCurrency(cost)} ${cost > meanCost ? 'выше' : 'ниже'} среднего на ${Math.abs(((cost - meanCost) / meanCost) * 100).toFixed(0)}%`
+                });
+            }
+        });
+    }
+    
+    // 5. Проверка отрицательной прибыли
     if (f.profit < 0) {
         anomalies.push({
             type: 'Критическое',
@@ -455,7 +683,7 @@ function detectAnomalies(data, f, totalSalesQuantity, avgCheck) {
         });
     }
     
-    // Аномальный средний чек
+    // 6. Проверка аномального среднего чека
     if (avgCheck > 0) {
         const checkAnomaly = avgCheck > 50000 ? 'high' : avgCheck < 1000 ? 'low' : null;
         if (checkAnomaly) {
@@ -470,16 +698,184 @@ function detectAnomalies(data, f, totalSalesQuantity, avgCheck) {
         }
     }
     
+    // Сортируем по критичности
     const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
     return anomalies.sort((a, b) => severityOrder[b.severity] - severityOrder[a.severity]);
 }
 
-// Экспортируем функции в window для глобального доступа
+// ========================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ========================
+
+/**
+ * Получает данные по продажам по месяцам
+ * @param {Array} data - массив данных
+ * @param {Array} monthsOrder - порядок месяцев
+ * @returns {Array} - массив продаж по месяцам
+ */
+function getMonthlySalesData(data, monthsOrder) {
+    const monthlySales = {};
+    monthsOrder.forEach(month => { monthlySales[month] = 0; });
+    
+    data.forEach(d => {
+        if (d.месяц && monthsOrder.includes(d.месяц)) {
+            const article = d.статья?.toLowerCase() || '';
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                monthlySales[d.месяц] += Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    
+    return monthsOrder.map(m => monthlySales[m] || 0);
+}
+
+/**
+ * Получает данные по чистой выручке по месяцам
+ * @param {Array} data - массив данных
+ * @param {Array} monthsOrder - порядок месяцев
+ * @returns {Array} - массив чистой выручки по месяцам
+ */
+function getMonthlyNetRevenueData(data, monthsOrder) {
+    const monthlyNetRevenue = {};
+    monthsOrder.forEach(month => { monthlyNetRevenue[month] = 0; });
+    
+    data.forEach(d => {
+        if (d.месяц && monthsOrder.includes(d.месяц) && d.тип === 'Доход') {
+            let ndsOut = 0;
+            data.forEach(row => {
+                if (row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                    ndsOut += (row.сумма || 0);
+                }
+            });
+            monthlyNetRevenue[d.месяц] += (d.сумма || 0) - ndsOut;
+        }
+    });
+    
+    return monthsOrder.map(m => monthlyNetRevenue[m] / 1000);
+}
+
+/**
+ * Получает данные по среднему чеку по месяцам
+ * @param {Array} data - массив данных
+ * @param {Array} monthsOrder - порядок месяцев
+ * @returns {Array} - массив среднего чека по месяцам
+ */
+function getMonthlyAvgCheckData(data, monthsOrder) {
+    const revenue = {}, sales = {};
+    monthsOrder.forEach(month => {
+        revenue[month] = 0;
+        sales[month] = 0;
+    });
+    
+    data.forEach(d => {
+        if (d.месяц && monthsOrder.includes(d.месяц)) {
+            if (d.тип === 'Доход') {
+                let ndsOut = 0;
+                data.forEach(row => {
+                    if (row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                        ndsOut += (row.сумма || 0);
+                    }
+                });
+                revenue[d.месяц] += (d.сумма || 0) - ndsOut;
+            }
+            const article = (d.статья || '').toLowerCase();
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                sales[d.месяц] += Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    
+    return monthsOrder.map(m => revenue[m] !== 0 && sales[m] !== 0 ? revenue[m] / sales[m] : 0);
+}
+
+/**
+ * Получает данные по эффективности по месяцам
+ * @param {Array} data - массив данных
+ * @param {Array} monthsOrder - порядок месяцев
+ * @returns {Array} - массив эффективности по месяцам
+ */
+function getMonthlyEfficiencyData(data, monthsOrder) {
+    const monthly = {};
+    monthsOrder.forEach(month => {
+        monthly[month] = { revenue: 0, ndsOut: 0, expenses: 0 };
+    });
+    
+    data.forEach(d => {
+        if (d.месяц && monthsOrder.includes(d.месяц)) {
+            if (d.тип === 'Доход') monthly[d.месяц].revenue += d.сумма || 0;
+            if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') monthly[d.месяц].ndsOut += d.сумма || 0;
+            if (d.тип === 'Расход') monthly[d.месяц].expenses += Math.abs(d.сумма || 0);
+        }
+    });
+    
+    return monthsOrder.map(m => {
+        const netRev = monthly[m].revenue - monthly[m].ndsOut;
+        if (netRev !== 0 && monthly[m].expenses !== 0) {
+            const profit = netRev - monthly[m].expenses;
+            return profit / (monthly[m].expenses || 1);
+        }
+        return 0;
+    });
+}
+
+// ========================
+// ФУНКЦИЯ ДЛЯ ВЫЧИСЛЕНИЯ СЕБЕСТОИМОСТИ ПО КАНАЛАМ
+// ========================
+
+/**
+ * Рассчитывает себестоимость по каналам
+ * @param {Array} data - массив данных
+ * @returns {Array} - массив объектов с себестоимостью по каналам
+ */
+function calculateCostByChannel(data) {
+    const costByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    
+    allChannels.forEach(channel => {
+        let cost = data
+            .filter(d => d.канал === channel && d.тип === 'Расход' && d.подканал === 'Себестоимость сырья')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        cost += data.filter(d => d.канал === channel && d.статья === 'Себестоимость сырья')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        cost += data.filter(d => d.канал === channel && d.статья === 'Себестоимость товаров')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        cost += data.filter(d => d.канал === channel && d.статья === 'Себестоимость')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        if (cost > 0) {
+            const revenue = data.filter(d => d.канал === channel && d.тип === 'Доход').reduce((sum, d) => sum + d.сумма, 0);
+            const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+            const netRevenue = revenue - ndsOut;
+            const costToRevenue = netRevenue > 0 ? (cost / netRevenue) * 100 : 0;
+            
+            costByChannel.push({
+                name: channel,
+                cost: cost,
+                costToRevenue: costToRevenue
+            });
+        }
+    });
+    
+    return costByChannel.sort((a, b) => b.cost - a.cost);
+}
+
+// ========================
+// ЭКСПОРТ ФУНКЦИЙ В WINDOW
+// ========================
+
 window.calculateFinancials = calculateFinancials;
 window.calculateNetRevenueByChannel = calculateNetRevenueByChannel;
+window.calculateSalesByChannel = calculateSalesByChannel;
+window.calculateAvgCheckByChannel = calculateAvgCheckByChannel;
+window.calculateCostByChannel = calculateCostByChannel;
 window.generateBreakEvenAnalysis = generateBreakEvenAnalysis;
 window.generateTrendsAnalysis = generateTrendsAnalysis;
 window.linearRegression = linearRegression;
 window.detectAnomalies = detectAnomalies;
+window.getMonthlySalesData = getMonthlySalesData;
+window.getMonthlyNetRevenueData = getMonthlyNetRevenueData;
+window.getMonthlyAvgCheckData = getMonthlyAvgCheckData;
+window.getMonthlyEfficiencyData = getMonthlyEfficiencyData;
 
-console.log('✅ dashboardCore.js: все функции загружены');
+console.log('✅ dashboardCore.js: ПОЛНАЯ версия загружена');
