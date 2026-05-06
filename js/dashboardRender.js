@@ -1457,9 +1457,14 @@ function renderDashboard() {
             return;
         }
         
-        const f = window.calculateFinancials ? window.calculateFinancials(window.currentData) : { totalRevenue: 0, netRevenue: 0, totalNDS: 0, totalExpenses: 0, profit: 0, profitability: 0 };
+        const f = window.calculateFinancials ? window.calculateFinancials(window.currentData) : { 
+            totalRevenue: 0, netRevenue: 0, totalNDS: 0, totalExpenses: 0, profit: 0, profitability: 0,
+            totalSalesQuantity: 0, costData: 0, avgCheck: 0, avgCost: 0
+        };
         
-        // Сбор доходов и расходов по каналам
+        // ========================
+        // СБОР ДОХОДОВ И РАСХОДОВ ПО КАНАЛАМ
+        // ========================
         const revenueByChannel = {}, expensesByChannel = {};
         window.currentData.forEach(d => {
             if (d.тип === 'Доход' && d.канал) {
@@ -1475,10 +1480,17 @@ function renderDashboard() {
             }
         });
         
-        const revenueChannelsList = Object.entries(revenueByChannel).filter(([_, data]) => data.total > 0).sort((a, b) => b[1].total - a[1].total).map(([name, data]) => ({ name, total: data.total, items: Object.entries(data.items).map(([itemName, amount]) => ({ name: itemName, amount })) }));
-        const expenseChannelsList = Object.entries(expensesByChannel).filter(([_, data]) => data.total > 0).sort((a, b) => b[1].total - a[1].total).map(([name, data]) => ({ name, total: data.total, items: Object.entries(data.items).map(([itemName, amount]) => ({ name: itemName, amount })) }));
+        const revenueChannelsList = Object.entries(revenueByChannel).filter(([_, data]) => data.total > 0)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([name, data]) => ({ name, total: data.total, items: Object.entries(data.items).map(([itemName, amount]) => ({ name: itemName, amount })) }));
         
-        // Продажи и средний чек
+        const expenseChannelsList = Object.entries(expensesByChannel).filter(([_, data]) => data.total > 0)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([name, data]) => ({ name, total: data.total, items: Object.entries(data.items).map(([itemName, amount]) => ({ name: itemName, amount })) }));
+        
+        // ========================
+        // ПРОДАЖИ И СРЕДНИЙ ЧЕК
+        // ========================
         let salesFromArticle = 0, salesFromReference = 0;
         window.currentData.forEach(d => {
             const article = d.статья?.toLowerCase() || '';
@@ -1488,10 +1500,13 @@ function renderDashboard() {
         const totalSalesQuantity = salesFromArticle + salesFromReference;
         const avgCheck = totalSalesQuantity > 0 ? f.netRevenue / totalSalesQuantity : 0;
         
-        // Месячные данные для графиков
+        // ========================
+        // МЕСЯЧНЫЕ ДАННЫЕ ДЛЯ ГРАФИКОВ
+        // ========================
         const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
         const monthlyDataMap = new Map();
         monthsOrder.forEach(month => monthlyDataMap.set(month, { revenue: 0, profit: 0, expenses: 0 }));
+        
         window.currentData.forEach(d => {
             if (d.месяц && monthsOrder.includes(d.месяц)) {
                 const monthData = monthlyDataMap.get(d.месяц);
@@ -1499,6 +1514,7 @@ function renderDashboard() {
                 if (d.тип === 'Расход') monthData.expenses += Math.abs(d.сумма);
             }
         });
+        
         monthlyDataMap.forEach((data, month) => {
             const ndsOut = window.currentData.filter(d => d.месяц === month && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
             const netRev = data.revenue - ndsOut;
@@ -1509,8 +1525,30 @@ function renderDashboard() {
         const monthlyLabels = monthsOrder.filter(m => monthlyDataMap.get(m).revenue > 0 || monthlyDataMap.get(m).profit !== 0);
         const monthlyRevenues = monthlyLabels.map(m => monthlyDataMap.get(m).revenue / 1000);
         const monthlyExpensesArray = monthlyLabels.map(m => (monthlyDataMap.get(m)?.expenses || 0) / 1000);
+        const monthlyProfits = monthlyLabels.map(m => monthlyDataMap.get(m).profit / 1000);
         
-        // Динамика изменений
+        // ========================
+        // НДС ДАННЫЕ
+        // ========================
+        const monthlyNds = {};
+        monthsOrder.forEach(month => monthlyNds[month] = 0);
+        window.currentData.forEach(d => {
+            if (d.месяц && monthsOrder.includes(d.месяц)) {
+                if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') monthlyNds[d.месяц] += d.сумма;
+                else if (d.статья === 'НДС' && d.подканал === 'НДС входящий') monthlyNds[d.месяц] -= d.сумма;
+            }
+        });
+        
+        const ndsLabels = monthlyLabels;
+        const ndsValues = ndsLabels.map(m => monthlyNds[m] || 0);
+        const revenueForNds = ndsLabels.map(m => monthlyDataMap.get(m)?.revenue || 0);
+        const totalNdsAmount = f.totalNDS;
+        const totalRevenueAmount = f.totalRevenue;
+        const totalNdsPercent = totalRevenueAmount > 0 ? (Math.abs(totalNdsAmount) / totalRevenueAmount) * 100 : 0;
+        
+        // ========================
+        // ДИНАМИКА ИЗМЕНЕНИЙ
+        // ========================
         function getChangePercent(current, previous) {
             if (!previous || previous === 0) return null;
             const change = ((current - previous) / previous) * 100;
@@ -1536,60 +1574,545 @@ function renderDashboard() {
         const expensesChange = fPrev ? getChangePercent(f.totalExpenses, fPrev.totalExpenses) : null;
         const profitChange = fPrev ? getChangePercent(f.profit, fPrev.profit) : null;
         const ndsChange = fPrev ? getChangePercent(f.totalNDS, fPrev.totalNDS) : null;
+        const profitabilityChange = fPrev ? getChangePercent(f.profitability, fPrev.profitability) : null;
         
-        // Себестоимость
+        // ========================
+        // СЕБЕСТОИМОСТЬ
+        // ========================
         let costData = window.currentData.filter(d => d.тип === 'Расход' && d.подканал === 'Себестоимость сырья').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        costData += window.currentData.filter(d => d.статья === 'Себестоимость сырья').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        costData += window.currentData.filter(d => d.статья === 'Себестоимость товаров').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        costData += window.currentData.filter(d => d.статья === 'Себестоимость').reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
         const avgCost = totalSalesQuantity > 0 ? costData / totalSalesQuantity : 0;
+        const costChange = fPrev ? getChangePercent(costData, fPrev.costData || 0) : null;
+        const avgCostChange = fPrev ? getChangePercent(avgCost, fPrev.avgCost || 0) : null;
+        const salesChange = fPrev ? getChangePercent(totalSalesQuantity, fPrev.totalSalesQuantity || 0) : null;
+        const avgCheckChange = fPrev ? getChangePercent(avgCheck, fPrev.avgCheck || 0) : null;
         
-        // НДС данные
-        const monthlyNds = {};
-        monthsOrder.forEach(month => monthlyNds[month] = 0);
-        window.currentData.forEach(d => {
-            if (d.месяц && monthsOrder.includes(d.месяц)) {
-                if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') monthlyNds[d.месяц] += d.сумма;
-                else if (d.статья === 'НДС' && d.подканал === 'НДС входящий') monthlyNds[d.месяц] -= d.сумма;
-            }
-        });
-        const ndsLabels = monthlyLabels;
-        const ndsValues = ndsLabels.map(m => monthlyNds[m] || 0);
-        const revenueForNds = ndsLabels.map(m => monthlyDataMap.get(m)?.revenue || 0);
-        const totalNdsAmount = f.totalNDS;
-        const totalRevenueAmount = f.totalRevenue;
-        const totalNdsPercent = totalRevenueAmount > 0 ? (Math.abs(totalNdsAmount) / totalRevenueAmount) * 100 : 0;
-        
-        // Состояние компании и рекомендации
+        // ========================
+        // СОСТОЯНИЕ КОМПАНИИ И РЕКОМЕНДАЦИИ
+        // ========================
         let healthStatus = { color: '#48bb78', text: 'Отлично', icon: '🚀' };
         let recommendations = [];
-        if (f.profit < 0) { healthStatus = { color: '#f56565', text: 'Критично', icon: '🔴' }; recommendations.push('⚠️ Компания убыточна! Срочно оптимизируйте расходы.'); }
-        else if (f.profitability < 10) { healthStatus = { color: '#ed8936', text: 'Требует внимания', icon: '⚠️' }; recommendations.push('📉 Низкая рентабельность (<10%). Пересмотрите ценообразование.'); }
-        else if (f.profitability < 20) { healthStatus = { color: '#f59e0b', text: 'Средняя', icon: '📊' }; recommendations.push('📈 Рентабельность можно улучшить. Оптимизируйте затраты.'); }
-        else { recommendations.push('✅ Отличная рентабельность! Масштабируйте успешные каналы.'); }
+        if (f.profit < 0) {
+            healthStatus = { color: '#f56565', text: 'Критично', icon: '🔴' };
+            recommendations.push('⚠️ Компания убыточна! Срочно оптимизируйте расходы.');
+        } else if (f.profitability < 10) {
+            healthStatus = { color: '#ed8936', text: 'Требует внимания', icon: '⚠️' };
+            recommendations.push('📉 Низкая рентабельность (<10%). Пересмотрите ценообразование.');
+        } else if (f.profitability < 20) {
+            healthStatus = { color: '#f59e0b', text: 'Средняя', icon: '📊' };
+            recommendations.push('📈 Рентабельность можно улучшить. Оптимизируйте затраты.');
+        } else {
+            recommendations.push('✅ Отличная рентабельность! Масштабируйте успешные каналы.');
+        }
+        
         if (avgCheck < 1000 && avgCheck > 0) recommendations.push('💰 Средний чек ниже 1000₽. Работайте над апселлингом.');
         else if (avgCheck > 5000) recommendations.push('💎 Высокий средний чек. Удерживайте качество обслуживания.');
         
-        // Верхняя панель
-        const topPanelHtml = `<div style="margin-bottom: 24px;"><div class="metrics-grid" style="margin-bottom: 20px;"><div class="metric-card" style="grid-column: span 4; padding: 20px;">
-            <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 18px;">📊</span><span style="font-size: 14px; font-weight: 600; color: #667eea;">СОСТОЯНИЕ КОМПАНИИ</span></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                    <div style="text-align: center; min-width: 100px;"><div style="font-size: 36px;">${healthStatus.icon}</div><div style="font-size: 11px; opacity: 0.7;">Статус</div><div style="font-size: 18px; font-weight: 700; color: ${healthStatus.color};">${healthStatus.text}</div></div>
-                    <div style="width: 1px; height: 50px; background: rgba(102,126,234,0.2);"></div>
-                    <div><div style="font-size: 11px; opacity: 0.7; margin-bottom: 6px;">💡 Ключевые рекомендации</div><div style="font-size: 13px; line-height: 1.4;">${recommendations[0] || 'Анализ данных в норме'}</div>${recommendations[1] ? `<div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${recommendations[1]}</div>` : ''}</div>
-                </div>
-                <div style="text-align: right;"><div style="font-size: 11px; opacity: 0.7;">Период анализа</div><div style="font-size: 14px; font-weight: 600;">${currentFilters.year || 'год'} ${currentFilters.month?.length ? currentFilters.month.join(', ') : 'все месяцы'}</div></div>
-            </div>
-        </div></div></div>`;
+        const efficiency = f.profit / (f.totalExpenses || 1);
         
-        // Основные блоки
-        const revenueHtml = createCollapsibleBlock('Доходы по каналам', '💰', f.totalRevenue, revenueChange, revenueChannelsList, false, monthlyDataMap, monthlyLabels, monthlyRevenues, null);
-        const expensesHtml = createCollapsibleBlock('Расходы по каналам', '📉', f.totalExpenses, expensesChange, expenseChannelsList, true, monthlyDataMap, monthlyLabels, monthlyExpensesArray, f.totalRevenue);
+        // ========================
+        // ВЕРХНЯЯ ПАНЕЛЬ
+        // ========================
+        const topPanelHtml = `
+        <div style="margin-bottom: 24px;">
+            <div class="metrics-grid" style="margin-bottom: 20px;">
+                <div class="metric-card" style="grid-column: span 4; padding: 20px;">
+                    <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 18px;">📊</span>
+                        <span style="font-size: 14px; font-weight: 600; color: #667eea;">СОСТОЯНИЕ КОМПАНИИ</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                            <div style="text-align: center; min-width: 100px;">
+                                <div style="font-size: 36px;">${healthStatus.icon}</div>
+                                <div style="font-size: 11px; opacity: 0.7;">Статус</div>
+                                <div style="font-size: 18px; font-weight: 700; color: ${healthStatus.color};">${healthStatus.text}</div>
+                            </div>
+                            <div style="width: 1px; height: 50px; background: rgba(102,126,234,0.2);"></div>
+                            <div>
+                                <div style="font-size: 11px; opacity: 0.7; margin-bottom: 6px;">💡 Ключевые рекомендации</div>
+                                <div style="font-size: 13px; line-height: 1.4;">${recommendations[0] || 'Анализ данных в норме'}</div>
+                                ${recommendations[1] ? `<div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${recommendations[1]}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 11px; opacity: 0.7;">Период анализа</div>
+                            <div style="font-size: 14px; font-weight: 600;">${currentFilters.year || 'год'} ${currentFilters.month?.length ? currentFilters.month.join(', ') : 'все месяцы'}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // ФУНКЦИЯ ДЛЯ КОЛЛАПСИБЕЛЬНЫХ БЛОКОВ
+        // ========================
+        function createCollapsibleBlock(title, icon, total, totalChange, channels, isExpense = false, monthlyValues = null) {
+            const channelItemsHtml = channels.map((channel, channelIdx) => {
+                const channelPercent = (channel.total / total) * 100;
+                const sortedItems = [...channel.items].sort((a, b) => b.amount - a.amount);
+                const itemsHtml = sortedItems.map((item, itemIdx) => {
+                    const itemPercentOfChannel = (item.amount / channel.total) * 100;
+                    const gradient = isExpense ? 'linear-gradient(90deg, #f56565, #ed8936)' : 'linear-gradient(90deg, #48bb78, #8dd934)';
+                    return `<div class="sub-item" style="margin-bottom: 12px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${itemIdx * 0.03}s;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                            <span style="font-size: 13px; font-weight: 500;">${item.name}</span>
+                            <div style="display: flex; gap: 12px;"><span style="font-size: 13px; font-weight: 600;">${formatCurrency(item.amount)}</span></div>
+                        </div>
+                        <div style="background: rgba(102,126,234,0.15); height: 6px; border-radius: 3px; overflow: hidden;">
+                            <div class="sub-progress-bar" style="width: ${itemPercentOfChannel}%; height: 100%; background: ${gradient}; border-radius: 3px;"></div>
+                        </div>
+                    </div>`;
+                }).join('');
+                const channelGradient = isExpense ? 'linear-gradient(90deg, #f56565, #ed8936)' : 'linear-gradient(90deg, #48bb78, #8dd934)';
+                return `<div class="channel-item" data-channel-name="${channel.name}" style="margin-bottom: 20px; border-bottom: 1px solid rgba(102,126,234,0.2); padding-bottom: 16px;">
+                    <div class="channel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="channel-icon" style="font-size: 20px;">${getChannelIcon(channel.name)}</span>
+                            <span style="font-weight: 700; font-size: 15px;">${channel.name}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="channel-total" style="font-size: 14px; font-weight: 600;">${formatCurrency(channel.total)}</span>
+                            <span class="expand-icon" style="font-size: 14px; transition: transform 0.3s; cursor: pointer;">▶</span>
+                        </div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); height: 8px; border-radius: 4px; margin-bottom: 12px; overflow: hidden;">
+                        <div class="channel-progress-bar" style="width: ${channelPercent}%; height: 100%; background: ${channelGradient}; border-radius: 4px;"></div>
+                    </div>
+                    <div class="channel-details" style="max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
+                        <div style="padding-top: 12px; padding-left: 30px;">${itemsHtml}</div>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            const chartHtml = (monthlyValues && monthlyValues.length > 0) ? `
+                <div class="revenue-chart-wrapper" style="margin-top: 16px;">
+                    <canvas id="${isExpense ? 'expenseMiniChartNew' : 'revenueMiniChartNew'}" style="height: 100px; width: 100%; display: block;"></canvas>
+                </div>
+            ` : '';
+            
+            return `<div class="metric-card" style="overflow: hidden; padding: 20px; height: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                    <div class="metric-title" style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 20px;">${icon}</span>
+                        <span style="font-size: 16px; font-weight: 700;">${title}</span>
+                    </div>
+                    <button class="toggle-channels-${isExpense ? 'expense' : 'revenue'}-btn" 
+                        style="background: rgba(102,126,234,0.15); border: none; border-radius: 20px; padding: 4px 12px; font-size: 11px; color: #667eea; cursor: pointer;">
+                        <span class="toggle-icon-main">▶</span> Показать каналы
+                    </button>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div class="metric-value" style="font-size: 32px;">${formatCurrency(total)}</div>
+                    ${getChangeHtml(totalChange, isExpense)}
+                </div>
+                <div class="channels-${isExpense ? 'expense' : 'revenue'}-container" 
+                    style="max-height: 0; opacity: 0; overflow-y: auto; transition: max-height 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;">
+                    ${channelItemsHtml}
+                    <button class="toggle-all-channels-btn" style="margin-top: 16px; background: none; border: none; color: #667eea; cursor: pointer;">
+                        <span>▶</span> Раскрыть подканалы
+                    </button>
+                </div>
+                ${chartHtml}
+            </div>`;
+        }
+        
+        // Генерируем основные блоки
+        const revenueHtml = createCollapsibleBlock('Доходы по каналам', '💰', f.totalRevenue, revenueChange, revenueChannelsList, false, monthlyRevenues);
+        const expensesHtml = createCollapsibleBlock('Расходы по каналам', '📉', f.totalExpenses, expensesChange, expenseChannelsList, true, monthlyExpensesArray);
         const tabsPanel = generateTabsPanel();
         
-        // Сборка дашборда
-        const dashboardHtml = `${topPanelHtml}<div class="dashboard-two-columns"><div class="dashboard-col">${revenueHtml}</div><div class="dashboard-col">${tabsPanel}</div></div><div class="dashboard-full-width">${expensesHtml}</div>`;
+        // ========================
+        // БЛОК НДС
+        // ========================
+        const ndsHtml = `
+        <div class="metric-card">
+            <div class="metric-title" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">💸</span>
+                    <span>НДС</span>
+                </div>
+                <button class="toggle-nds-breakdown-btn" style="background: none; border: none; color: #667eea; cursor: pointer;">
+                    <span>▶</span> Показать по каналам
+                </button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <div class="metric-value" id="mainNdsValue">${formatCurrency(f.totalNDS)}</div>
+                    <div class="metric-sub">${f.totalNDS >= 0 ? '↗ НДС к уплате' : '↙ НДС к возмещению'}</div>
+                    ${ndsChange ? getChangeHtml(ndsChange) : ''}
+                </div>
+                <div style="text-align: right;">
+                    <div class="metric-value" id="ndsPercentValue" style="font-size: 28px;">${totalNdsPercent.toFixed(1)}%</div>
+                    <div class="metric-sub">от выручки</div>
+                </div>
+            </div>
+            <canvas id="ndsToRevenueChart" style="height: 140px; width: 100%; margin-top: 8px;"></canvas>
+            <div id="ndsStatsCard"></div>
+            <div class="nds-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease;">
+                <div style="padding-top: 16px;">${generateNDSBreakdown(window.currentData)}</div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // БЛОК ЧИСТОЙ ВЫРУЧКИ
+        // ========================
+        const netRevenueHtml = `
+        <div class="metric-card">
+            <div class="metric-title" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">📊</span>
+                    <span>Выручка чистая</span>
+                </div>
+                <button class="toggle-breakdown-btn" data-type="netRevenue" style="background: none; border: none; color: #667eea; cursor: pointer;">
+                    <span>▶</span> Показать по каналам
+                </button>
+            </div>
+            <div>
+                <div class="metric-value">${formatCurrency(f.netRevenue)}</div>
+                ${netRevenueChange ? getChangeHtml(netRevenueChange) : ''}
+            </div>
+            <div class="revenue-chart-wrapper" style="margin-top: 16px;">
+                <canvas id="netRevenueMiniChart" style="height: 100px; width: 100%;"></canvas>
+            </div>
+            <div class="netrevenue-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 16px;">
+                <div style="padding-top: 16px;">${generateChannelBreakdown('ВЫРУЧКА ЧИСТАЯ ПО КАНАЛАМ', 'value', window.calculateNetRevenueByChannel ? window.calculateNetRevenueByChannel(window.currentData) : [], true, '')}</div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // БЛОК МАРЖИНАЛЬНОЙ ПРИБЫЛИ
+        // ========================
+        const profitHtml = `
+        <div class="metric-card" style="${f.profit < 0 ? 'border: 2px solid #f56565; animation: pulseRed 1s ease-in-out infinite;' : ''}">
+            <div class="metric-title" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">${f.profit < 0 ? '🔴' : '📈'}</span>
+                    <span>Маржинальная прибыль</span>
+                    ${f.profit < 0 ? '<span style="background: #f56565; color: white; padding: 2px 8px; border-radius: 20px; font-size: 10px;">УБЫТОК!</span>' : ''}
+                </div>
+                <button class="toggle-channels-profit-btn" style="background: none; border: none; color: #667eea; cursor: pointer;">
+                    <span>▶</span> Показать по каналам
+                </button>
+            </div>
+            <div>
+                <div class="metric-value ${f.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(f.profit)}</div>
+                ${profitChange ? getChangeHtml(profitChange) : ''}
+            </div>
+            <div class="metric-sub">Рентабельность: ${f.profitability.toFixed(1)}% ${profitabilityChange ? getChangeHtml(profitabilityChange) : ''}</div>
+            <div class="revenue-chart-wrapper" style="margin-top: 16px;">
+                <canvas id="profitMiniChart" style="height: 100px; width: 100%;"></canvas>
+            </div>
+            <div class="profit-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 16px;">
+                <div style="padding-top: 16px;">${generateProfitByChannels(f, revenueChannelsList, expenseChannelsList, window.calculateNetRevenueByChannel ? window.calculateNetRevenueByChannel(window.currentData) : [])}</div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // БЛОК ПРОДАЖ (ШТ)
+        // ========================
+        const salesHtml = `
+        <div class="metric-card">
+            <div class="metric-title" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">📦</span>
+                    <span>Продажи (шт)</span>
+                </div>
+                <button class="toggle-sales-breakdown-btn" style="background: none; border: none; color: #667eea; cursor: pointer;">
+                    <span>▶</span> Показать по каналам
+                </button>
+            </div>
+            <div>
+                <div class="metric-value">${new Intl.NumberFormat('ru-RU').format(totalSalesQuantity)}</div>
+                ${salesChange ? getChangeHtml(salesChange) : ''}
+            </div>
+            <canvas id="salesChart" style="height: 100px; width: 100%; margin-top: 8px; border-radius: 8px; cursor: pointer;"></canvas>
+            <div class="sales-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 16px;">
+                <div style="padding-top: 16px;">${generateSalesBreakdown(window.currentData)}</div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // БЛОК СРЕДНЕГО ЧЕКА
+        // ========================
+        const avgCheckHtml = `
+        <div class="metric-card">
+            <div class="metric-title" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">💰</span>
+                    <span>Средний чек</span>
+                </div>
+                <button class="toggle-avgcheck-breakdown-btn" style="background: none; border: none; color: #667eea; cursor: pointer;">
+                    <span>▶</span> Показать по каналам
+                </button>
+            </div>
+            <div>
+                <div class="metric-value">${formatCurrency(avgCheck)}</div>
+                ${avgCheckChange ? getChangeHtml(avgCheckChange) : ''}
+            </div>
+            <div class="avgcheck-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 16px;">
+                <div style="padding-top: 16px;">${generateAverageCheckBreakdown(window.currentData)}</div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // БЛОК СЕБЕСТОИМОСТИ (СЫРЬЯ)
+        // ========================
+        const costHtml = `
+        <div class="metric-card">
+            <div class="metric-title" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">🏭</span>
+                    <span>Себестоимость сырья</span>
+                </div>
+                <button class="toggle-cost-breakdown-btn" style="background: none; border: none; color: #667eea; cursor: pointer;">
+                    <span>▶</span> Показать по каналам
+                </button>
+            </div>
+            <div>
+                <div class="metric-value">${formatCurrency(costData)}</div>
+                ${costChange ? getChangeHtml(costChange, true) : ''}
+            </div>
+            <div class="cost-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 16px;">
+                <div style="padding-top: 16px;">${generateCostBreakdown(window.currentData)}</div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // БЛОК СЕБЕСТОИМОСТИ 1 ШТ
+        // ========================
+        const avgCostHtml = `
+        <div class="metric-card">
+            <div class="metric-title">📊 Себестоимость 1 шт</div>
+            <div>
+                <div class="metric-value">${formatCurrency(avgCost)}</div>
+                ${avgCostChange ? getChangeHtml(avgCostChange, true) : ''}
+            </div>
+        </div>`;
+        
+        // ========================
+        // АНАЛИЗ ТОЧКИ БЕЗУБЫТОЧНОСТИ
+        // ========================
+        const breakEvenAnalysis = window.generateBreakEvenAnalysis ? window.generateBreakEvenAnalysis(window.currentData, f, totalSalesQuantity) : null;
+        
+        const breakEvenHtml = `
+        <div class="metric-card" style="grid-column: span 4;">
+            <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                <span style="font-size: 18px;">⚖️</span>
+                <span>Точка безубыточности</span>
+                <span style="font-size: 12px; color: var(--text-secondary); margin-left: auto;">анализ постоянных и переменных затрат</span>
+            </div>
+            <div class="break-even-container">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px; text-align: center;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">📊 Точка безубыточности (шт)</div>
+                        <div style="font-size: 28px; font-weight: 700;">${breakEvenAnalysis ? new Intl.NumberFormat('ru-RU').format(breakEvenAnalysis.breakEvenUnits) : '—'}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">минимальный объем продаж</div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px; text-align: center;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">💰 Точка безубыточности (₽)</div>
+                        <div style="font-size: 28px; font-weight: 700;">${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.breakEvenRevenue) : '—'}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">минимальная выручка</div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px; text-align: center;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">🛡️ Запас финансовой прочности</div>
+                        <div style="font-size: 28px; font-weight: 700; ${(breakEvenAnalysis?.safetyMargin || 0) >= 30 ? 'color: #48bb78;' : (breakEvenAnalysis?.safetyMargin || 0) >= 10 ? 'color: #f59e0b;' : 'color: #f56565;'}">${breakEvenAnalysis ? breakEvenAnalysis.safetyMargin.toFixed(1) : '—'}%</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.safetyMarginAbsolute) : '—'} выше точки</div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px; text-align: center;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">⚡ Операционный рычаг</div>
+                        <div style="font-size: 28px; font-weight: 700;">${breakEvenAnalysis ? breakEvenAnalysis.operatingLeverage.toFixed(2) : '—'}x</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">прирост прибыли на 1% роста продаж</div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px; padding: 16px; background: rgba(102,126,234,0.05); border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                        <div>
+                            <span style="font-size: 13px; font-weight: 600;">📈 Маржинальный доход на единицу</span>
+                            <div style="font-size: 20px; font-weight: 700; color: #48bb78;">${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.contributionMarginPerUnit) : '—'}</div>
+                            <div style="font-size: 11px;">(средняя цена ${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.avgPrice) : '—'} - переменные затраты ${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.avgVariableCostPerUnit) : '—'})</div>
+                        </div>
+                        <div>
+                            <span style="font-size: 13px; font-weight: 600;">📊 Коэффициент маржинального дохода</span>
+                            <div style="font-size: 20px; font-weight: 700; color: #667eea;">${breakEvenAnalysis ? breakEvenAnalysis.contributionMarginRatio.toFixed(1) : '—'}%</div>
+                            <div style="font-size: 11px;">доля в выручке</div>
+                        </div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); height: 8px; border-radius: 4px; margin: 12px 0; overflow: hidden;">
+                        <div style="width: ${breakEvenAnalysis ? Math.min((breakEvenAnalysis.totalRevenue - breakEvenAnalysis.breakEvenRevenue) / breakEvenAnalysis.totalRevenue * 100, 100) : 0}%; height: 100%; background: linear-gradient(90deg, #48bb78, #667eea); border-radius: 4px;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                        <span>🔴 Постоянные затраты: ${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.totalFixedCosts) : '—'}</span>
+                        <span>🟢 Переменные затраты: ${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.totalVariableCosts) : '—'}</span>
+                        <span>💰 Текущая выручка: ${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.totalRevenue) : '—'}</span>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="padding: 12px; background: rgba(72,187,120,0.1); border-radius: 12px;">
+                        <div style="font-size: 12px; color: #48bb78; margin-bottom: 8px;">🎯 Прогноз для целевой прибыли (+20%)</div>
+                        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                            <div><div style="font-size: 11px;">Целевая прибыль</div><div style="font-size: 16px; font-weight: 600;">${breakEvenAnalysis ? formatCurrency(breakEvenAnalysis.targetProfit) : '—'}</div></div>
+                            <div><div style="font-size: 11px;">Необходимо продать</div><div style="font-size: 16px; font-weight: 600;">${breakEvenAnalysis ? new Intl.NumberFormat('ru-RU').format(breakEvenAnalysis.targetUnits) : '—'} шт</div></div>
+                        </div>
+                    </div>
+                    <div style="padding: 12px; background: rgba(245,101,101,0.1); border-radius: 12px;">
+                        <div style="font-size: 12px; color: #f56565; margin-bottom: 8px;">⚠️ Риски и рекомендации</div>
+                        <div style="font-size: 11px; line-height: 1.4;">
+                            ${breakEvenAnalysis ? (breakEvenAnalysis.safetyMargin < 10 ? '🔴 Критический запас прочности! Срочно требуются меры.' : breakEvenAnalysis.safetyMargin < 30 ? '🟡 Запас прочности ниже нормы. Рекомендуется оптимизация.' : '🟢 Хороший запас прочности.') : '—'}
+                            ${breakEvenAnalysis ? (breakEvenAnalysis.contributionMarginPerUnit < 0 ? '❌ Отрицательный маржинальный доход! Себестоимость выше цены.' : '✅ Маржинальный доход положительный.') : '—'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // АНАЛИЗ ТРЕНДОВ
+        // ========================
+        const trendsAnalysis = window.generateTrendsAnalysis ? window.generateTrendsAnalysis(window.currentData, f, totalSalesQuantity) : null;
+        
+        const trendsHtml = `
+        <div class="metric-card" style="grid-column: span 4;">
+            <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                <span style="font-size: 18px;">📈</span>
+                <span>Анализ трендов</span>
+                <span style="font-size: 12px; color: var(--text-secondary); margin-left: auto;">динамика, сезонность, прогноз</span>
+            </div>
+            <div class="trends-container">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">📈 Скользящая средняя (3 мес)</div>
+                        <div style="font-size: 24px; font-weight: 700;">${trendsAnalysis ? formatCurrency(trendsAnalysis.lastMovingAverage3) : '—'}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">тренд ${trendsAnalysis ? trendsAnalysis.trend3to6Text : '—'}</div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">📊 Скользящая средняя (6 мес)</div>
+                        <div style="font-size: 24px; font-weight: 700;">${trendsAnalysis ? formatCurrency(trendsAnalysis.lastMovingAverage6) : '—'}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">сглаживает колебания</div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">📉 Общий рост прибыли</div>
+                        <div style="font-size: 24px; font-weight: 700; ${(trendsAnalysis?.totalProfitGrowth || 0) >= 0 ? 'color: #48bb78;' : 'color: #f56565;'}">${trendsAnalysis ? (trendsAnalysis.totalProfitGrowth >= 0 ? '+' : '') + trendsAnalysis.totalProfitGrowth.toFixed(1) + '%' : '—'}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">с начала периода</div>
+                    </div>
+                    <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">🏆 Лучший месяц</div>
+                        <div style="font-size: 16px; font-weight: 700;">${trendsAnalysis ? trendsAnalysis.bestMonth?.split('-')[1] : '—'}</div>
+                        <div style="font-size: 11px; color: #48bb78;">прибыль ${trendsAnalysis ? formatCurrency(trendsAnalysis.profits?.[trendsAnalysis.profits.length - 1] || 0) : '—'}</div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px; padding: 16px; background: rgba(102,126,234,0.05); border-radius: 12px;">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">📊 Темп роста (месяц к месяцу)</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">Выручка</div>
+                            <div style="font-size: 18px; font-weight: 700; ${(trendsAnalysis?.lastGrowth?.revenueGrowth || 0) >= 0 ? 'color: #48bb78;' : 'color: #f56565;'}">
+                                ${trendsAnalysis?.lastGrowth ? (trendsAnalysis.lastGrowth.revenueGrowth >= 0 ? '+' : '') + trendsAnalysis.lastGrowth.revenueGrowth.toFixed(1) + '%' : 'Нет данных'}
+                            </div>
+                            <div style="font-size: 10px;">средний: ${trendsAnalysis?.avgRevenueGrowth?.toFixed(1) || '0'}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">Прибыль</div>
+                            <div style="font-size: 18px; font-weight: 700; ${(trendsAnalysis?.lastGrowth?.profitGrowth || 0) >= 0 ? 'color: #48bb78;' : 'color: #f56565;'}">
+                                ${trendsAnalysis?.lastGrowth ? (trendsAnalysis.lastGrowth.profitGrowth >= 0 ? '+' : '') + trendsAnalysis.lastGrowth.profitGrowth.toFixed(1) + '%' : 'Нет данных'}
+                            </div>
+                            <div style="font-size: 10px;">средний: ${trendsAnalysis?.avgProfitGrowth?.toFixed(1) || '0'}%</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px; padding: 16px; background: rgba(102,126,234,0.05); border-radius: 12px;">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">📅 Сезонность продаж</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                        ${trendsAnalysis?.seasonalityCoeff ? Object.entries(trendsAnalysis.seasonalityCoeff).map(([month, coeff]) => {
+                            const height = Math.min(Math.max(coeff * 30, 20), 60);
+                            const color = coeff > 1.1 ? '#48bb78' : coeff < 0.9 ? '#f56565' : '#667eea';
+                            return `<div style="text-align: center; flex: 1; min-width: 50px;">
+                                <div style="font-size: 10px; margin-bottom: 4px;">${month.slice(0, 3)}</div>
+                                <div style="height: ${height}px; background: ${color}; border-radius: 4px; width: 100%;"></div>
+                                <div style="font-size: 10px; margin-top: 4px;">${coeff.toFixed(1)}x</div>
+                            </div>`;
+                        }).join('') : '<div>Нет данных</div>'}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; flex-wrap: wrap; gap: 8px;">
+                        <span>🟢 Высокий сезон: ${trendsAnalysis?.highSeasonMonths?.length > 0 ? trendsAnalysis.highSeasonMonths.join(', ') : 'нет'}</span>
+                        <span>🔴 Низкий сезон: ${trendsAnalysis?.lowSeasonMonths?.length > 0 ? trendsAnalysis.lowSeasonMonths.join(', ') : 'нет'}</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px; padding: 16px; background: rgba(102,126,234,0.1); border-radius: 12px;">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">🔮 Прогноз на следующий месяц</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">Прогнозируемая прибыль</div>
+                            <div style="font-size: 20px; font-weight: 700; ${(trendsAnalysis?.forecastProfit || 0) >= 0 ? 'color: #48bb78;' : 'color: #f56565;'}">
+                                ${trendsAnalysis?.forecastProfit !== null ? formatCurrency(trendsAnalysis.forecastProfit) : 'Недостаточно данных'}
+                            </div>
+                            <div style="font-size: 10px;">относительно текущей: ${trendsAnalysis?.forecastProfit !== null && f.profit !== 0 ? ((trendsAnalysis.forecastProfit - f.profit) / f.profit * 100).toFixed(1) : '?'}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">Прогнозируемая выручка</div>
+                            <div style="font-size: 20px; font-weight: 700;">${trendsAnalysis?.forecastRevenue !== null ? formatCurrency(trendsAnalysis.forecastRevenue) : 'Недостаточно данных'}</div>
+                            <div style="font-size: 10px;">чистая, без НДС</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">Точность прогноза</div>
+                            <div style="font-size: 20px; font-weight: 700;">${trendsAnalysis?.forecastConfidence !== null ? (trendsAnalysis.forecastConfidence * 100).toFixed(0) + '%' : '?'}</div>
+                            <div style="font-size: 10px;">${trendsAnalysis?.forecastConfidence !== null ? (trendsAnalysis.forecastConfidence > 0.7 ? 'высокая достоверность' : trendsAnalysis.forecastConfidence > 0.5 ? 'средняя достоверность' : 'низкая достоверность') : ''}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <div style="padding: 12px; background: rgba(72,187,120,0.1); border-radius: 12px;">
+                        <div style="font-size: 11px; color: #48bb78;">📈 Рекомендации</div>
+                        <div style="font-size: 12px; margin-top: 8px;">
+                            ${trendsAnalysis?.avgProfitGrowth > 10 ? '🚀 Отличный рост! Увеличивайте маркетинговый бюджет.' : 
+                              trendsAnalysis?.avgProfitGrowth > 0 ? '📊 Стабильный рост. Работайте над увеличением среднего чека.' :
+                              '⚠️ Прибыль снижается. Анализируйте причины и оптимизируйте расходы.'}
+                            ${trendsAnalysis?.highSeasonMonths?.length > 0 ? `\n🎯 Готовьтесь к высокому сезону (${trendsAnalysis.highSeasonMonths[0]}).` : ''}
+                            ${trendsAnalysis?.forecastProfit !== null && trendsAnalysis.forecastProfit > f.profit ? '\n📈 Прогноз положительный. Увеличивайте запасы.' : trendsAnalysis?.forecastProfit !== null && trendsAnalysis.forecastProfit < f.profit ? '\n📉 Прогноз отрицательный. Будьте готовы к снижению.' : ''}
+                        </div>
+                    </div>
+                    <div style="padding: 12px; background: rgba(102,126,234,0.1); border-radius: 12px;">
+                        <div style="font-size: 11px;">📌 Ключевые выводы</div>
+                        <div style="font-size: 11px; margin-top: 8px; line-height: 1.4;">
+                            • ${trendsAnalysis?.totalProfitGrowth >= 0 ? 'Прибыль растет' : 'Прибыль снижается'} (${trendsAnalysis?.totalProfitGrowth >= 0 ? '+' : ''}${trendsAnalysis?.totalProfitGrowth?.toFixed(1) || '0'}% за период)<br>
+                            • Средний рост выручки: ${trendsAnalysis?.avgRevenueGrowth?.toFixed(1) || '0'}% в месяц<br>
+                            • ${trendsAnalysis?.highSeasonMonths?.length > 0 ? `Пик продаж ожидается в ${trendsAnalysis.highSeasonMonths[0]}` : 'Ярко выраженной сезонности нет'}<br>
+                            • ${trendsAnalysis?.forecastProfit !== null ? (trendsAnalysis.forecastProfit > 0 ? 'Ожидается прибыль' : 'Ожидается убыток') : 'Недостаточно данных для прогноза'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        
+        // ========================
+        // СБОРКА ДАШБОРДА
+        // ========================
+        const dashboardHtml = `${topPanelHtml}
+        <div class="dashboard-two-columns">
+            <div class="dashboard-col">${revenueHtml}</div>
+            <div class="dashboard-col">${tabsPanel}</div>
+        </div>
+        <div class="dashboard-full-width">${expensesHtml}</div>
+        <div class="dashboard-metrics-grid">
+            ${ndsHtml}
+            ${netRevenueHtml}
+            ${profitHtml}
+            ${salesHtml}
+            ${avgCheckHtml}
+            ${costHtml}
+            ${avgCostHtml}
+        </div>
+        <div class="dashboard-full-width">${breakEvenHtml}</div>
+        <div class="dashboard-full-width">${trendsHtml}</div>`;
+        
         document.getElementById('dashboardMetrics').innerHTML = dashboardHtml;
         
-        // Отрисовка мини-графиков
+        // ========================
+        // ОТРИСОВКА ГРАФИКОВ
+        // ========================
         setTimeout(() => {
             renderMiniChartJS('revenueMiniChartNew', monthlyLabels, monthlyRevenues, '#48bb78');
             renderExpenseMiniChartJS('expenseMiniChartNew', monthlyLabels, monthlyExpensesArray, '#f56565');
@@ -1601,31 +2124,25 @@ function renderDashboard() {
             renderSalesChart(monthlyLabels, getMonthlySalesData(window.currentData, monthlyLabels));
         }, 100);
         
-        // ========== ДОПОЛНИТЕЛЬНЫЕ БЛОКИ ==========
-        // Водопад + Тепловая карта
-        let waterfallContainer = document.getElementById('waterfallChartContainer');
-        let heatmapContainer = document.getElementById('heatmapContainer');
-        if (!waterfallContainer && document.getElementById('dashboardMetrics')) {
-            const newSection = document.createElement('div');
-            newSection.id = 'newChartsSection';
-            newSection.className = 'metrics-grid';
-            newSection.style.marginTop = '24px';
-            newSection.innerHTML = `<div class="metric-card" style="grid-column: span 2; padding: 20px;"><div id="waterfallChartContainer" style="height: 380px; width: 100%;"></div></div><div class="metric-card" style="grid-column: span 2; padding: 20px;"><div id="heatmapContainer" style="min-height: 300px;"></div></div>`;
-            document.getElementById('dashboardMetrics').appendChild(newSection);
-            waterfallContainer = document.getElementById('waterfallChartContainer');
-            heatmapContainer = document.getElementById('heatmapContainer');
-        }
-        if (waterfallContainer) renderWaterfallSVG('waterfallChartContainer', f);
-        if (heatmapContainer) renderHeatmapTable('heatmapContainer', window.currentData);
-        
-        // Сценарный анализ
+        // ========================
+        // СЦЕНАРНЫЙ АНАЛИЗ
+        // ========================
         let scenarioContainer = document.getElementById('scenarioAnalysisContainer');
         if (!scenarioContainer && document.getElementById('dashboardMetrics')) {
             const scenarioSection = document.createElement('div');
             scenarioSection.id = 'scenarioSection';
             scenarioSection.className = 'metrics-grid';
             scenarioSection.style.marginTop = '24px';
-            scenarioSection.innerHTML = `<div class="metric-card" style="grid-column: span 4; padding: 20px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 20px;">🎯</span><span>Сценарный анализ</span><span style="font-size: 11px; color: #a0aec0; margin-left: auto;">двигайте ползунки — результаты меняются в реальном времени</span></div><div id="scenarioAnalysisContainer"></div></div>`;
+            scenarioSection.innerHTML = `
+                <div class="metric-card" style="grid-column: span 4; padding: 20px;">
+                    <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 20px;">🎯</span>
+                        <span>Сценарный анализ</span>
+                        <span style="font-size: 11px; color: #a0aec0; margin-left: auto;">двигайте ползунки — результаты меняются в реальном времени</span>
+                    </div>
+                    <div id="scenarioAnalysisContainer"></div>
+                </div>
+            `;
             document.getElementById('dashboardMetrics').appendChild(scenarioSection);
             scenarioContainer = document.getElementById('scenarioAnalysisContainer');
         }
@@ -1634,40 +2151,71 @@ function renderDashboard() {
             initScenarioHandlers(f, totalSalesQuantity, avgCheck, avgCost, costData);
         }
         
-        // Аномалии
+        // ========================
+        // АНОМАЛИИ
+        // ========================
         let anomaliesContainer = document.getElementById('anomaliesContainer');
         if (!anomaliesContainer && document.getElementById('dashboardMetrics')) {
             const anomaliesSection = document.createElement('div');
             anomaliesSection.id = 'anomaliesSection';
             anomaliesSection.className = 'metrics-grid';
             anomaliesSection.style.marginTop = '24px';
-            anomaliesSection.innerHTML = `<div class="metric-card" style="grid-column: span 4; padding: 20px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 20px;">🔍</span><span>Аномалии и выбросы</span><span style="font-size: 11px; color: #a0aec0; margin-left: auto;">автоматическое обнаружение отклонений</span></div><div id="anomaliesContainer"></div></div>`;
+            anomaliesSection.innerHTML = `
+                <div class="metric-card" style="grid-column: span 4; padding: 20px;">
+                    <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 20px;">🔍</span>
+                        <span>Аномалии и выбросы</span>
+                        <span style="font-size: 11px; color: #a0aec0; margin-left: auto;">автоматическое обнаружение отклонений</span>
+                    </div>
+                    <div id="anomaliesContainer"></div>
+                </div>
+            `;
             document.getElementById('dashboardMetrics').appendChild(anomaliesSection);
             anomaliesContainer = document.getElementById('anomaliesContainer');
         }
-        if (anomaliesContainer) anomaliesContainer.innerHTML = renderAnomaliesBlock(window.currentData, f, totalSalesQuantity, avgCheck);
+        if (anomaliesContainer) {
+            anomaliesContainer.innerHTML = renderAnomaliesBlock(window.currentData, f, totalSalesQuantity, avgCheck);
+        }
         
-        // Матрица 4 квадрантов
+        // ========================
+        // МАТРИЦА 4 КВАДРАНТОВ
+        // ========================
         let quadrantContainer = document.getElementById('quadrantMatrixContainer');
         if (!quadrantContainer && document.getElementById('dashboardMetrics')) {
             const quadrantSection = document.createElement('div');
             quadrantSection.id = 'quadrantSection';
             quadrantSection.className = 'metrics-grid';
             quadrantSection.style.marginTop = '24px';
-            quadrantSection.innerHTML = `<div class="metric-card" style="grid-column: span 4; padding: 20px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><span style="font-size: 20px;">🎯</span><span>Матрица "Маржинальность vs Оборачиваемость"</span><span style="font-size: 11px; color: #a0aec0; margin-left: auto;">4 квадранта стратегии</span></div><div id="quadrantMatrixContainer"></div></div>`;
+            quadrantSection.innerHTML = `
+                <div class="metric-card" style="grid-column: span 4; padding: 20px;">
+                    <div class="metric-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 20px;">🎯</span>
+                        <span>Матрица "Маржинальность vs Оборачиваемость"</span>
+                        <span style="font-size: 11px; color: #a0aec0; margin-left: auto;">4 квадранта стратегии</span>
+                    </div>
+                    <div id="quadrantMatrixContainer"></div>
+                </div>
+            `;
             document.getElementById('dashboardMetrics').appendChild(quadrantSection);
             quadrantContainer = document.getElementById('quadrantMatrixContainer');
         }
-        if (quadrantContainer) quadrantContainer.innerHTML = renderQuadrantMatrix(window.currentData, f);
+        if (quadrantContainer) {
+            quadrantContainer.innerHTML = renderQuadrantMatrix(window.currentData, f);
+        }
         
-        // Настройка обработчиков
+        // ========================
+        // НАСТРОЙКА ОБРАБОТЧИКОВ
+        // ========================
         setTimeout(() => {
             setupCollapsibleHandlers();
             initTabs();
         }, 200);
         
-    } catch(e) { console.error('Ошибка рендера:', e); }
-    finally { isRendering = false; }
+    } catch(e) {
+        console.error('Ошибка рендера:', e);
+    } finally {
+        isRendering = false;
+    }
 }
 
 function getMonthlySalesData(data, monthlyLabels) {
