@@ -1,8 +1,8 @@
 // ========================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// aiModule.js - AI ФИНАНСОВЫЙ АНАЛИТИК (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
-// История диалога (опционально, для будущего расширения)
+// Глобальные переменные
 let aiChatHistory = [];
 
 // Доступные команды для быстрых вопросов
@@ -13,24 +13,18 @@ const QUICK_QUESTIONS = [
     { id: 'recommend', text: '💡 Рекомендации', icon: '💡' },
     { id: 'profitability', text: '📈 Рентабельность по каналам', icon: '📈' },
     { id: 'trends', text: '📉 Тренды и прогноз', icon: '📉' },
-    { id: 'cash', text: '🏦 Денежные средства', icon: '🏦' }
+    { id: 'cash', text: '🏦 Денежные средства', icon: '🏦' },
+    { id: 'breakEven', text: '⚖️ Точка безубыточности', icon: '⚖️' },
+    { id: 'nds', text: '💸 Анализ НДС', icon: '💸' },
+    { id: 'cost', text: '🏭 Себестоимость', icon: '🏭' }
 ];
 
 // ========================
-// ГЕНЕРАЦИЯ ОТВЕТОВ AI
+// ГЕНЕРАЦИЯ ОТВЕТОВ AI (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
-/**
- * Генерирует ответ AI на основе вопроса и текущих данных
- * @param {string} question - вопрос пользователя
- * @param {Array} data - текущие финансовые данные
- * @returns {string} - ответ AI
- */
 function getAIResponse(question, data) {
-    // Приводим вопрос к нижнему регистру для удобства поиска
     const q = question.toLowerCase();
-    
-    // Получаем актуальные финансовые показатели
     const f = calculateFinancials(data);
     
     // Получаем данные по каналам
@@ -51,12 +45,18 @@ function getAIResponse(question, data) {
     
     channelProfitability.sort((a, b) => b.profit - a.profit);
     
-    // ========================
     // 1. АНАЛИЗ ОБЩИХ ПОКАЗАТЕЛЕЙ
-    // ========================
-    if (q.includes('анализ') || q === 'analyze' || q.includes('общий')) {
+    if (q.includes('анализ') || q === 'analyze' || q.includes('общий') || q.includes('показател')) {
         const statusEmoji = f.profit >= 0 ? '✅' : '🔴';
         const statusText = f.profit >= 0 ? 'прибыльна' : 'убыточна';
+        
+        // Рассчитываем дополнительные метрики
+        const salesData = data.filter(d => {
+            const article = d.статья?.toLowerCase() || '';
+            return article.includes('продажи') && (article.includes('шт') || article.includes('штук'));
+        }).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        const avgCheck = salesData > 0 ? f.netRevenue / salesData : 0;
         
         return `
 📊 **ФИНАНСОВЫЙ АНАЛИЗ**
@@ -68,15 +68,15 @@ ${statusEmoji} Компания ${statusText}
 💸 Расходы: ${formatCurrency(f.totalExpenses)}
 📈 Прибыль: ${formatCurrency(f.profit)}
 📊 Рентабельность: ${f.profitability.toFixed(1)}%
+📦 Продажи: ${new Intl.NumberFormat('ru-RU').format(salesData)} шт
+💳 Средний чек: ${formatCurrency(avgCheck)}
 
-${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна. Рекомендуется срочно оптимизировать расходы.' : ''}
+${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна. Рекомендуется срочно оптимизировать расходы.' : f.profitability < 10 ? '⚠️ **Низкая рентабельность!** Пересмотрите ценообразование.' : '✅ **Хорошие показатели.** Продолжайте в том же духе.'}
         `;
     }
     
-    // ========================
     // 2. САМЫЙ ПРИБЫЛЬНЫЙ КАНАЛ
-    // ========================
-    if (q.includes('прибыльн') || q === 'bestChannel' || q.includes('лучш')) {
+    if (q.includes('прибыльн') || q === 'bestChannel' || q.includes('лучш') || q.includes('канал')) {
         if (channelProfitability.length === 0) {
             return '❌ Нет данных по каналам для анализа.';
         }
@@ -89,9 +89,10 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
             analysis = `🏆 **${best.name}** - самый прибыльный канал\n`;
             analysis += `   Прибыль: ${formatCurrency(best.profit)}\n`;
             analysis += `   Рентабельность: ${best.profitability.toFixed(1)}%\n`;
+            analysis += `   Выручка: ${formatCurrency(best.revenue)}\n`;
             
             if (second) {
-                const gap = ((best.profit - second.profit) / second.profit) * 100;
+                const gap = ((best.profit - second.profit) / Math.abs(second.profit)) * 100;
                 analysis += `   Опережает ${second.name} на ${gap.toFixed(0)}%\n`;
             }
             
@@ -105,11 +106,8 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
         return analysis;
     }
     
-    // ========================
     // 3. ОСНОВНЫЕ РАСХОДЫ
-    // ========================
-    if (q.includes('расход') || q === 'expenses' || q.includes('затрат')) {
-        // Собираем расходы по категориям
+    if (q.includes('расход') || q === 'expenses' || q.includes('затрат') || q.includes('трат')) {
         const expensesByCategory = {};
         
         data.forEach(row => {
@@ -120,10 +118,7 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
             }
         });
         
-        const sortedExpenses = Object.entries(expensesByCategory)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-        
+        const sortedExpenses = Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1]).slice(0, 5);
         const totalExpenses = f.totalExpenses;
         
         let expensesText = `💰 **АНАЛИЗ РАСХОДОВ**\n\n`;
@@ -143,9 +138,7 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
         return expensesText;
     }
     
-    // ========================
     // 4. РЕНТАБЕЛЬНОСТЬ ПО КАНАЛАМ
-    // ========================
     if (q.includes('рентабельн') || q === 'profitability' || q.includes('маржинальн')) {
         if (channelProfitability.length === 0) {
             return '❌ Нет данных по каналам для анализа.';
@@ -175,11 +168,8 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
         return text;
     }
     
-    // ========================
     // 5. ТРЕНДЫ И ПРОГНОЗ
-    // ========================
     if (q.includes('тренд') || q === 'trends' || q.includes('прогноз') || q.includes('динамик')) {
-        // Собираем данные по месяцам
         const monthlyProfit = {};
         
         data.forEach(row => {
@@ -205,7 +195,6 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
             return '📊 Недостаточно данных для анализа трендов (нужно минимум 2 месяца).';
         }
         
-        // Расчет тренда
         const firstProfit = profits[0];
         const lastProfit = profits[profits.length - 1];
         const trend = ((lastProfit - firstProfit) / Math.abs(firstProfit)) * 100;
@@ -218,26 +207,20 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
         text += `Текущая прибыль: ${formatCurrency(lastProfit)}\n\n`;
         
         if (trend > 20) {
-            text += `🚀 **Отличная динамика!** Прибыль выросла более чем на 20%.\n`;
-            text += `💡 Рекомендация: Увеличьте маркетинговый бюджет для ускорения роста.`;
+            text += `🚀 **Отличная динамика!** Прибыль выросла более чем на 20%.\n💡 Рекомендация: Увеличьте маркетинговый бюджет для ускорения роста.`;
         } else if (trend > 0) {
-            text += `📈 **Положительная динамика.** Прибыль растет.\n`;
-            text += `💡 Рекомендация: Продолжайте в том же духе, следите за расходами.`;
+            text += `📈 **Положительная динамика.** Прибыль растет.\n💡 Рекомендация: Продолжайте в том же духе, следите за расходами.`;
         } else if (trend > -20) {
-            text += `⚠️ **Небольшое снижение.** Прибыль уменьшилась.\n`;
-            text += `💡 Рекомендация: Проанализируйте структуру расходов.`;
+            text += `⚠️ **Небольшое снижение.** Прибыль уменьшилась.\n💡 Рекомендация: Проанализируйте структуру расходов.`;
         } else {
-            text += `🔴 **Критическое падение!** Прибыль снизилась более чем на 20%.\n`;
-            text += `💡 Рекомендация: Срочный анализ причин и оптимизация затрат!`;
+            text += `🔴 **Критическое падение!** Прибыль снизилась более чем на 20%.\n💡 Рекомендация: Срочный анализ причин и оптимизация затрат!`;
         }
         
         return text;
     }
     
-    // ========================
     // 6. ДЕНЕЖНЫЕ СРЕДСТВА
-    // ========================
-    if (q.includes('денежн') || q === 'cash' || q.includes('остат') || q.includes('счет')) {
+    if (q.includes('денежн') || q === 'cash' || q.includes('остат') || q.includes('счет') || q.includes('баланс')) {
         const { accountBalances, totalBalance, periodText } = calculateCashData();
         
         if (accountBalances.length === 0) {
@@ -267,13 +250,100 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
         return text;
     }
     
-    // ========================
-    // 7. РЕКОМЕНДАЦИИ
-    // ========================
-    if (q.includes('рекоменд') || q === 'recommend' || q.includes('совет')) {
+    // 7. ТОЧКА БЕЗУБЫТОЧНОСТИ
+    if (q.includes('безубыточн') || q === 'breakEven' || q.includes('окупаемост')) {
+        const salesQuantity = f.totalSalesQuantity;
+        const analysis = generateBreakEvenAnalysis(data, f, salesQuantity);
+        
+        if (!analysis) {
+            return '⚖️ Недостаточно данных для анализа точки безубыточности.';
+        }
+        
+        let text = `⚖️ **ТОЧКА БЕЗУБЫТОЧНОСТИ**\n\n`;
+        text += `📊 Точка безубыточности (шт): ${new Intl.NumberFormat('ru-RU').format(analysis.breakEvenUnits)} шт\n`;
+        text += `💰 Точка безубыточности (₽): ${formatCurrency(analysis.breakEvenRevenue)}\n`;
+        text += `📈 Текущая выручка: ${formatCurrency(analysis.totalRevenue)}\n`;
+        text += `🛡️ Запас финансовой прочности: ${analysis.safetyMargin.toFixed(1)}% (${formatCurrency(analysis.safetyMarginAbsolute)})\n`;
+        text += `⚡ Операционный рычаг: ${analysis.operatingLeverage.toFixed(2)}x\n\n`;
+        
+        if (analysis.safetyMargin < 10) {
+            text += `🔴 **Критический запас прочности!** Срочно увеличьте продажи или сократите расходы.`;
+        } else if (analysis.safetyMargin < 30) {
+            text += `🟡 **Запас прочности ниже нормы.** Рекомендуется оптимизация затрат.`;
+        } else {
+            text += `🟢 **Хороший запас прочности.** Бизнес устойчив к падению продаж.`;
+        }
+        
+        return text;
+    }
+    
+    // 8. НДС АНАЛИЗ
+    if (q.includes('ндс') || q === 'nds' || q.includes('налог')) {
+        const ndsPercent = f.totalRevenue > 0 ? (Math.abs(f.totalNDS) / f.totalRevenue) * 100 : 0;
+        
+        let status = '';
+        let recommendation = '';
+        
+        if (ndsPercent > 20) {
+            status = '🔴 Критично высокая';
+            recommendation = 'Срочно оптимизируйте налоги! Увеличьте долю входящего НДС.';
+        } else if (ndsPercent > 15) {
+            status = '🟠 Высокая';
+            recommendation = 'Рассмотрите возможность работы с поставщиками на ОСНО.';
+        } else if (ndsPercent > 10) {
+            status = '🟡 Средняя';
+            recommendation = 'Налоговая нагрузка в норме, но есть потенциал для оптимизации.';
+        } else if (ndsPercent > 5) {
+            status = '🟢 Низкая';
+            recommendation = 'Хороший показатель! Поддерживайте текущий уровень.';
+        } else {
+            status = '✅ Минимальная';
+            recommendation = 'Отличный результат! Вы эффективно управляете налоговой нагрузкой.';
+        }
+        
+        return `
+💸 **АНАЛИЗ НДС**
+
+💰 НДС к уплате/возмещению: ${formatCurrency(Math.abs(f.totalNDS))}
+📊 НДС % от выручки: ${ndsPercent.toFixed(1)}%
+📈 Статус: ${status}
+
+💡 **Рекомендация:** ${recommendation}
+        `;
+    }
+    
+    // 9. СЕБЕСТОИМОСТЬ
+    if (q.includes('себестоим') || q === 'cost' || q.includes('затрат на товар')) {
+        const costData = f.costData;
+        const avgCost = f.avgCost;
+        const salesQuantity = f.totalSalesQuantity;
+        
+        let text = `🏭 **СЕБЕСТОИМОСТЬ**\n\n`;
+        text += `💰 Общая себестоимость: ${formatCurrency(costData)}\n`;
+        text += `📊 Себестоимость 1 шт: ${formatCurrency(avgCost)}\n`;
+        text += `📦 Продано штук: ${new Intl.NumberFormat('ru-RU').format(salesQuantity)}\n`;
+        text += `📈 Доля себестоимости в выручке: ${f.netRevenue > 0 ? ((costData / f.netRevenue) * 100).toFixed(1) : '0'}%\n\n`;
+        
+        if (avgCost > 0 && f.avgCheck > 0) {
+            const margin = ((f.avgCheck - avgCost) / f.avgCheck) * 100;
+            text += `📊 Маржинальность после себестоимости: ${margin.toFixed(1)}%\n`;
+            
+            if (margin < 20) {
+                text += `\n⚠️ **Низкая маржинальность!** Рассмотрите возможность снижения себестоимости или повышения цен.`;
+            } else if (margin < 40) {
+                text += `\n📈 **Средняя маржинальность.** Есть потенциал для увеличения.`;
+            } else {
+                text += `\n✅ **Высокая маржинальность.** Отличный показатель!`;
+            }
+        }
+        
+        return text;
+    }
+    
+    // 10. РЕКОМЕНДАЦИИ
+    if (q.includes('рекоменд') || q === 'recommend' || q.includes('совет') || q.includes('что делать')) {
         let recommendations = `💡 **РЕКОМЕНДАЦИИ ПО УЛУЧШЕНИЮ**\n\n`;
         
-        // Рекомендация по прибыли
         if (f.profit < 0) {
             recommendations += `🔴 **Критично:** Компания убыточна!\n`;
             recommendations += `   → Срочно оптимизируйте расходы\n`;
@@ -294,7 +364,6 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
             recommendations += `   → Увеличьте маркетинговый бюджет\n\n`;
         }
         
-        // Рекомендация по расходам
         const expenseToRevenue = (f.totalExpenses / f.netRevenue) * 100;
         if (expenseToRevenue > 70) {
             recommendations += `💰 **Высокая доля расходов** (${expenseToRevenue.toFixed(0)}% от выручки)\n`;
@@ -307,7 +376,6 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
             recommendations += `   → Увеличьте рекламный бюджет\n\n`;
         }
         
-        // Рекомендация по среднему чеку
         let sales = 0;
         data.forEach(d => {
             const article = d.статья?.toLowerCase() || '';
@@ -334,9 +402,7 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
         return recommendations;
     }
     
-    // ========================
-    // 8. ПОМОЩЬ / НЕИЗВЕСТНЫЙ ЗАПРОС
-    // ========================
+    // 11. ПОМОЩЬ / НЕИЗВЕСТНЫЙ ЗАПРОС
     return `
 🤖 **Я AI финансовый аналитик**
 
@@ -347,6 +413,9 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
 • 📈 Рентабельности и маржинальности
 • 📉 Трендах и прогнозах
 • 🏦 Денежных средствах на счетах
+• ⚖️ Точке безубыточности
+• 💸 НДС и налогах
+• 🏭 Себестоимости товаров
 • 💡 Рекомендациях по улучшению
 
 **Примеры вопросов:**
@@ -354,16 +423,13 @@ ${f.profit < 0 ? '⚠️ **Внимание!** Компания убыточна
 "Какой канал самый прибыльный?"
 "Какие основные расходы?"
 "Дай рекомендации по улучшению"
+"Анализ НДС"
+"Точка безубыточности"
 
 Используйте кнопки быстрых вопросов выше для получения ответов.
     `;
 }
 
-/**
- * Вспомогательная функция для получения ключа канала по названию
- * @param {string} channelName - название канала
- * @returns {string|null} - ключ канала
- */
 function getChannelKey(channelName) {
     for (const [key, value] of Object.entries(CHANNEL_MAPPING)) {
         if (value.displayName === channelName) {
@@ -374,14 +440,9 @@ function getChannelKey(channelName) {
 }
 
 // ========================
-// УПРАВЛЕНИЕ ЧАТОМ
+// УПРАВЛЕНИЕ ЧАТОМ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
-/**
- * Добавляет сообщение в чат
- * @param {string} text - текст сообщения
- * @param {boolean} isUser - true если сообщение от пользователя
- */
 function addAIMessage(text, isUser) {
     const aiChatMessages = document.getElementById('aiChatMessages');
     if (!aiChatMessages) return;
@@ -394,15 +455,11 @@ function addAIMessage(text, isUser) {
     aiChatMessages.appendChild(div);
     aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
     
-    // Ограничиваем историю 50 сообщениями
     while (aiChatMessages.children.length > 50) {
         aiChatMessages.removeChild(aiChatMessages.firstChild);
     }
 }
 
-/**
- * Очищает историю чата
- */
 function clearAIChat() {
     const aiChatMessages = document.getElementById('aiChatMessages');
     if (aiChatMessages) {
@@ -415,38 +472,28 @@ function clearAIChat() {
 }
 
 // ========================
-// ИНИЦИАЛИЗАЦИЯ AI АССИСТЕНТА
+// ИНИЦИАЛИЗАЦИЯ AI АССИСТЕНТА (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
-/**
- * Инициализирует AI ассистента на странице AI
- */
 function initAIAssistant() {
     const aiSendBtn = document.getElementById('aiSendBtn');
     const aiInput = document.getElementById('aiInput');
-    const aiChatMessages = document.getElementById('aiChatMessages');
     
     if (!aiSendBtn || !aiInput) return;
     
-    // Обработчик отправки сообщения
     aiSendBtn.onclick = () => {
         const question = aiInput.value.trim();
         if (!question) return;
         
-        // Добавляем вопрос пользователя в чат
         addAIMessage(question, true);
-        
-        // Очищаем поле ввода
         aiInput.value = '';
         
-        // Генерируем и добавляем ответ AI
         setTimeout(() => {
             const answer = getAIResponse(question, currentData);
             addAIMessage(answer, false);
-        }, 300); // Небольшая задержка для имитации "думания"
+        }, 300);
     };
     
-    // Отправка по Enter (Ctrl+Enter для новой строки)
     aiInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
             e.preventDefault();
@@ -454,25 +501,19 @@ function initAIAssistant() {
         }
     });
     
-    // Настройка быстрых вопросов
     setupQuickQuestions();
 }
 
-/**
- * Настраивает кнопки быстрых вопросов
- */
 function setupQuickQuestions() {
     const suggestionsContainer = document.getElementById('aiSuggestions');
     if (!suggestionsContainer) return;
     
-    // Очищаем и заполняем предложения
     suggestionsContainer.innerHTML = QUICK_QUESTIONS.map(q => `
         <span class="ai-suggestion" data-question="${q.id}">
             ${q.icon || ''} ${q.text}
         </span>
     `).join('');
     
-    // Добавляем обработчики
     document.querySelectorAll('.ai-suggestion').forEach(suggestion => {
         suggestion.onclick = () => {
             const questionId = suggestion.dataset.question;
@@ -487,15 +528,6 @@ function setupQuickQuestions() {
     });
 }
 
-/**
- * Обновляет AI аналитику на главном дашборде
- * @param {Object} f - финансовые показатели
- * @param {Array} revenueChannelsList - доходы по каналам
- * @param {Array} expenseChannelsList - расходы по каналам
- * @param {number} totalSalesQuantity - количество продаж
- * @param {number} avgCheck - средний чек
- * @param {number} avgCost - средняя себестоимость
- */
 function updateDashboardAIInsights(f, revenueChannelsList, expenseChannelsList, totalSalesQuantity, avgCheck, avgCost) {
     const aiInsightsDiv = document.getElementById('aiInsights');
     if (!aiInsightsDiv) return;
@@ -530,9 +562,7 @@ function updateDashboardAIInsights(f, revenueChannelsList, expenseChannelsList, 
             </div>
         </div>
         
-        <div class="ai-message assistant" style="margin-top: 12px;">
-            ${statusMessage}
-        </div>
+        <div class="ai-message assistant" style="margin-top: 12px;">${statusMessage}</div>
         
         <div class="ai-message assistant">
             <strong>📊 КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ</strong><br><br>
@@ -562,16 +592,28 @@ function updateDashboardAIInsights(f, revenueChannelsList, expenseChannelsList, 
         </div>
     `;
     
-    // Обработчик кнопки "Задать вопрос"
     document.getElementById('askAIBtn')?.addEventListener('click', () => {
-        // Переключаемся на страницу AI
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
         document.querySelector('.nav-item[data-page="ai"]')?.classList.add('active');
         document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
         document.getElementById('page-ai')?.classList.add('active');
-        
-        // Очищаем и добавляем приветствие
         clearAIChat();
     });
 }
+
+// ========================
+// ЭКСПОРТ ФУНКЦИЙ В WINDOW
+// ========================
+
+window.aiChatHistory = aiChatHistory;
+window.QUICK_QUESTIONS = QUICK_QUESTIONS;
+window.getAIResponse = getAIResponse;
+window.getChannelKey = getChannelKey;
+window.addAIMessage = addAIMessage;
+window.clearAIChat = clearAIChat;
+window.initAIAssistant = initAIAssistant;
+window.setupQuickQuestions = setupQuickQuestions;
+window.updateDashboardAIInsights = updateDashboardAIInsights;
+
+console.log('✅ aiModule.js: ПОЛНАЯ версия загружена');
