@@ -197,44 +197,23 @@ function setupNavigation() {
     const channelsSubmenu = document.getElementById('channelsSubmenu');
     const arrow = dashboardMenu?.querySelector('.arrow');
     
-    // Дашборд (главная страница)
-    if (dashboardMenu) {
-        dashboardMenu.onclick = (e) => {
-            e.stopPropagation();
-            channelsSubmenu.classList.toggle('show');
-            if (arrow) arrow.classList.toggle('open');
-            
-            if (!channelsSubmenu.classList.contains('show')) {
-                currentChannel = null;
-                document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
-                document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
-                document.getElementById('page-dashboard').classList.add('active');
-                
-                const floatingBtn = document.getElementById('floatingFilterBtn');
-                if (floatingBtn) floatingBtn.style.display = 'flex';
-                
-                renderDashboard();
-            }
-        };
-    }
-    
-    // Подменю каналов
-    document.querySelectorAll('.nav-subitem').forEach(item => {
-        item.onclick = () => {
-            const channel = item.dataset.channel;
-            currentChannel = channel;
-            
-            document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-            document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(`page-channel-${channel}`).classList.add('active');
-            
-            const floatingBtn = document.getElementById('floatingFilterBtn');
-            if (floatingBtn) floatingBtn.style.display = 'none';
-            
-            renderChannelPage(channel);
-        };
-    });
+    // ДАШБОРД (главная страница) - УПРОЩЁННАЯ ВЕРСИЯ
+if (dashboardMenu) {
+    dashboardMenu.onclick = (e) => {
+        e.stopPropagation();
+        currentChannel = null;
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
+        dashboardMenu.classList.add('active');
+        document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('page-dashboard').classList.add('active');
+        
+        const floatingBtn = document.getElementById('floatingFilterBtn');
+        if (floatingBtn) floatingBtn.style.display = 'flex';
+        
+        renderDashboard();
+    };
+}
     
     // Страница ОДДС
     const oddsNavItem = document.querySelector('.nav-item[data-page="odds"]');
