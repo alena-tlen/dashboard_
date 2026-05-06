@@ -10,15 +10,11 @@ let netRevenueMiniChart = null;
 let profitMiniChart = null;
 let isRendering = false;
 
-// Синхронизация глобальных данных
-let originalData = window.originalData || [];
-let currentData = window.currentData || [];
-let currentFilters = window.currentFilters || { company: '', year: '', month: [], channel: '' };
-
+// НЕ ОБЪЯВЛЯЕМ переменные, используем глобальные из window
 function syncGlobalData() {
-    originalData = window.originalData || [];
-    currentData = window.currentData || [];
-    currentFilters = window.currentFilters || { company: '', year: '', month: [], channel: '' };
+    window.originalData = window.originalData || [];
+    window.currentData = window.currentData || [];
+    window.currentFilters = window.currentFilters || { company: '', year: '', month: [], channel: '' };
 }
 
 // ========================
