@@ -93,14 +93,15 @@ function initApp() {
     const themeToggle = document.getElementById('themeToggle');
     const body = document.body;
     
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        body.classList.remove('light');
-        body.classList.add('dark');
-        if (themeToggle) themeToggle.classList.add('active');
-    } else {
-        body.classList.add('light');
-    }
+    // В функции initApp или при загрузке
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark') {
+    document.body.classList.remove('light');
+    document.body.classList.add('dark');
+} else {
+    document.body.classList.add('light');
+    document.body.classList.remove('dark');
+}
     
     if (themeToggle) {
         themeToggle.onclick = () => {
