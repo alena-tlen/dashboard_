@@ -729,6 +729,11 @@ function generateEfficiencySimpleBreakdown(data) {
 // ========================
 
 function generateTabsPanel() {
+    // Проверка на наличие данных
+    if (!currentData || currentData.length === 0) {
+        return '<div class="metric-card" style="padding: 40px; text-align: center;">📊 Нет данных для отображения</div>';
+    }
+    
     const f = calculateFinancials(currentData);
     
     // Получаем данные за предыдущий период для сравнения
@@ -1614,86 +1619,66 @@ function renderTrendsAnalysisHtml(data, f, totalSalesQuantity) {
 }
 
 // ИСПРАВЛЕННАЯ ФУНКЦИЯ getMonthlySalesData
-function getMonthlySalesData(dataParam, monthlyLabels) {
-    // Используем переданные данные или глобальные
-    const data = dataParam || window.currentData || [];
-    
-    if (!data || data.length === 0) {
-        return monthlyLabels ? monthlyLabels.map(() => 0) : [];
-    }
-    
-    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-    const monthlySales = {};
-    
-    for (let i = 0; i < monthsOrder.length; i++) {
-        monthlySales[monthsOrder[i]] = 0;
-    }
-    
-    for (let i = 0; i < data.length; i++) {
-        const d = data[i];
-        if (d && d.месяц && monthsOrder.includes(d.месяц)) {
-            const article = (d.статья || '').toLowerCase();
-            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
-                monthlySales[d.месяц] += Math.abs(d.сумма || 0);
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ getMonthlySalesData
+function getMonthlySalesData() {
+    try {
+        // Используем currentData (уже с фильтрами)
+        const data = window.currentData || [];
+        if (!data || data.length === 0) return [0];
+        
+        const monthlySales = {};
+        for (let i = 0; i < MONTHS_ORDER.length; i++) {
+            monthlySales[MONTHS_ORDER[i]] = 0;
+        }
+        
+        for (let i = 0; i < data.length; i++) {
+            const d = data[i];
+            if (d && d.месяц && MONTHS_ORDER.includes(d.месяц)) {
+                const article = (d.статья || '').toLowerCase();
+                if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                    monthlySales[d.месяц] += Math.abs(d.сумма || 0);
+                }
             }
         }
+        
+        // Возвращаем значения в порядке MONTHS_ORDER
+        return MONTHS_ORDER.map(m => monthlySales[m] || 0);
+    } catch(e) {
+        console.error('getMonthlySalesData error:', e);
+        return [0];
     }
-    
-    // Если передан monthlyLabels, возвращаем массив в соответствующем порядке
-    if (monthlyLabels && Array.isArray(monthlyLabels)) {
-        return monthlyLabels.map(m => monthlySales[m] || 0);
-    }
-    
-    // Иначе возвращаем все месяцы с ненулевыми значениями
-    const result = [];
-    for (let i = 0; i < monthsOrder.length; i++) {
-        const val = monthlySales[monthsOrder[i]];
-        if (val !== 0 && val !== undefined) {
-            result.push(val);
-        }
-    }
-    return result.length ? result : [0];
 }
 
 // ИСПРАВЛЕННАЯ ФУНКЦИЯ getMonthlyNetRevenueData
 function getMonthlyNetRevenueData() {
     try {
         const data = window.currentData || [];
-        if (!data || data.length === 0) {
-            return [0];
-        }
+        if (!data || data.length === 0) return [0];
         
-        const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-        const monthly = {};
-        
-        for (let i = 0; i < months.length; i++) {
-            monthly[months[i]] = 0;
+        const monthlyNetRevenue = {};
+        for (let i = 0; i < MONTHS_ORDER.length; i++) {
+            monthlyNetRevenue[MONTHS_ORDER[i]] = 0;
         }
         
         for (let i = 0; i < data.length; i++) {
             const d = data[i];
-            if (d && d.месяц && d.тип === 'Доход') {
-                // Считаем НДС исходящий для этого месяца
-                let ndsOut = 0;
-                for (let j = 0; j < data.length; j++) {
-                    const row = data[j];
-                    if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
-                        ndsOut += (row.сумма || 0);
+            if (d && d.месяц && MONTHS_ORDER.includes(d.месяц)) {
+                if (d.тип === 'Доход') {
+                    // Считаем НДС исходящий для этого месяца
+                    let ndsOut = 0;
+                    for (let j = 0; j < data.length; j++) {
+                        const row = data[j];
+                        if (row && row.месяц === d.месяц && row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+                            ndsOut += (row.сумма || 0);
+                        }
                     }
+                    monthlyNetRevenue[d.месяц] += (d.сумма || 0) - ndsOut;
                 }
-                monthly[d.месяц] += (d.сумма || 0) - ndsOut;
             }
         }
         
-        // Возвращаем только месяцы с данными
-        const result = [];
-        for (let i = 0; i < months.length; i++) {
-            const val = monthly[months[i]];
-            if (val !== 0 && val !== undefined) {
-                result.push(val / 1000);
-            }
-        }
-        return result.length ? result : [0];
+        // Возвращаем в тысячах
+        return MONTHS_ORDER.map(m => (monthlyNetRevenue[m] || 0) / 1000);
     } catch(e) {
         console.error('getMonthlyNetRevenueData error:', e);
         return [0];
@@ -1704,22 +1689,19 @@ function getMonthlyNetRevenueData() {
 function getMonthlyAvgCheckData() {
     try {
         const data = window.currentData || [];
-        if (!data || data.length === 0) {
-            return [0];
-        }
+        if (!data || data.length === 0) return [0];
         
-        const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
         const revenue = {};
         const sales = {};
         
-        for (let i = 0; i < months.length; i++) {
-            revenue[months[i]] = 0;
-            sales[months[i]] = 0;
+        for (let i = 0; i < MONTHS_ORDER.length; i++) {
+            revenue[MONTHS_ORDER[i]] = 0;
+            sales[MONTHS_ORDER[i]] = 0;
         }
         
         for (let i = 0; i < data.length; i++) {
             const d = data[i];
-            if (d && d.месяц) {
+            if (d && d.месяц && MONTHS_ORDER.includes(d.месяц)) {
                 if (d.тип === 'Доход') {
                     let ndsOut = 0;
                     for (let j = 0; j < data.length; j++) {
@@ -1738,14 +1720,15 @@ function getMonthlyAvgCheckData() {
         }
         
         const result = [];
-        for (let i = 0; i < months.length; i++) {
-            const rev = revenue[months[i]];
-            const sal = sales[months[i]];
-            if (rev !== 0 && sal !== 0 && rev !== undefined && sal !== undefined) {
-                result.push(rev / sal);
+        for (let i = 0; i < MONTHS_ORDER.length; i++) {
+            const m = MONTHS_ORDER[i];
+            if (revenue[m] !== 0 && sales[m] !== 0) {
+                result.push(revenue[m] / sales[m]);
+            } else {
+                result.push(0);
             }
         }
-        return result.length ? result : [0];
+        return result;
     } catch(e) {
         console.error('getMonthlyAvgCheckData error:', e);
         return [0];
@@ -1756,20 +1739,16 @@ function getMonthlyAvgCheckData() {
 function getMonthlyEfficiencyData() {
     try {
         const data = window.currentData || [];
-        if (!data || data.length === 0) {
-            return [0];
-        }
+        if (!data || data.length === 0) return [0];
         
-        const months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
         const monthly = {};
-        
-        for (let i = 0; i < months.length; i++) {
-            monthly[months[i]] = { revenue: 0, ndsOut: 0, expenses: 0 };
+        for (let i = 0; i < MONTHS_ORDER.length; i++) {
+            monthly[MONTHS_ORDER[i]] = { revenue: 0, ndsOut: 0, expenses: 0 };
         }
         
         for (let i = 0; i < data.length; i++) {
             const d = data[i];
-            if (d && d.месяц) {
+            if (d && d.месяц && MONTHS_ORDER.includes(d.месяц)) {
                 if (d.тип === 'Доход') {
                     monthly[d.месяц].revenue += d.сумма || 0;
                 }
@@ -1783,15 +1762,17 @@ function getMonthlyEfficiencyData() {
         }
         
         const result = [];
-        for (let i = 0; i < months.length; i++) {
-            const m = months[i];
+        for (let i = 0; i < MONTHS_ORDER.length; i++) {
+            const m = MONTHS_ORDER[i];
             const netRev = monthly[m].revenue - monthly[m].ndsOut;
             if (netRev !== 0 && monthly[m].expenses !== 0) {
                 const profit = netRev - monthly[m].expenses;
                 result.push(profit / (monthly[m].expenses || 1));
+            } else {
+                result.push(0);
             }
         }
-        return result.length ? result : [0];
+        return result;
     } catch(e) {
         console.error('getMonthlyEfficiencyData error:', e);
         return [0];
@@ -1807,8 +1788,6 @@ function renderTabChart(index) {
     const canvas = document.getElementById(`tabChart_${tabId}`);
     if (!canvas) return;
     
-    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-    
     let chartData = [];
     let yAxisLabel = '';
     let formatValue = (val) => val;
@@ -1816,10 +1795,9 @@ function renderTabChart(index) {
     if (tabId === 'netRevenue') {
         chartData = getMonthlyNetRevenueData();
         yAxisLabel = 'тыс. ₽';
-        formatValue = (val) => (val / 1000).toFixed(0) + 'K';
+        formatValue = (val) => (val).toFixed(0) + 'K';
     } else if (tabId === 'sales') {
-        const allData = getMonthlySalesData();
-        chartData = allData;
+        chartData = getMonthlySalesData();
         yAxisLabel = 'шт';
         formatValue = (val) => val.toFixed(0);
     } else if (tabId === 'avgCheck') {
@@ -1832,21 +1810,35 @@ function renderTabChart(index) {
         formatValue = (val) => val.toFixed(2);
     }
     
-    // Фильтруем данные для отображения только месяцев с ненулевыми значениями
+    // ФИЛЬТРУЕМ ТОЛЬКО МЕСЯЦЫ С НЕНУЛЕВЫМИ ЗНАЧЕНИЯМИ
     const filteredLabels = [];
     const filteredData = [];
-    for (let i = 0; i < monthsOrder.length && i < chartData.length; i++) {
-        if (chartData[i] && chartData[i] !== 0 && chartData[i] !== undefined && chartData[i] !== null) {
-            filteredLabels.push(monthsOrder[i].slice(0, 3));
+    
+    for (let i = 0; i < chartData.length; i++) {
+        // Пропускаем нулевые значения
+        if (chartData[i] !== 0 && chartData[i] !== undefined && chartData[i] !== null) {
+            filteredLabels.push(MONTHS_ORDER[i].slice(0, 3)); // Первые 3 буквы
             filteredData.push(chartData[i]);
         }
     }
     
+    // Если осталось слишком мало данных, показываем хотя бы что-то
     if (filteredData.length === 0) {
+        // Пробуем показать все данные
+        for (let i = 0; i < chartData.length; i++) {
+            if (chartData[i] !== undefined && chartData[i] !== null) {
+                filteredLabels.push(MONTHS_ORDER[i].slice(0, 3));
+                filteredData.push(chartData[i]);
+            }
+        }
+    }
+    
+    if (filteredData.length === 0) {
+        console.warn(`Нет данных для графика ${tabId}`);
         return;
     }
     
-    // Уничтожаем старый график, если он существует
+    // Уничтожаем старый график
     if (window.tabCharts && window.tabCharts[tabId]) {
         try {
             if (typeof window.tabCharts[tabId].destroy === 'function') {
@@ -1857,7 +1849,6 @@ function renderTabChart(index) {
     }
     
     const ctx = canvas.getContext('2d');
-    
     if (!window.tabCharts) window.tabCharts = {};
     
     window.tabCharts[tabId] = new Chart(ctx, {
