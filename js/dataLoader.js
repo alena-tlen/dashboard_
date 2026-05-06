@@ -364,7 +364,7 @@ function updateModalFilters() {
 }
 
 // ========================
-// ЗАГРУЗКА ФАЙЛА (ПОЛНАЯ ВЕРСИЯ)
+// ЗАГРУЗКА ФАЙЛА (ПОЛНАЯ ВЕРСИЯ С ИНДИКАТОРОМ)
 // ========================
 
 /**
@@ -372,6 +372,20 @@ function updateModalFilters() {
  * @param {File} file - загруженный файл
  */
 async function loadFile(file) {
+    // Сохраняем оригинальное содержимое области загрузки
+    const uploadArea = document.getElementById('uploadArea');
+    const originalContent = uploadArea ? uploadArea.innerHTML : '';
+    
+    // Показываем индикатор загрузки
+    if (uploadArea) {
+        uploadArea.innerHTML = `
+            <div class="upload-icon">⏳</div>
+            <div class="upload-title">Загрузка данных...</div>
+            <div class="upload-text">Пожалуйста, подождите, обрабатывается файл</div>
+        `;
+        uploadArea.style.cursor = 'wait';
+    }
+    
     try {
         const data = await readExcelFile(file);
         originalData = data;
@@ -392,11 +406,21 @@ async function loadFile(file) {
         if (cashSidebarBlock) cashSidebarBlock.style.display = 'block';
         
         // Скрываем область загрузки
-        const uploadArea = document.getElementById('uploadArea');
-        if (uploadArea) uploadArea.style.display = 'none';
+        if (uploadArea) {
+            uploadArea.style.display = 'none';
+            uploadArea.style.cursor = 'pointer';
+        }
         
     } catch (error) { 
-        showNotification('Ошибка: ' + error.message, 'error');
+        showNotification('❌ Ошибка: ' + error.message, 'error');
+        console.error('Ошибка загрузки файла:', error);
+        
+        // Восстанавливаем область загрузки при ошибке
+        if (uploadArea) {
+            uploadArea.innerHTML = originalContent;
+            uploadArea.style.display = 'block';
+            uploadArea.style.cursor = 'pointer';
+        }
     }
 }
 
@@ -477,6 +501,8 @@ function showNotification(message, type = 'success') {
         }
     }, 4000);
 }
+
+
 
 // ========================
 // ЭКСПОРТ ФУНКЦИЙ В WINDOW
