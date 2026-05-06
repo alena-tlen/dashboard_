@@ -878,153 +878,6 @@ function renderQuadrantMatrix(data, f) {
 }
 
 // ========================
-// ВОДОПАДНАЯ ДИАГРАММА SVG (из монолита)
-// ========================
-
-function renderWaterfallSVG(containerId, f) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const width = container.clientWidth || 600;
-    const height = 350;
-    const padding = { top: 60, right: 100, bottom: 40, left: 100 };
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
-    
-    const steps = [
-        { name: 'Выручка', value: f.totalRevenue, color: '#4299e1' },
-        { name: 'НДС', value: -Math.abs(f.totalNDS), color: '#ed8936' },
-        { name: 'Расходы', value: -Math.abs(f.totalExpenses), color: '#f56565' },
-        { name: 'Прибыль', value: f.profit, color: f.profit >= 0 ? '#48bb78' : '#f56565' }
-    ];
-    
-    let cumulative = 0;
-    steps.forEach(step => { step.cumulative = cumulative + step.value; cumulative = step.cumulative; });
-    const maxValue = Math.max(...steps.map(s => Math.abs(s.cumulative)), Math.abs(f.totalRevenue));
-    const minValue = Math.min(...steps.map(s => s.cumulative), 0);
-    const valueRange = maxValue - minValue;
-    const barWidth = (chartWidth - (steps.length - 1) * 10) / steps.length;
-    
-    let svgHtml = `<svg width="${width}" height="${height}" style="background: transparent; font-family: inherit;">
-        <defs>
-            <linearGradient id="waterfallGrad1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#4299e1;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#3182ce;stop-opacity:0.7"/></linearGradient>
-            <linearGradient id="waterfallGrad2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#ed8936;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#dd6b20;stop-opacity:0.7"/></linearGradient>
-            <linearGradient id="waterfallGrad3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#f56565;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#e53e3e;stop-opacity:0.7"/></linearGradient>
-            <linearGradient id="waterfallGrad4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#48bb78;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#38a169;stop-opacity:0.7"/></linearGradient>
-            <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/></filter>
-        </defs>
-        <text x="${width/2}" y="25" text-anchor="middle" font-size="14" font-weight="600" fill="#667eea">💰 От выручки к чистой прибыли</text>`;
-    
-    steps.forEach((step, i) => {
-        const x = padding.left + i * (barWidth + 10);
-        const yStart = padding.top + chartHeight - ((step.cumulative - minValue) / valueRange) * chartHeight;
-        const yEnd = padding.top + chartHeight - ((step.cumulative - step.value - minValue) / valueRange) * chartHeight;
-        const barHeight = Math.abs(yEnd - yStart);
-        const y = step.value >= 0 ? yEnd : yStart;
-        const gradId = `waterfallGrad${i+1}`;
-        svgHtml += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="6" fill="url(#${gradId})" filter="url(#shadow)"><title>${step.name}: ${formatCurrency(Math.abs(step.value))}</title></rect>`;
-        svgHtml += `<text x="${x + barWidth/2}" y="${y + (step.value >= 0 ? -8 : barHeight + 18)}" text-anchor="middle" font-size="11" fill="${step.color}" font-weight="500">${step.value >= 0 ? `+${formatCurrency(step.value)}` : formatCurrency(step.value)}</text>`;
-        svgHtml += `<text x="${x + barWidth/2}" y="${height - 12}" text-anchor="middle" font-size="11" fill="#a0aec0">${step.name}</text>`;
-        if (i < steps.length - 1) {
-            const nextX = padding.left + (i + 1) * (barWidth + 10);
-            svgHtml += `<line x1="${x + barWidth}" y1="${yStart}" x2="${nextX}" y2="${yStart}" stroke="#cbd5e0" stroke-width="1.5" stroke-dasharray="4,3"/>`;
-        }
-    });
-    
-    svgHtml += `<circle cx="${padding.left + (steps.length-1) * (barWidth + 10) + barWidth/2}" cy="${padding.top + chartHeight - ((steps[steps.length-1].cumulative - minValue) / valueRange) * chartHeight}" r="5" fill="#667eea" stroke="white" stroke-width="2"/>`;
-    svgHtml += `</svg>`;
-    container.innerHTML = svgHtml;
-}
-
-// ========================
-// ТЕПЛОВАЯ КАРТА HTML/CSS (из монолита)
-// ========================
-
-function renderHeatmapTable(containerId, data) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    const channels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
-    const monthMap = new Map();
-    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-    
-    data.forEach(row => {
-        if (!row.месяц || !row.год) return;
-        const monthIndex = monthsOrder.indexOf(row.месяц);
-        if (monthIndex === -1) return;
-        const key = `${row.год}-${monthIndex}`;
-        if (!monthMap.has(key)) monthMap.set(key, { year: row.год, month: row.месяц, index: monthIndex, profits: {} });
-        const monthData = monthMap.get(key);
-        const channel = row.канал;
-        if (!channels.includes(channel)) return;
-        const revenue = row.тип === 'Доход' ? row.сумма : 0;
-        const ndsOut = (row.статья === 'НДС' && row.подканал === 'НДС исходящий') ? row.сумма : 0;
-        const expense = row.тип === 'Расход' ? Math.abs(row.сумма) : 0;
-        if (!monthData.profits[channel]) monthData.profits[channel] = 0;
-        monthData.profits[channel] += revenue - ndsOut - expense;
-    });
-    
-    const sortedMonths = Array.from(monthMap.values()).sort((a, b) => {
-        if (a.year !== b.year) return a.year - b.year;
-        return a.index - b.index;
-    });
-    
-    if (sortedMonths.length < 2) {
-        container.innerHTML = '<div style="text-align: center; padding: 40px;">⚠️ Недостаточно данных для тепловой карты (нужно минимум 2 месяца)</div>';
-        return;
-    }
-    
-    let allProfits = [];
-    sortedMonths.forEach(m => { channels.forEach(ch => { const profit = m.profits[ch] || 0; if (profit !== 0) allProfits.push(profit); }); });
-    const maxProfit = Math.max(...allProfits, 0);
-    const minProfit = Math.min(...allProfits, 0);
-    const absMax = Math.max(Math.abs(maxProfit), Math.abs(minProfit));
-    
-    function getColor(profit) {
-        if (profit === 0) return '#2d3748';
-        const intensity = Math.min(Math.abs(profit) / absMax, 1);
-        if (profit > 0) {
-            const r = Math.round(72 - 72 * intensity);
-            const g = Math.round(187 + 68 * intensity);
-            const b = Math.round(120 - 120 * intensity);
-            return `rgb(${r}, ${g}, ${b})`;
-        } else {
-            const r = Math.round(245 - 100 * intensity);
-            const g = Math.round(101 - 60 * intensity);
-            const b = Math.round(101 - 60 * intensity);
-            return `rgb(${r}, ${g}, ${b})`;
-        }
-    }
-    
-    let html = `<div style="overflow-x: auto;"><div style="margin-bottom: 12px; text-align: center; font-size: 13px; font-weight: 600; color: #667eea;">🌡️ Прибыль по месяцам и каналам (тыс. ₽)</div>
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr><th style="padding: 10px 8px; text-align: left; background: rgba(102,126,234,0.15); border-radius: 8px 0 0 0;">Месяц</th>`;
-    channels.forEach(ch => { html += `<th style="padding: 10px 8px; text-align: center; background: rgba(102,126,234,0.15);">${ch}</th>`; });
-    html += `</tr></thead><tbody>`;
-    
-    sortedMonths.forEach(month => {
-        const monthName = `${month.month} ${month.year}`;
-        html += `<tr style="border-bottom: 1px solid rgba(102,126,234,0.1);"><td style="padding: 10px 8px; font-weight: 500; background: rgba(102,126,234,0.08); border-radius: 6px 0 0 6px;">${monthName}</td>`;
-        channels.forEach(ch => {
-            const profit = month.profits[ch] || 0;
-            const color = getColor(profit);
-            const displayValue = profit === 0 ? '—' : (profit / 1000).toFixed(0);
-            const sign = profit > 0 ? '+' : '';
-            html += `<td style="padding: 10px 8px; text-align: center; background: ${color}; color: ${Math.abs(profit) > absMax/2 ? 'white' : '#e2e8f0'}; border-radius: 6px; font-weight: 500;">${profit !== 0 ? sign : ''}${displayValue}</td>`;
-        });
-        html += `</tr>`;
-    });
-    
-    html += `</tbody></table>
-        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 12px; font-size: 11px;">
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #48bb78; border-radius: 4px;"></div><span>Прибыль</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #f56565; border-radius: 4px;"></div><span>Убыток</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #2d3748; border-radius: 4px;"></div><span>Ноль</span></div>
-        </div>
-    </div>`;
-    
-    container.innerHTML = html;
-}
-
-// ========================
 // КОЛЛАПСИБЕЛЬНЫЙ БЛОК (с анимацией)
 // ========================
 
@@ -1119,7 +972,12 @@ function generateTabsPanel() {
             <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>${tab.trend.html ? `<div class="tab-trend ${tab.trend.class}">${tab.trend.html} <span style="margin-left: 4px; opacity: 0.7;">к предыдущему периоду</span></div>` : ''}
             <div class="tab-chart-container"><canvas id="tabChart_${tab.id}" style="height: 80px; width: 100%;"></canvas></div>
             <div class="tab-breakdown-header" data-tab="${tab.id}"><span class="breakdown-title">📊 Детализация по каналам</span><span class="breakdown-toggle">▼</span></div>
-            <div class="tab-breakdown-content" id="breakdown_${tab.id}">${tab.id === 'netRevenue' ? generateSimpleBreakdown(netRevenueByChannel, 'value', true) : tab.id === 'sales' ? generateSimpleBreakdown(salesByChannel, 'sales', false, ' шт') : tab.id === 'avgCheck' ? generateSimpleBreakdown(avgCheckByChannel, 'avgCheck', true) : generateEfficiencySimpleBreakdown(window.currentData)}</div>
+            <div class="tab-breakdown-content" id="breakdown_${tab.id}">
+    ${tab.id === 'netRevenue' ? generateFullChannelBreakdown('ВЫРУЧКА ЧИСТАЯ ПО КАНАЛАМ', netRevenueByChannel, true, '') : 
+      tab.id === 'sales' ? generateFullSalesBreakdown(window.currentData) :
+      tab.id === 'avgCheck' ? generateFullAverageCheckBreakdown(window.currentData) :
+      generateFullEfficiencyBreakdown(window.currentData)}
+</div>
         </div>`).join('')}</div></div>`;
     
     setTimeout(() => initTabs(), 100);
