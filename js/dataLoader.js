@@ -330,6 +330,24 @@ async function loadFile(file) {
 }
 
 // ========================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ФИЛЬТРОВ
+// ========================
+
+function getPreviousMonths(months, count = 1) {
+    const MONTHS_ORDER = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const prevMonths = [];
+    for (const month of months) {
+        const monthIndex = MONTHS_ORDER.indexOf(month);
+        if (monthIndex !== -1) {
+            let prevIndex = monthIndex - count;
+            while (prevIndex < 0) prevIndex += 12;
+            prevMonths.push(MONTHS_ORDER[prevIndex % 12]);
+        }
+    }
+    return prevMonths;
+}
+
+// ========================
 // ПРИВЯЗКА К ГЛОБАЛЬНОМУ ОБЪЕКТУ WINDOW
 // ========================
 
@@ -339,5 +357,6 @@ window.currentFilters = currentFilters;
 window.applyFilters = applyFilters;
 window.loadFile = loadFile;
 window.updateFilters = updateFilters;
+window.getPreviousMonths = getPreviousMonths;
 
 console.log('✅ dataLoader.js: данные привязаны к window');
