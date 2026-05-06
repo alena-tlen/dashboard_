@@ -1,14 +1,15 @@
 // ========================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// oddsModule.js - ОДДС (ОТЧЁТ О ДВИЖЕНИИ ДЕНЕЖНЫХ СРЕДСТВ) (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
-let oddsDateRange = { startDate: null, endDate: null };  // Выбранный период
-let oddsOperations = [];                                 // Все операции
-let oddsPlans = {};                                      // Плановые значения
-let forecastPeriods = 6;                                // Прогноз на 6 месяцев
-let currentCurrency = 'RUB';                            // Текущая валюта
-let activeOddsTab = 0;                                  // Активная вкладка
-let currentBalance = 0;                                 // Текущий остаток
+// Глобальные переменные
+let oddsDateRange = { startDate: null, endDate: null };
+let oddsOperations = [];
+let oddsPlans = {};
+let forecastPeriods = 6;
+let currentCurrency = 'RUB';
+let activeOddsTab = 0;
+let currentBalance = 0;
 
 // ========================
 // СБОР ОПЕРАЦИЙ ИЗ ДАННЫХ
@@ -29,7 +30,6 @@ function parseOddsDate(row) {
     const monthIndex = MONTHS_ORDER.indexOf(month.toLowerCase());
     if (monthIndex === -1) return null;
     
-    // Нормализуем дату к UTC (полночь)
     const date = new Date(Date.UTC(parseInt(year), monthIndex, parseInt(day)));
     return isNaN(date.getTime()) ? null : date;
 }
@@ -39,7 +39,6 @@ function parseOddsDate(row) {
  * @returns {Array} - массив операций
  */
 function collectOddsOperations() {
-    // Используем оригинальные данные, игнорируя все фильтры
     const sourceData = originalData.length > 0 ? originalData : [];
     if (sourceData.length === 0) return [];
     
@@ -49,7 +48,6 @@ function collectOddsOperations() {
         const account = row.Счет || row.счет || row['Счет'] || '';
         const article = row.статья || '';
         
-        // Пропускаем начальные остатки
         if (article === 'Начальный остаток' || !account) return;
         
         const amount = parseFloat(row.сумма) || 0;
@@ -59,10 +57,8 @@ function collectOddsOperations() {
         const currency = detectCurrency(account);
         const channel = row.канал || row.Канал || '';
         
-        // Проверяем, техническая ли операция
         const isTechnical = EXCLUDED_FROM_TOP.some(ex => channel.includes(ex));
         
-        // Определяем тип операции
         let type = '';
         const isDeposit = channel === 'Депозит' || channel === 'депозит';
         
@@ -102,12 +98,6 @@ function collectOddsOperations() {
 // РАЗДЕЛЕНИЕ РАСХОДОВ НА ПОСТОЯННЫЕ И ПЕРЕМЕННЫЕ
 // ========================
 
-/**
- * Разделяет расходы на постоянные и переменные
- * @param {Array} operations - массив операций
- * @param {string} currency - валюта
- * @returns {Object} - объект с totals и items
- */
 function splitExpensesByType(operations, currency = 'RUB') {
     const filtered = operations.filter(op => 
         op.type === 'expense' && 
@@ -115,13 +105,8 @@ function splitExpensesByType(operations, currency = 'RUB') {
         !op.isTechnical
     );
     
-    // Ключевые слова для определения типа расходов
-    const fixedKeywords = ['аренд', 'фот', 'зарплат', 'оклад', 'бухгалтер', 
-                           'юр сопровожд', 'связ', 'подписк', 'страхован', 'лиценз'];
-    
-    const variableKeywords = ['закупк', 'товар', 'себестоим', 'логистик', 
-                              'доставк', 'комисс', 'маркетинг', 'реклам', 
-                              'wb', 'ozon', 'маркетплейс'];
+    const fixedKeywords = ['аренд', 'фот', 'зарплат', 'оклад', 'бухгалтер', 'юридическ', 'связ', 'подписк', 'страхован', 'лиценз', 'софт', 'программ'];
+    const variableKeywords = ['закупк', 'товар', 'себестоим', 'логистик', 'доставк', 'комисс', 'маркетинг', 'реклам', 'wb', 'ozon', 'маркетплейс', 'wildberries', 'ozon'];
     
     let fixedTotal = 0, variableTotal = 0;
     const fixedItems = [], variableItems = [];
@@ -150,13 +135,6 @@ function splitExpensesByType(operations, currency = 'RUB') {
 // РАСЧЕТ ТОЧКИ БЕЗУБЫТОЧНОСТИ
 // ========================
 
-/**
- * Рассчитывает точку безубыточности
- * @param {number} fixedCosts - постоянные расходы
- * @param {number} variableCosts - переменные расходы
- * @param {number} revenue - выручка
- * @returns {Object} - объект с показателями
- */
 function calculateBreakEvenPoint(fixedCosts, variableCosts, revenue) {
     const contributionMargin = revenue - variableCosts;
     const contributionMarginRatio = revenue > 0 ? (contributionMargin / revenue) * 100 : 0;
@@ -177,31 +155,22 @@ function calculateBreakEvenPoint(fixedCosts, variableCosts, revenue) {
 // РАСЧЕТ ДЕНЕЖНОГО ЦИКЛА (CCC)
 // ========================
 
-/**
- * Рассчитывает Cash Conversion Cycle
- * @param {Array} operations - массив операций
- * @param {string} currency - валюта
- * @returns {Object} - объект с CCC и компонентами
- */
 function calculateCCC(operations, currency = 'RUB') {
     const filtered = operations.filter(op => op.currency === currency);
     
-    // Ищем средний срок оплаты поставщикам
     const variableOps = filtered.filter(op => {
         const text = (op.article + ' ' + op.category).toLowerCase();
         return text.includes('закупк') || text.includes('товар') || text.includes('поставщик');
     });
     
-    // Ищем средний срок получения денег от покупателей
     const incomeOps = filtered.filter(op => 
         op.type === 'income' && 
         (op.article.includes('поступление') || op.category.includes('оплата'))
     );
     
-    // Примерные оценки (в реальности нужно брать из данных)
-    const avgPayablesDays = variableOps.length > 0 ? 30 : 45;     // Отсрочка поставщикам
-    const avgReceivablesDays = incomeOps.length > 0 ? 15 : 30;    // Отсрочка клиентам
-    const avgInventoryDays = 60;                                   // Оборачиваемость запасов
+    const avgPayablesDays = variableOps.length > 0 ? 30 : 45;
+    const avgReceivablesDays = incomeOps.length > 0 ? 15 : 30;
+    const avgInventoryDays = 60;
     
     const ccc = avgInventoryDays + avgReceivablesDays - avgPayablesDays;
     
@@ -218,18 +187,10 @@ function calculateCCC(operations, currency = 'RUB') {
 // ПРОГНОЗ КАССОВЫХ РАЗРЫВОВ
 // ========================
 
-/**
- * Прогнозирует кассовые разрывы
- * @param {number} currentBalance - текущий остаток
- * @param {number} dailyIncome - средний дневной доход
- * @param {number} dailyExpense - средний дневной расход
- * @param {number} months - количество месяцев прогноза
- * @returns {Array} - массив с прогнозом по месяцам
- */
 function calculateCashGapForecast(currentBalance, dailyIncome, dailyExpense, months = 6) {
     const forecast = [];
     let balance = currentBalance;
-    const minBalance = 100000; // Минимальный порог в 100 тыс. руб.
+    const minBalance = 100000;
     
     for (let i = 1; i <= months; i++) {
         const monthIncome = dailyIncome * 30;
@@ -253,19 +214,9 @@ function calculateCashGapForecast(currentBalance, dailyIncome, dailyExpense, mon
 // РЕКОМЕНДАЦИИ ПО ЛИКВИДНОСТИ
 // ========================
 
-/**
- * Генерирует рекомендации на основе финансовых показателей
- * @param {number} balance - текущий остаток
- * @param {number} ccc - денежный цикл в днях
- * @param {number} safetyMargin - запас прочности (%)
- * @param {number} breakEvenRevenue - точка безубыточности
- * @param {number} revenue - текущая выручка
- * @returns {Array} - массив рекомендаций
- */
 function getLiquidityRecommendations(balance, ccc, safetyMargin, breakEvenRevenue, revenue) {
     const recommendations = [];
     
-    // Рекомендации по остатку
     if (balance < 500000) {
         recommendations.push({ 
             level: 'danger', 
@@ -283,7 +234,6 @@ function getLiquidityRecommendations(balance, ccc, safetyMargin, breakEvenRevenu
         });
     }
     
-    // Рекомендации по денежному циклу
     if (ccc > 60) {
         recommendations.push({ 
             level: 'warning', 
@@ -296,7 +246,6 @@ function getLiquidityRecommendations(balance, ccc, safetyMargin, breakEvenRevenu
         });
     }
     
-    // Рекомендации по запасу прочности
     if (safetyMargin < 10) {
         recommendations.push({ 
             level: 'danger', 
@@ -309,7 +258,6 @@ function getLiquidityRecommendations(balance, ccc, safetyMargin, breakEvenRevenu
         });
     }
     
-    // Рекомендация по точке безубыточности
     if (breakEvenRevenue > revenue && revenue > 0) {
         recommendations.push({ 
             level: 'danger', 
@@ -321,24 +269,15 @@ function getLiquidityRecommendations(balance, ccc, safetyMargin, breakEvenRevenu
 }
 
 // ========================
-// ГРАФИК ДИНАМИКИ ОСТАТКА
+// ГРАФИКИ
 // ========================
 
-/**
- * Отрисовывает график изменения остатка по дням
- * @param {Array} data - массив {date, balance}
- */
 function renderBalanceTrendChart(data) {
     const canvas = document.getElementById('balanceTrendChart');
     if (!canvas || !data || !data.length) return;
     
-    // Уничтожаем старый график
     if (window.balanceTrendChart) {
-        try {
-            if (typeof window.balanceTrendChart.destroy === 'function') {
-                window.balanceTrendChart.destroy();
-            }
-        } catch(e) {}
+        try { if (typeof window.balanceTrendChart.destroy === 'function') window.balanceTrendChart.destroy(); } catch(e) {}
         window.balanceTrendChart = null;
     }
     
@@ -373,47 +312,24 @@ function renderBalanceTrendChart(data) {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `💰 ${formatCurrency(context.raw * 1000)}`;
-                        }
-                    }
-                },
+                tooltip: { callbacks: { label: function(context) { return `💰 ${formatCurrency(context.raw * 1000)}`; } } },
                 legend: { display: false }
             },
             scales: {
-                y: {
-                    title: { display: true, text: 'тыс. ₽', font: { size: 10 } },
-                    ticks: { callback: (v) => v.toFixed(0) + ' тыс.' }
-                },
-                x: {
-                    ticks: { maxRotation: 45, minRotation: 45, font: { size: 9 } }
-                }
+                y: { title: { display: true, text: 'тыс. ₽', font: { size: 10 } }, ticks: { callback: (v) => v.toFixed(0) + ' тыс.' } },
+                x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 9 } } }
             }
         }
     });
 }
 
-// ========================
-// ГРАФИК ДЕНЕЖНОГО ЦИКЛА
-// ========================
-
-/**
- * Отрисовывает столбчатую диаграмму CCC
- * @param {Object} cccData - данные CCC
- */
 function renderCCCChart(cccData) {
     const canvas = document.getElementById('cccChart');
     if (!canvas) return;
     
-    if (window.cccChart) {
-        try { window.cccChart.destroy(); } catch(e) {}
-        window.cccChart = null;
-    }
+    if (window.cccChart) { try { window.cccChart.destroy(); } catch(e) {} window.cccChart = null; }
     
     const ctx = canvas.getContext('2d');
-    const isDarkMode = document.body.classList.contains('dark');
     
     window.cccChart = new Chart(ctx, {
         type: 'bar',
@@ -429,38 +345,21 @@ function renderCCCChart(cccData) {
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (ctx) => ctx.raw + ' дней' } }
-            }
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.raw + ' дней' } } }
         }
     });
 }
 
-// ========================
-// ГРАФИК СЕЗОННОСТИ
-// ========================
-
-/**
- * Отрисовывает график сезонности доходов и расходов
- * @param {Array} operations - массив операций
- * @param {string} currency - валюта
- */
 function renderSeasonalityChart(operations, currency = 'RUB') {
     const canvas = document.getElementById('seasonalityChart');
     if (!canvas) return;
     
-    if (window.seasonalityChart) {
-        try { window.seasonalityChart.destroy(); } catch(e) {}
-        window.seasonalityChart = null;
-    }
+    if (window.seasonalityChart) { try { window.seasonalityChart.destroy(); } catch(e) {} window.seasonalityChart = null; }
     
     const filtered = operations.filter(op => op.currency === currency);
     const monthlyData = {};
     
-    MONTHS_ORDER.forEach(m => { 
-        monthlyData[m] = { income: 0, expense: 0 }; 
-    });
+    MONTHS_ORDER.forEach(m => { monthlyData[m] = { income: 0, expense: 0 }; });
     
     filtered.forEach(op => {
         const month = op.month;
@@ -482,51 +381,19 @@ function renderSeasonalityChart(operations, currency = 'RUB') {
         data: {
             labels: labels,
             datasets: [
-                { 
-                    label: 'Поступления', 
-                    data: incomeData, 
-                    borderColor: '#48bb78', 
-                    backgroundColor: 'rgba(72,187,120,0.1)', 
-                    fill: true, 
-                    tension: 0.4,
-                    pointRadius: 3
-                },
-                { 
-                    label: 'Списания', 
-                    data: expenseData, 
-                    borderColor: '#f56565', 
-                    backgroundColor: 'rgba(245,101,101,0.1)', 
-                    fill: true, 
-                    tension: 0.4,
-                    pointRadius: 3
-                }
+                { label: 'Поступления', data: incomeData, borderColor: '#48bb78', backgroundColor: 'rgba(72,187,120,0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+                { label: 'Списания', data: expenseData, borderColor: '#f56565', backgroundColor: 'rgba(245,101,101,0.1)', fill: true, tension: 0.4, pointRadius: 3 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            plugins: {
-                tooltip: { 
-                    callbacks: { 
-                        label: (ctx) => ctx.dataset.label + ': ' + formatCurrency(ctx.raw * 1000) 
-                    } 
-                }
-            },
-            scales: { 
-                y: { title: { display: true, text: 'тыс. ₽', font: { size: 10 } } } 
-            }
+            plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + formatCurrency(ctx.raw * 1000) } } },
+            scales: { y: { title: { display: true, text: 'тыс. ₽', font: { size: 10 } } } }
         }
     });
 }
 
-// ========================
-// КРЕДИТНЫЙ КАЛЬКУЛЯТОР
-// ========================
-
-/**
- * Создает и отрисовывает кредитный калькулятор
- * @param {number} currentBalance - текущий остаток для проверки
- */
 function renderCreditCalculator(currentBalance) {
     const container = document.getElementById('creditCalculator');
     if (!container) return;
@@ -536,13 +403,10 @@ function renderCreditCalculator(currentBalance) {
             <div>
                 <label style="font-size: 12px; display: block; margin-bottom: 6px;">💰 Сумма кредита (₽)</label>
                 <input type="number" id="creditAmount" class="auth-input" style="width: 100%;" placeholder="1 000 000" value="1000000">
-                
                 <label style="font-size: 12px; display: block; margin-top: 12px; margin-bottom: 6px;">📅 Срок (месяцев)</label>
                 <input type="number" id="creditTerm" class="auth-input" style="width: 100%;" placeholder="12" value="12">
-                
                 <label style="font-size: 12px; display: block; margin-top: 12px; margin-bottom: 6px;">📈 Ставка (% годовых)</label>
                 <input type="number" id="creditRate" class="auth-input" style="width: 100%;" placeholder="25" value="25">
-                
                 <button id="calcCreditBtn" class="btn btn-primary" style="margin-top: 16px; width: 100%;">Рассчитать</button>
             </div>
             <div id="creditResult" style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px;">
@@ -552,16 +416,13 @@ function renderCreditCalculator(currentBalance) {
         </div>
     `;
     
-    // Обработчик расчета
     document.getElementById('calcCreditBtn')?.addEventListener('click', () => {
         const amount = parseFloat(document.getElementById('creditAmount')?.value) || 0;
         const term = parseFloat(document.getElementById('creditTerm')?.value) || 12;
         const rate = parseFloat(document.getElementById('creditRate')?.value) || 25;
         
-        // Формула аннуитетного платежа
         const monthlyRate = rate / 12 / 100;
-        const payment = amount * monthlyRate * Math.pow(1 + monthlyRate, term) / 
-                        (Math.pow(1 + monthlyRate, term) - 1);
+        const payment = amount * monthlyRate * Math.pow(1 + monthlyRate, term) / (Math.pow(1 + monthlyRate, term) - 1);
         const totalPayment = payment * term;
         const overpayment = totalPayment - amount;
         
@@ -580,83 +441,45 @@ function renderCreditCalculator(currentBalance) {
 // ПЛАНОВЫЕ РАСХОДЫ И ПРОГНОЗ
 // ========================
 
-/**
- * Сохраняет планы в localStorage
- */
 function saveOddsPlans() {
     localStorage.setItem('odds_plans', JSON.stringify(oddsPlans));
 }
 
-/**
- * Загружает планы из localStorage
- */
 function loadOddsPlans() {
     const saved = localStorage.getItem('odds_plans');
     if (saved) {
-        try {
-            oddsPlans = JSON.parse(saved);
-        } catch(e) {}
+        try { oddsPlans = JSON.parse(saved); } catch(e) {}
     }
 }
 
-/**
- * Отрисовывает форму для плановых расходов
- */
 function renderPlannedExpenses() {
     const container = document.getElementById('plannedExpensesContainer');
     if (!container) return;
     
-    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
-                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const currentMonth = new Date().getMonth();
     
-    let html = `
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                <thead>
-                    <tr>
-    `;
-    
+    let html = `<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr>`;
     for (let i = 0; i < Math.min(forecastPeriods, months.length); i++) {
         const monthIdx = (currentMonth + i) % 12;
         html += `<th style="padding: 10px; background: rgba(102,126,234,0.1);">${months[monthIdx]}</th>`;
     }
-    
     html += `</tr></thead><tbody><tr>`;
-    
-    // Плановые расходы
     for (let i = 0; i < forecastPeriods; i++) {
         const key = `planned_month_${i}`;
         const value = oddsPlans[key] || '';
-        html += `<td style="padding: 10px;">
-                    <input type="number" id="${key}" class="planned-input" 
-                           style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(102,126,234,0.3); background: transparent;" 
-                           placeholder="Расходы" value="${value}">
-                 </td>`;
+        html += `<td style="padding: 10px;"><input type="number" id="${key}" class="planned-input" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(102,126,234,0.3); background: transparent;" placeholder="Расходы" value="${value}"></td>`;
     }
-    
     html += `</tr><tr>`;
-    
-    // Плановые поступления
     for (let i = 0; i < forecastPeriods; i++) {
         const key = `planned_income_${i}`;
         const value = oddsPlans[key] || '';
-        html += `<td style="padding: 10px;">
-                    <input type="number" id="${key}" class="planned-input" 
-                           style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(102,126,234,0.3); background: transparent;" 
-                           placeholder="Поступления" value="${value}">
-                 </td>`;
+        html += `<td style="padding: 10px;"><input type="number" id="${key}" class="planned-input" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(102,126,234,0.3); background: transparent;" placeholder="Поступления" value="${value}"></td>`;
     }
-    
-    html += `</tr></tbody></table>
-        </div>
-        <button id="savePlansBtn" class="btn btn-secondary" style="margin-top: 16px;">💾 Сохранить план</button>
-        <div id="forecastResult" style="margin-top: 16px;"></div>
-    `;
+    html += `</tr></tbody></table></div><button id="savePlansBtn" class="btn btn-secondary" style="margin-top: 16px;">💾 Сохранить план</button><div id="forecastResult" style="margin-top: 16px;"></div>`;
     
     container.innerHTML = html;
     
-    // Сохранение при изменении
     const inputs = document.querySelectorAll('.planned-input');
     inputs.forEach(input => {
         input.addEventListener('change', () => {
@@ -665,7 +488,6 @@ function renderPlannedExpenses() {
         });
     });
     
-    // Кнопка сохранения
     document.getElementById('savePlansBtn')?.addEventListener('click', () => {
         calculateForecast();
         showNotification('План сохранён', 'success');
@@ -674,9 +496,6 @@ function renderPlannedExpenses() {
     if (Object.keys(oddsPlans).length > 0) calculateForecast();
 }
 
-/**
- * Рассчитывает прогноз на основе планов
- */
 function calculateForecast() {
     const forecast = [];
     let balance = currentBalance;
@@ -717,12 +536,9 @@ function calculateForecast() {
 }
 
 // ========================
-// ИНИЦИАЛИЗАЦИЯ ФИЛЬТРОВ
+// ИНИЦИАЛИЗАЦИЯ ФИЛЬТРОВ ОДДС
 // ========================
 
-/**
- * Устанавливает начальные даты для фильтрации
- */
 function initOddsDates() {
     const startDateInput = document.getElementById('oddsStartDate');
     const endDateInput = document.getElementById('oddsEndDate');
@@ -730,9 +546,7 @@ function initOddsDates() {
     
     const tempOps = collectOddsOperations();
     
-    // Находим минимальную и максимальную дату
-    let minDate = null;
-    let maxDate = null;
+    let minDate = null, maxDate = null;
     
     tempOps.forEach(op => {
         if (op.date) {
@@ -764,9 +578,6 @@ function initOddsDates() {
     }
 }
 
-/**
- * Настраивает обработчики фильтров ОДДС
- */
 function initOddsFilters() {
     const startDateInput = document.getElementById('oddsStartDate');
     const endDateInput = document.getElementById('oddsEndDate');
@@ -777,7 +588,6 @@ function initOddsFilters() {
     
     if (!startDateInput || !endDateInput) return;
     
-    // Применение фильтра
     if (applyBtn) {
         applyBtn.onclick = () => {
             oddsOperations = collectOddsOperations();
@@ -795,12 +605,8 @@ function initOddsFilters() {
         };
     }
     
-    // Сброс фильтра
-    if (resetBtn) {
-        resetBtn.onclick = initOddsDates;
-    }
+    if (resetBtn) resetBtn.onclick = initOddsDates;
     
-    // Принудительное обновление
     if (forceRefreshBtn) {
         forceRefreshBtn.onclick = () => {
             oddsOperations = collectOddsOperations();
@@ -809,7 +615,6 @@ function initOddsFilters() {
         };
     }
     
-    // Быстрые периоды
     quickBtns.forEach(btn => {
         btn.onclick = () => {
             oddsOperations = collectOddsOperations();
@@ -850,7 +655,6 @@ function initOddsFilters() {
 // ========================
 
 function renderOddsPage() {
-    // Обновляем операции перед рендером
     oddsOperations = collectOddsOperations();
     
     const container = document.getElementById('oddsMainContent');
@@ -861,13 +665,11 @@ function renderOddsPage() {
         return;
     }
     
-    // Фильтрация по датам
     let filteredOps = oddsOperations;
     if (oddsDateRange.startDate && oddsDateRange.endDate) {
         filteredOps = oddsOperations.filter(op => op.date >= oddsDateRange.startDate && op.date <= oddsDateRange.endDate);
     }
     
-    // Фильтр по валюте
     const currencyFiltered = filteredOps.filter(op => op.currency === currentCurrency && !op.isTechnical);
     const incomes = currencyFiltered.filter(op => op.type === 'income');
     const expenses = currencyFiltered.filter(op => op.type === 'expense');
@@ -879,7 +681,6 @@ function renderOddsPage() {
     const totalExpense = expenses.reduce((s, o) => s + o.amount, 0);
     const netFlow = totalIncome - totalExpense;
     
-    // Расчет начального остатка
     let initialBalance = 0;
     originalData.forEach(row => {
         if (row.статья === 'Начальный остаток') {
@@ -908,15 +709,12 @@ function renderOddsPage() {
     
     let startBalance = cumulativeBalance;
     
-    // Расчет дневных остатков
     const sortedOps = [...currencyFiltered].sort((a, b) => a.date - b.date);
     const dailyMap = new Map();
     
     sortedOps.forEach(op => {
         const key = op.date.toISOString().split('T')[0];
-        if (!dailyMap.has(key)) {
-            dailyMap.set(key, { date: op.date, income: 0, expense: 0, balance: 0 });
-        }
+        if (!dailyMap.has(key)) dailyMap.set(key, { date: op.date, income: 0, expense: 0, balance: 0 });
         const day = dailyMap.get(key);
         if (op.type === 'income') day.income += op.amount;
         else day.expense += op.amount;
@@ -932,19 +730,13 @@ function renderOddsPage() {
     currentBalance = dailyData.length > 0 ? dailyData[dailyData.length - 1].balance : startBalance;
     const balanceChartData = dailyData.map(d => ({ date: d.date, balance: d.balance / 1000 }));
     
-    // Постоянные и переменные расходы
     const { fixedTotal, variableTotal } = splitExpensesByType(filteredOps, currentCurrency);
     const revenue = incomes.reduce((s, o) => s + o.amount, 0);
     const { contributionMargin, contributionMarginRatio, breakEvenRevenue, safetyMargin, safetyMarginAbsolute } = calculateBreakEvenPoint(fixedTotal, variableTotal, revenue);
-    
-    // CCC
     const cccData = calculateCCC(filteredOps, currentCurrency);
-    
-    // Рекомендации
     const recommendations = getLiquidityRecommendations(currentBalance, cccData.ccc, safetyMargin, breakEvenRevenue, revenue);
     
-    // Форматирование валюты
-    const formatCurrencyWithCurrency = (amount, currency) => {
+    const formatCurrencyWithCurrencyLocal = (amount, currency) => {
         const symbols = { RUB: '₽', USD: '$', EUR: '€', CNY: '¥' };
         const symbol = symbols[currency] || currency;
         const formatter = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -953,9 +745,7 @@ function renderOddsPage() {
     
     const formatDateRange = (date) => date ? `${date.getDate()}.${date.getMonth()+1}.${date.getFullYear()}` : '';
     
-    // HTML
     const html = `
-        <!-- Переключатель валюты -->
         <div class="metrics-grid" style="margin-bottom: 20px;">
             <div class="metric-card" style="padding: 16px;">
                 <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
@@ -966,131 +756,51 @@ function renderOddsPage() {
                         <option value="EUR" ${currentCurrency === 'EUR' ? 'selected' : ''}>EUR</option>
                         <option value="CNY" ${currentCurrency === 'CNY' ? 'selected' : ''}>CNY</option>
                     </select>
-                    <div style="margin-left: auto; font-size: 12px;">
-                        📅 ${oddsDateRange.startDate ? formatDateRange(oddsDateRange.startDate) : '—'} — ${oddsDateRange.endDate ? formatDateRange(oddsDateRange.endDate) : '—'}
-                    </div>
+                    <div style="margin-left: auto; font-size: 12px;">📅 ${oddsDateRange.startDate ? formatDateRange(oddsDateRange.startDate) : '—'} — ${oddsDateRange.endDate ? formatDateRange(oddsDateRange.endDate) : '—'}</div>
                 </div>
             </div>
         </div>
         
-        <!-- Основные показатели -->
         <div class="metrics-grid" style="margin-bottom: 24px;">
-            <div class="metric-card">
-                <div class="metric-title">💰 Остаток на ${oddsDateRange.endDate ? formatDateRange(oddsDateRange.endDate) : 'конец периода'}</div>
-                <div class="metric-value ${currentBalance >= 0 ? 'positive' : 'negative'}">${formatCurrencyWithCurrency(currentBalance, currentCurrency)}</div>
-                <div class="metric-sub">на начало: ${formatCurrencyWithCurrency(startBalance, currentCurrency)}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">📥 Поступления</div>
-                <div class="metric-value positive">+${formatCurrencyWithCurrency(totalIncome, currentCurrency)}</div>
-                <div class="metric-sub">${incomes.length} операций</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">📤 Списания</div>
-                <div class="metric-value negative">-${formatCurrencyWithCurrency(totalExpense, currentCurrency)}</div>
-                <div class="metric-sub">${expenses.length} операций</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">📊 Чистый поток</div>
-                <div class="metric-value ${netFlow >= 0 ? 'positive' : 'negative'}">${netFlow >= 0 ? '+' : ''}${formatCurrencyWithCurrency(netFlow, currentCurrency)}</div>
-            </div>
+            <div class="metric-card"><div class="metric-title">💰 Остаток на ${oddsDateRange.endDate ? formatDateRange(oddsDateRange.endDate) : 'конец периода'}</div><div class="metric-value ${currentBalance >= 0 ? 'positive' : 'negative'}">${formatCurrencyWithCurrencyLocal(currentBalance, currentCurrency)}</div><div class="metric-sub">на начало: ${formatCurrencyWithCurrencyLocal(startBalance, currentCurrency)}</div></div>
+            <div class="metric-card"><div class="metric-title">📥 Поступления</div><div class="metric-value positive">+${formatCurrencyWithCurrencyLocal(totalIncome, currentCurrency)}</div><div class="metric-sub">${incomes.length} операций</div></div>
+            <div class="metric-card"><div class="metric-title">📤 Списания</div><div class="metric-value negative">-${formatCurrencyWithCurrencyLocal(totalExpense, currentCurrency)}</div><div class="metric-sub">${expenses.length} операций</div></div>
+            <div class="metric-card"><div class="metric-title">📊 Чистый поток</div><div class="metric-value ${netFlow >= 0 ? 'positive' : 'negative'}">${netFlow >= 0 ? '+' : ''}${formatCurrencyWithCurrencyLocal(netFlow, currentCurrency)}</div></div>
         </div>
         
-        <!-- Вкладки -->
         <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid rgba(102,126,234,0.2);">
             <button class="odds-tab-btn" data-tab="0" style="padding: 8px 20px; background: none; border: none; cursor: pointer; ${activeOddsTab === 0 ? 'border-bottom: 2px solid #667eea; color: #667eea;' : 'color: #a0aec0;'}">Основной анализ</button>
             <button class="odds-tab-btn" data-tab="1" style="padding: 8px 20px; background: none; border: none; cursor: pointer; ${activeOddsTab === 1 ? 'border-bottom: 2px solid #667eea; color: #667eea;' : 'color: #a0aec0;'}">Прогноз и планы</button>
             <button class="odds-tab-btn" data-tab="2" style="padding: 8px 20px; background: none; border: none; cursor: pointer; ${activeOddsTab === 2 ? 'border-bottom: 2px solid #667eea; color: #667eea;' : 'color: #a0aec0;'}">Кредитный калькулятор</button>
         </div>
         
-        <!-- Вкладка 0: Основной анализ -->
         <div id="oddsTab0" class="odds-tab-content" style="${activeOddsTab === 0 ? '' : 'display: none;'}">
             <div class="metrics-grid" style="margin-bottom: 24px;">
-                <div class="metric-card" style="grid-column: span 2;">
-                    <div class="metric-title">📈 Динамика остатка</div>
-                    <canvas id="balanceTrendChart" style="height: 250px; width: 100%;"></canvas>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">💰 Резервный фонд</div>
-                    <div class="metric-value" style="color: #4299e1;">${formatCurrencyWithCurrency(fixedTotal * 3, currentCurrency)}</div>
-                    <div class="metric-sub">3 месяца постоянных расходов</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">⚖️ Точка безубыточности</div>
-                    <div class="metric-value">${formatCurrencyWithCurrency(breakEvenRevenue, currentCurrency)}</div>
-                    <div class="metric-sub">Запас прочности: ${safetyMargin.toFixed(1)}%</div>
-                </div>
+                <div class="metric-card" style="grid-column: span 2;"><div class="metric-title">📈 Динамика остатка</div><canvas id="balanceTrendChart" style="height: 250px; width: 100%;"></canvas></div>
+                <div class="metric-card"><div class="metric-title">💰 Резервный фонд</div><div class="metric-value" style="color: #4299e1;">${formatCurrencyWithCurrencyLocal(fixedTotal * 3, currentCurrency)}</div><div class="metric-sub">3 месяца постоянных расходов</div></div>
+                <div class="metric-card"><div class="metric-title">⚖️ Точка безубыточности</div><div class="metric-value">${formatCurrencyWithCurrencyLocal(breakEvenRevenue, currentCurrency)}</div><div class="metric-sub">Запас прочности: ${safetyMargin.toFixed(1)}%</div></div>
             </div>
-            
             <div class="metrics-grid" style="margin-bottom: 24px;">
-                <div class="metric-card">
-                    <div class="metric-title">📊 Денежный цикл (CCC)</div>
-                    <canvas id="cccChart" style="height: 200px; width: 100%;"></canvas>
-                    <div class="metric-sub">${cccData.ccc} дней</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">📅 Сезонность</div>
-                    <canvas id="seasonalityChart" style="height: 200px; width: 100%;"></canvas>
-                </div>
+                <div class="metric-card"><div class="metric-title">📊 Денежный цикл (CCC)</div><canvas id="cccChart" style="height: 200px; width: 100%;"></canvas><div class="metric-sub">${cccData.ccc} дней</div></div>
+                <div class="metric-card"><div class="metric-title">📅 Сезонность</div><canvas id="seasonalityChart" style="height: 200px; width: 100%;"></canvas></div>
             </div>
-            
             <div class="metrics-grid" style="margin-bottom: 24px;">
-                <div class="metric-card">
-                    <div class="metric-title">🏆 ТОП-5 поступлений</div>
-                    ${topIncomes.length > 0 ? topIncomes.map((op, i) => `
-                        <div style="margin-bottom: 8px; padding: 6px; background: rgba(72,187,120,0.1); border-radius: 6px;">
-                            ${i+1}. ${op.article.substring(0, 35)}<br>
-                            <span style="color: #48bb78;">+${formatCurrencyWithCurrency(op.amount, currentCurrency)}</span>
-                        </div>
-                    `).join('') : '<div style="padding: 20px; text-align: center;">Нет данных</div>'}
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">⚠️ ТОП-5 списаний</div>
-                    ${topExpenses.length > 0 ? topExpenses.map((op, i) => `
-                        <div style="margin-bottom: 8px; padding: 6px; background: rgba(245,101,101,0.1); border-radius: 6px;">
-                            ${i+1}. ${op.article.substring(0, 35)}<br>
-                            <span style="color: #f56565;">-${formatCurrencyWithCurrency(op.amount, currentCurrency)}</span>
-                        </div>
-                    `).join('') : '<div style="padding: 20px; text-align: center;">Нет данных</div>'}
-                </div>
+                <div class="metric-card"><div class="metric-title">🏆 ТОП-5 поступлений</div>${topIncomes.length > 0 ? topIncomes.map((op, i) => `<div style="margin-bottom: 8px; padding: 6px; background: rgba(72,187,120,0.1); border-radius: 6px;">${i+1}. ${op.article.substring(0, 35)}<br><span style="color: #48bb78;">+${formatCurrencyWithCurrencyLocal(op.amount, currentCurrency)}</span></div>`).join('') : '<div style="padding: 20px; text-align: center;">Нет данных</div>'}</div>
+                <div class="metric-card"><div class="metric-title">⚠️ ТОП-5 списаний</div>${topExpenses.length > 0 ? topExpenses.map((op, i) => `<div style="margin-bottom: 8px; padding: 6px; background: rgba(245,101,101,0.1); border-radius: 6px;">${i+1}. ${op.article.substring(0, 35)}<br><span style="color: #f56565;">-${formatCurrencyWithCurrencyLocal(op.amount, currentCurrency)}</span></div>`).join('') : '<div style="padding: 20px; text-align: center;">Нет данных</div>'}</div>
             </div>
-            
-            <div class="odds-section-card">
-                <div class="metric-title">💡 Рекомендации</div>
-                ${recommendations.map(rec => `<div style="margin-bottom: 8px; padding: 8px; background: rgba(102,126,234,0.1); border-radius: 8px;">${rec.text}</div>`).join('')}
-            </div>
+            <div class="odds-section-card"><div class="metric-title">💡 Рекомендации</div>${recommendations.map(rec => `<div style="margin-bottom: 8px; padding: 8px; background: rgba(102,126,234,0.1); border-radius: 8px;">${rec.text}</div>`).join('')}</div>
         </div>
         
-        <!-- Вкладка 1: Прогноз и планы -->
         <div id="oddsTab1" class="odds-tab-content" style="${activeOddsTab === 1 ? '' : 'display: none;'}">
-            <div class="metric-card" style="margin-bottom: 20px;">
-                <div class="metric-title">📋 Плановые значения</div>
-                <div id="plannedExpensesContainer"></div>
-            </div>
-            <div class="odds-section-card">
-                <div class="metric-title">📊 Анализ расходов</div>
-                <div style="display: flex; gap: 20px; margin-top: 12px;">
-                    <div style="flex: 1; padding: 16px; background: rgba(66,153,225,0.1); border-radius: 12px;">
-                        <div style="font-size: 12px;">🏢 Постоянные расходы</div>
-                        <div style="font-size: 24px; font-weight: 700;">${formatCurrencyWithCurrency(fixedTotal, currentCurrency)}</div>
-                    </div>
-                    <div style="flex: 1; padding: 16px; background: rgba(237,137,54,0.1); border-radius: 12px;">
-                        <div style="font-size: 12px;">📦 Переменные расходы</div>
-                        <div style="font-size: 24px; font-weight: 700;">${formatCurrencyWithCurrency(variableTotal, currentCurrency)}</div>
-                    </div>
-                </div>
-            </div>
+            <div class="metric-card" style="margin-bottom: 20px;"><div class="metric-title">📋 Плановые значения</div><div id="plannedExpensesContainer"></div></div>
+            <div class="odds-section-card"><div class="metric-title">📊 Анализ расходов</div><div style="display: flex; gap: 20px; margin-top: 12px;"><div style="flex: 1; padding: 16px; background: rgba(66,153,225,0.1); border-radius: 12px;"><div style="font-size: 12px;">🏢 Постоянные расходы</div><div style="font-size: 24px; font-weight: 700;">${formatCurrencyWithCurrencyLocal(fixedTotal, currentCurrency)}</div></div><div style="flex: 1; padding: 16px; background: rgba(237,137,54,0.1); border-radius: 12px;"><div style="font-size: 12px;">📦 Переменные расходы</div><div style="font-size: 24px; font-weight: 700;">${formatCurrencyWithCurrencyLocal(variableTotal, currentCurrency)}</div></div></div></div>
         </div>
         
-        <!-- Вкладка 2: Кредитный калькулятор -->
-        <div id="oddsTab2" class="odds-tab-content" style="${activeOddsTab === 2 ? '' : 'display: none;'}">
-            <div id="creditCalculator"></div>
-        </div>
+        <div id="oddsTab2" class="odds-tab-content" style="${activeOddsTab === 2 ? '' : 'display: none;'}"><div id="creditCalculator"></div></div>
     `;
     
     container.innerHTML = html;
     
-    // Отрисовка графиков
     setTimeout(() => {
         renderBalanceTrendChart(balanceChartData);
         renderCCCChart(cccData);
@@ -1098,52 +808,57 @@ function renderOddsPage() {
         renderCreditCalculator(currentBalance);
         renderPlannedExpenses();
         
-        // Переключатель валюты
         document.getElementById('oddsCurrencySelect')?.addEventListener('change', (e) => {
             currentCurrency = e.target.value;
             renderOddsPage();
         });
         
-        // Переключатель вкладок
         document.querySelectorAll('.odds-tab-btn').forEach((btn, idx) => {
             btn.onclick = () => {
                 activeOddsTab = parseInt(btn.dataset.tab);
-                document.querySelectorAll('.odds-tab-content').forEach((c, i) => {
-                    c.style.display = i === activeOddsTab ? '' : 'none';
-                });
-                document.querySelectorAll('.odds-tab-btn').forEach((b, i) => {
-                    b.style.borderBottom = i === activeOddsTab ? '2px solid #667eea' : 'none';
-                    b.style.color = i === activeOddsTab ? '#667eea' : '#a0aec0';
-                });
+                document.querySelectorAll('.odds-tab-content').forEach((c, i) => { c.style.display = i === activeOddsTab ? '' : 'none'; });
+                document.querySelectorAll('.odds-tab-btn').forEach((b, i) => { b.style.borderBottom = i === activeOddsTab ? '2px solid #667eea' : 'none'; b.style.color = i === activeOddsTab ? '#667eea' : '#a0aec0'; });
             };
         });
     }, 100);
 }
 
-
-/**
- * Очищает кэш ОДДС при переключении страницы
- */
 function clearOddsCache() {
     oddsOperations = [];
-    if (window.balanceTrendChart) {
-        try { window.balanceTrendChart.destroy(); } catch(e) {}
-        window.balanceTrendChart = null;
-    }
-    if (window.cccChart) {
-        try { window.cccChart.destroy(); } catch(e) {}
-        window.cccChart = null;
-    }
-    if (window.seasonalityChart) {
-        try { window.seasonalityChart.destroy(); } catch(e) {}
-        window.seasonalityChart = null;
-    }
+    if (window.balanceTrendChart) { try { window.balanceTrendChart.destroy(); } catch(e) {} window.balanceTrendChart = null; }
+    if (window.cccChart) { try { window.cccChart.destroy(); } catch(e) {} window.cccChart = null; }
+    if (window.seasonalityChart) { try { window.seasonalityChart.destroy(); } catch(e) {} window.seasonalityChart = null; }
 }
 
-function formatDateForInput(date) {
-    if (!date) return '';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
+// ========================
+// ЭКСПОРТ ФУНКЦИЙ В WINDOW
+// ========================
+
+window.oddsDateRange = oddsDateRange;
+window.oddsOperations = oddsOperations;
+window.oddsPlans = oddsPlans;
+window.forecastPeriods = forecastPeriods;
+window.currentCurrency = currentCurrency;
+window.activeOddsTab = activeOddsTab;
+window.currentBalance = currentBalance;
+window.parseOddsDate = parseOddsDate;
+window.collectOddsOperations = collectOddsOperations;
+window.splitExpensesByType = splitExpensesByType;
+window.calculateBreakEvenPoint = calculateBreakEvenPoint;
+window.calculateCCC = calculateCCC;
+window.calculateCashGapForecast = calculateCashGapForecast;
+window.getLiquidityRecommendations = getLiquidityRecommendations;
+window.renderBalanceTrendChart = renderBalanceTrendChart;
+window.renderCCCChart = renderCCCChart;
+window.renderSeasonalityChart = renderSeasonalityChart;
+window.renderCreditCalculator = renderCreditCalculator;
+window.saveOddsPlans = saveOddsPlans;
+window.loadOddsPlans = loadOddsPlans;
+window.renderPlannedExpenses = renderPlannedExpenses;
+window.calculateForecast = calculateForecast;
+window.initOddsDates = initOddsDates;
+window.initOddsFilters = initOddsFilters;
+window.renderOddsPage = renderOddsPage;
+window.clearOddsCache = clearOddsCache;
+
+console.log('✅ oddsModule.js: ПОЛНАЯ версия загружена');
