@@ -1,17 +1,17 @@
 // ========================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// articlesModule.js - БЛОК СТАТЕЙ И КАРУСЕЛЬ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
-let articlesData = [];           // Массив статей
-let currentArticleIndex = 0;     // Текущая отображаемая статья
-let articleInterval = null;      // Таймер автопрокрутки
-let isArticleAnimating = false;   // Флаг для предотвращения двойной анимации
+// Глобальные переменные
+let articlesData = [];
+let currentArticleIndex = 0;
+let articleInterval = null;
+let isArticleAnimating = false;
 
-// URL для загрузки статей (файл должен лежать в корне проекта)
 const ARTICLES_FILE_PATH = 'articles.json';
 
 // ========================
-// ЗАГРУЗКА СТАТЕЙ ИЗ JSON ФАЙЛА
+// ЗАГРУЗКА СТАТЕЙ ИЗ JSON ФАЙЛА (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
 /**
@@ -31,25 +31,20 @@ async function loadArticles() {
         
         console.log(`Загружено ${articlesData.length} статей`);
         
-        // Отрисовываем статьи
         renderArticles();
-        
-        // Запускаем автопрокрутку
         startArticleCarousel();
-        
-        // Создаем точки навигации
         createArticleDots();
         
     } catch (error) {
         console.error('Ошибка загрузки статей:', error);
         
-        // Статьи по умолчанию (если файл не найден)
+        // Статьи по умолчанию (как в монолите)
         articlesData = [
             {
                 title: "Вы управляете ассортиментом или складом случайностей?",
                 description: "Глубокая товарная и ценовая аналитика на маркетплейсах",
                 link: "https://dzen.ru/a/aUqz1yENXTiPF2Dt",
-                imageUrl: "",
+                imageUrl: "https://avatars.dzeninfra.ru/get-zen_doc/271828/pub_6948cf24c058d37e481f1a68_695d80dca5ebb71be8c38b22/scale_1200",
                 source: "Дзен"
             },
             {
@@ -65,6 +60,20 @@ async function loadArticles() {
                 link: "#",
                 imageUrl: "",
                 source: "Блог"
+            },
+            {
+                title: "Управление товарными запасами на маркетплейсах",
+                description: "Как избежать дефицита и пересклада",
+                link: "#",
+                imageUrl: "",
+                source: "Блог"
+            },
+            {
+                title: "Как увеличить средний чек в интернет-магазине",
+                description: "10 проверенных способов",
+                link: "#",
+                imageUrl: "",
+                source: "Блог"
             }
         ];
         
@@ -75,62 +84,81 @@ async function loadArticles() {
 }
 
 // ========================
-// ОТРИСОВКА СТАТЕЙ
+// ОТРИСОВКА СТАТЕЙ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
-
-/**
- * Отрисовывает все статьи в карусели
- * Формат: картинка сверху, контент снизу
- */
-function renderArticles() {
-    const carousel = document.getElementById('articlesCarousel');
-    if (!carousel) return;
-    
-    // Генерируем HTML для каждой статьи
-    carousel.innerHTML = articlesData.map((article, index) => `
-        <div class="article-card" data-index="${index}">
-            <div class="article-image-container">
-                ${article.imageUrl ? 
-                    `<img src="${article.imageUrl}" class="article-image" alt="${article.title}" loading="lazy">` : 
-                    `<div class="article-image-placeholder">${getRandomArticleIcon()}</div>`
-                }
-            </div>
-            <div class="article-content">
-                <div class="article-source">${article.source || 'Полезная статья'}</div>
-                <div class="article-title">${article.title}</div>
-                <div class="article-description">${article.description || 'Читайте подробнее в источнике'}</div>
-                <div class="article-link">
-                    Читать далее <span>→</span>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    // Добавляем обработчики кликов на карточки
-    document.querySelectorAll('.article-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            // Предотвращаем всплытие, чтобы не сработала анимация
-            e.stopPropagation();
-            
-            const index = parseInt(card.dataset.index);
-            if (!isNaN(index) && articlesData[index] && articlesData[index].link) {
-                // Открываем ссылку в новой вкладке
-                window.open(articlesData[index].link, '_blank');
-            }
-        });
-    });
-    
-    // Обновляем позицию карусели
-    updateCarouselPosition();
-}
 
 /**
  * Возвращает случайную иконку для статьи без картинки
  * @returns {string} - эмодзи
  */
 function getRandomArticleIcon() {
-    const icons = ['📄', '📊', '💰', '📈', '📉', '🏦', '💡', '🔍', '📚', '🎯'];
+    const icons = ['📄', '📊', '💰', '📈', '📉', '🏦', '💡', '🔍', '📚', '🎯', '📰', '📑', '📌', '⭐', '🔥'];
     return icons[Math.floor(Math.random() * icons.length)];
+}
+
+/**
+ * Форматирует дату для отображения (если есть)
+ * @param {string} dateStr - строка с датой
+ * @returns {string} - отформатированная дата
+ */
+function formatArticleDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '';
+        return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
+    } catch(e) {
+        return '';
+    }
+}
+
+/**
+ * Отрисовывает все статьи в карусели
+ * Формат: картинка сверху, контент снизу (как в монолите)
+ */
+function renderArticles() {
+    const carousel = document.getElementById('articlesCarousel');
+    if (!carousel) return;
+    
+    carousel.innerHTML = articlesData.map((article, index) => {
+        const imageElement = article.imageUrl && article.imageUrl !== '' ? 
+            `<img src="${article.imageUrl}" class="article-image" alt="${article.title}" loading="lazy">` : 
+            `<div class="article-image-placeholder">${getRandomArticleIcon()}</div>`;
+        
+        const dateHtml = article.date ? `<div style="font-size: 10px; opacity: 0.5; margin-bottom: 4px;">📅 ${formatArticleDate(article.date)}</div>` : '';
+        
+        return `
+            <div class="article-card" data-index="${index}">
+                <div class="article-image-container">
+                    ${imageElement}
+                </div>
+                <div class="article-content">
+                    <div class="article-source">${article.source || 'Полезная статья'}</div>
+                    ${dateHtml}
+                    <div class="article-title">${article.title}</div>
+                    <div class="article-description">${article.description || 'Читайте подробнее в источнике'}</div>
+                    <div class="article-link">
+                        Читать далее <span>→</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Добавляем обработчики кликов на карточки
+    document.querySelectorAll('.article-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(card.dataset.index);
+            if (!isNaN(index) && articlesData[index] && articlesData[index].link && articlesData[index].link !== '#') {
+                window.open(articlesData[index].link, '_blank');
+            } else if (articlesData[index] && articlesData[index].link === '#') {
+                showNotification('Статья временно недоступна', 'info');
+            }
+        });
+    });
+    
+    updateCarouselPosition();
 }
 
 /**
@@ -145,7 +173,7 @@ function updateCarouselPosition() {
 }
 
 // ========================
-// ТОЧКИ НАВИГАЦИИ
+// ТОЧКИ НАВИГАЦИИ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
 /**
@@ -161,9 +189,9 @@ function createArticleDots() {
         </div>
     `).join('');
     
-    // Добавляем обработчики для точек
     document.querySelectorAll('.articles-dot').forEach(dot => {
-        dot.addEventListener('click', () => {
+        dot.addEventListener('click', (e) => {
+            e.stopPropagation();
             const index = parseInt(dot.dataset.index);
             if (!isNaN(index) && index !== currentArticleIndex) {
                 goToArticle(index);
@@ -186,7 +214,7 @@ function updateActiveDot() {
 }
 
 // ========================
-// НАВИГАЦИЯ ПО КАРУСЕЛИ
+// НАВИГАЦИЯ ПО КАРУСЕЛИ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
 /**
@@ -194,23 +222,17 @@ function updateActiveDot() {
  * @param {number} index - индекс статьи
  */
 function goToArticle(index) {
-    // Защита от множественных анимаций
     if (isArticleAnimating) return;
-    
-    // Проверка границ
     if (index < 0 || index >= articlesData.length) return;
     
     isArticleAnimating = true;
     currentArticleIndex = index;
     
-    // Анимируем переход
     updateCarouselPosition();
     updateActiveDot();
     
-    // Сбрасываем таймер автопрокрутки
     resetArticleTimer();
     
-    // Снимаем флаг анимации через 500ms
     setTimeout(() => {
         isArticleAnimating = false;
     }, 500);
@@ -222,7 +244,7 @@ function goToArticle(index) {
 function nextArticle() {
     let newIndex = currentArticleIndex + 1;
     if (newIndex >= articlesData.length) {
-        newIndex = 0;  // Зацикливаем
+        newIndex = 0;
     }
     goToArticle(newIndex);
 }
@@ -233,33 +255,30 @@ function nextArticle() {
 function prevArticle() {
     let newIndex = currentArticleIndex - 1;
     if (newIndex < 0) {
-        newIndex = articlesData.length - 1;  // Зацикливаем
+        newIndex = articlesData.length - 1;
     }
     goToArticle(newIndex);
 }
 
 // ========================
-// АВТОМАТИЧЕСКАЯ ПРОКРУТКА
+// АВТОМАТИЧЕСКАЯ ПРОКРУТКА (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
 /**
  * Запускает автоматическую смену статей (каждые 15 секунд)
  */
 function startArticleCarousel() {
-    // Останавливаем старый интервал, если есть
     if (articleInterval) {
         clearInterval(articleInterval);
     }
     
-    // Запускаем новый
     articleInterval = setInterval(() => {
         nextArticle();
-    }, 15000);  // 15 секунд
+    }, 15000);
 }
 
 /**
  * Сбрасывает таймер автопрокрутки
- * (используется при ручном переключении)
  */
 function resetArticleTimer() {
     if (articleInterval) {
@@ -279,7 +298,7 @@ function stopArticleCarousel() {
 }
 
 // ========================
-// ОБРАБОТЧИКИ СОБЫТИЙ
+// ОБРАБОТЧИКИ СОБЫТИЙ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
 /**
@@ -289,12 +308,10 @@ function setupArticleHoverEvents() {
     const container = document.querySelector('.articles-carousel-container');
     if (!container) return;
     
-    // Пауза при наведении
     container.addEventListener('mouseenter', () => {
         stopArticleCarousel();
     });
     
-    // Возобновление при уходе мыши
     container.addEventListener('mouseleave', () => {
         if (!articleInterval) {
             startArticleCarousel();
@@ -324,8 +341,40 @@ function setupArticleNavButtons() {
     }
 }
 
+/**
+ * Обработчик изменения темы для статей
+ * Перерисовывает стили при смене темы
+ */
+function handleArticleThemeChange() {
+    const isDarkMode = document.body.classList.contains('dark');
+    const cards = document.querySelectorAll('.article-card');
+    
+    cards.forEach(card => {
+        if (isDarkMode) {
+            card.style.backgroundColor = 'rgba(255,255,255,0.03)';
+        } else {
+            card.style.backgroundColor = 'rgba(102,126,234,0.05)';
+        }
+    });
+}
+
+/**
+ * Наблюдатель за изменением темы
+ */
+function observeThemeChange() {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'class') {
+                handleArticleThemeChange();
+            }
+        });
+    });
+    
+    observer.observe(document.body, { attributes: true });
+}
+
 // ========================
-// ОСНОВНАЯ ИНИЦИАЛИЗАЦИЯ
+// ОСНОВНАЯ ИНИЦИАЛИЗАЦИЯ (ПОЛНАЯ ВЕРСИЯ)
 // ========================
 
 /**
@@ -333,26 +382,130 @@ function setupArticleNavButtons() {
  * Вызывается при загрузке страницы
  */
 function initArticlesBlock() {
-    // Загружаем статьи из JSON
     loadArticles();
-    
-    // Настраиваем события наведения
     setupArticleHoverEvents();
-    
-    // Настраиваем кнопки навигации
     setupArticleNavButtons();
+    observeThemeChange();
+    
+    // Дополнительная инициализация для мобильных устройств
+    if (window.innerWidth <= 768) {
+        const container = document.querySelector('.articles-carousel-container');
+        if (container) {
+            container.style.touchAction = 'pan-y pinch-zoom';
+        }
+    }
     
     console.log('Блок статей инициализирован');
 }
 
 /**
  * Обновляет блок статей (при необходимости)
- * Можно вызвать после смены темы, языка и т.д.
  */
 function refreshArticlesBlock() {
-    // Обновляем отображение с учетом текущей темы
     renderArticles();
     createArticleDots();
     updateCarouselPosition();
     updateActiveDot();
+    handleArticleThemeChange();
 }
+
+// ========================
+// ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ КАРУСЕЛИ СТАТЕЙ
+// ========================
+
+/**
+ * Показывает уведомление для статей
+ * @param {string} message - текст уведомления
+ * @param {string} type - тип уведомления
+ */
+function showArticleNotification(message, type = 'info') {
+    const oldNotification = document.getElementById('articleNotification');
+    if (oldNotification) oldNotification.remove();
+    
+    const notification = document.createElement('div');
+    notification.id = 'articleNotification';
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 12px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        animation: fadeInUp 0.3s ease-out;
+        pointer-events: none;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification && notification.parentNode) {
+            notification.remove();
+        }
+    }, 2000);
+}
+
+/**
+ * Получает количество статей
+ * @returns {number} - количество статей
+ */
+function getArticlesCount() {
+    return articlesData.length;
+}
+
+/**
+ * Получает текущую статью
+ * @returns {Object|null} - текущая статья
+ */
+function getCurrentArticle() {
+    if (articlesData.length === 0) return null;
+    return articlesData[currentArticleIndex];
+}
+
+/**
+ * Переключает автопрокрутку
+ * @param {boolean} enabled - включить/выключить
+ */
+function toggleAutoScroll(enabled) {
+    if (enabled) {
+        if (!articleInterval) startArticleCarousel();
+    } else {
+        stopArticleCarousel();
+    }
+}
+
+// ========================
+// ЭКСПОРТ ФУНКЦИЙ В WINDOW
+// ========================
+
+window.articlesData = articlesData;
+window.currentArticleIndex = currentArticleIndex;
+window.loadArticles = loadArticles;
+window.getRandomArticleIcon = getRandomArticleIcon;
+window.formatArticleDate = formatArticleDate;
+window.renderArticles = renderArticles;
+window.updateCarouselPosition = updateCarouselPosition;
+window.createArticleDots = createArticleDots;
+window.updateActiveDot = updateActiveDot;
+window.goToArticle = goToArticle;
+window.nextArticle = nextArticle;
+window.prevArticle = prevArticle;
+window.startArticleCarousel = startArticleCarousel;
+window.resetArticleTimer = resetArticleTimer;
+window.stopArticleCarousel = stopArticleCarousel;
+window.setupArticleHoverEvents = setupArticleHoverEvents;
+window.setupArticleNavButtons = setupArticleNavButtons;
+window.handleArticleThemeChange = handleArticleThemeChange;
+window.observeThemeChange = observeThemeChange;
+window.initArticlesBlock = initArticlesBlock;
+window.refreshArticlesBlock = refreshArticlesBlock;
+window.showArticleNotification = showArticleNotification;
+window.getArticlesCount = getArticlesCount;
+window.getCurrentArticle = getCurrentArticle;
+window.toggleAutoScroll = toggleAutoScroll;
+
+console.log('✅ articlesModule.js: ПОЛНАЯ версия загружена');
