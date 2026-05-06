@@ -334,10 +334,10 @@ body.dark .user-info {
 }
 
 /* ========================
-   ИСПРАВЛЕНИЕ БОКОВОЙ ПАНЕЛИ - РАСШИРЕНИЕ ПРИ НАВЕДЕНИИ
+   ЛЕВАЯ ПАНЕЛЬ НАВИГАЦИИ - ПОЛНАЯ ВЕРСИЯ
    ======================== */
 
-/* Боковая панель - по умолчанию узкая */
+/* Базовые стили */
 .sidebar-nav {
     width: 80px;
     min-width: 80px;
@@ -349,21 +349,32 @@ body.dark .user-info {
     left: 0;
     margin: 20px 0 20px 20px !important;
     border-radius: 16px !important;
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(10px);
     padding: 20px 0;
     height: fit-content;
     z-index: 100;
 }
 
-/* ПРИ НАВЕДЕНИИ - РАСШИРЯЕМ */
+/* Расширение при наведении */
 .sidebar-nav:hover {
     width: 280px;
     max-width: 280px;
     overflow: visible;
 }
 
-/* Заголовок навигации */
+/* СВЕТЛАЯ ТЕМА */
+body.light .sidebar-nav {
+    background: white !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+}
+
+/* ТЁМНАЯ ТЕМА */
+body.dark .sidebar-nav {
+    background: #1a1a2a !important;
+    border: 1px solid #2d2d3a;
+}
+
+/* Заголовок */
 .nav-title {
     font-size: 12px;
     text-transform: uppercase;
@@ -374,9 +385,10 @@ body.dark .user-info {
     border-bottom: 1px solid rgba(102,126,234,0.3);
     white-space: nowrap;
     overflow: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
 }
 
-/* Скрываем текст заголовка в свёрнутом состоянии */
+/* Скрываем заголовок в свёрнутом состоянии */
 .sidebar-nav:not(:hover) .nav-title {
     opacity: 0;
     visibility: hidden;
@@ -396,7 +408,6 @@ body.dark .user-info {
 
 /* Скрываем текст пунктов меню в свёрнутом состоянии */
 .sidebar-nav .nav-item span:not(.nav-icon),
-.sidebar-nav .nav-subitem span:not(.nav-icon),
 .sidebar-nav .theme-toggle-label {
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -405,7 +416,6 @@ body.dark .user-info {
 
 /* Показываем текст при наведении */
 .sidebar-nav:hover .nav-item span:not(.nav-icon),
-.sidebar-nav:hover .nav-subitem span:not(.nav-icon),
 .sidebar-nav:hover .theme-toggle-label {
     opacity: 1;
 }
@@ -425,101 +435,25 @@ body.dark .user-info {
     white-space: nowrap;
 }
 
-.nav-item .nav-icon {
-    font-size: 20px;
-    min-width: 24px;
-    text-align: center;
-}
-
-/* Стрелка для подменю */
-.arrow {
-    margin-left: auto;
-    transition: transform 0.2s;
-    font-size: 10px;
-    opacity: 0;
-}
-
-.sidebar-nav:hover .arrow {
-    opacity: 1;
-}
-
-.arrow.open {
-    transform: rotate(90deg);
-}
-
-/* ========== ПОДМЕНЮ - ИСПРАВЛЕННАЯ ВЕРСИЯ ========== */
-.nav-submenu {
-    position: fixed;
-    left: 105px;
-    background: inherit;
-    border-radius: 12px;
-    padding: 10px;
-    min-width: 180px;
-    z-index: 1000;
-    box-shadow: 4px 0 12px rgba(0,0,0,0.15);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
-    pointer-events: none;
-    top: 0;
-}
-
-/* При наведении на панель - показываем подменю */
-.sidebar-nav:hover .nav-submenu {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-/* КОГДА ПАНЕЛЬ РАСШИРЕНА - подменю становится внутри */
-.sidebar-nav:hover .nav-submenu {
-    position: static;
-    left: auto;
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    margin-left: 32px;
-    margin-top: 4px;
-    margin-bottom: 8px;
-    display: block;
-    box-shadow: none;
-    background: transparent;
-    padding: 0;
-}
-
-/* Стили для элементов подменю */
-.nav-subitem {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    margin: 4px 0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-body.light .nav-subitem {
+body.light .nav-item {
     color: #4a5568;
 }
 
-body.dark .nav-subitem {
+body.dark .nav-item {
     color: #a0a0b0;
 }
 
-.nav-subitem:hover {
+.nav-item:hover {
     background: rgba(102,126,234,0.1);
 }
 
-.nav-subitem.active {
+.nav-item.active {
     background: #667eea;
     color: white;
 }
 
-.nav-subitem .nav-icon {
-    font-size: 16px;
+.nav-item .nav-icon {
+    font-size: 20px;
     min-width: 24px;
     text-align: center;
 }
@@ -558,6 +492,7 @@ body.dark .nav-subitem {
     margin: 0;
 }
 
+/* Переключатель */
 .toggle-switch {
     width: 50px;
     height: 26px;
