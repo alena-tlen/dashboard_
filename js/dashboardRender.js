@@ -2803,6 +2803,145 @@ function generateAverageCheckBreakdown(data) {
     return html;
 }
 
+/**
+ * Генерирует разбивку себестоимости по каналам
+ */
+function generateCostBreakdown(data) {
+    let costByChannel = [];
+    const allChannels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
+    let totalCost = 0;
+    let totalRevenue = 0;
+    
+    allChannels.forEach(channel => {
+        let cost = data.filter(d => d.канал === channel && d.тип === 'Расход' && d.подканал === 'Себестоимость сырья')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        // Дополнительные источники себестоимости
+        cost += data.filter(d => d.канал === channel && d.статья === 'Себестоимость сырья')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        cost += data.filter(d => d.канал === channel && d.статья === 'Себестоимость товаров')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        cost += data.filter(d => d.канал === channel && d.статья === 'Себестоимость')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        cost += data.filter(d => d.канал === channel && d.подканал === 'Закупка товаров' && d.тип === 'Расход')
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        
+        const revenue = data.filter(d => d.канал === channel && d.тип === 'Доход').reduce((sum, d) => sum + d.сумма, 0);
+        const ndsOut = data.filter(d => d.канал === channel && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+        const netRevenue = revenue - ndsOut;
+        const costToRevenue = netRevenue > 0 ? (cost / netRevenue) * 100 : 0;
+        const profit = netRevenue - cost;
+        const marginAfterCost = netRevenue > 0 ? (profit / netRevenue) * 100 : 0;
+        
+        let sales = data.filter(d => {
+            const article = d.статья?.toLowerCase() || '';
+            return d.канал === channel && (article.includes('продажи') && (article.includes('шт') || article.includes('штук')));
+        }).reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        const salesRef = data.filter(d => d.канал === channel && d.тип === 'Справочная' && 
+            (d.статья?.toLowerCase().includes('продажи') || d.подканал?.toLowerCase().includes('продажи')))
+            .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+        const totalSales = sales + salesRef;
+        const costPerUnit = totalSales > 0 ? cost / totalSales : 0;
+        
+        if (cost > 0) {
+            costByChannel.push({
+                name: channel,
+                cost: cost,
+                costToRevenue: costToRevenue,
+                marginAfterCost: marginAfterCost,
+                costPerUnit: costPerUnit,
+                netRevenue: netRevenue,
+                sales: totalSales
+            });
+            totalCost += cost;
+            totalRevenue += netRevenue;
+        }
+    });
+    
+    if (costByChannel.length === 0) {
+        return '<div style="text-align: center; padding: 16px; color: var(--text-secondary);">Нет данных по себестоимости<br><small>Проверьте наличие подканала "Себестоимость сырья" в Excel</small></div>';
+    }
+    
+    costByChannel.sort((a, b) => b.cost - a.cost);
+    const avgCostToRevenue = totalRevenue > 0 ? (totalCost / totalRevenue) * 100 : 0;
+    
+    let html = '<div class="cost-channels-list">';
+    html += '<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(102,126,234,0.2);">';
+    html += '<span style="font-size: 12px; font-weight: 600; color: #667eea;">СЕБЕСТОИМОСТЬ ПО КАНАЛАМ</span>';
+    html += '<span style="font-size: 11px; color: var(--text-secondary); margin-left: 8px;">(доля в выручке и эффективность)</span>';
+    html += '</div>';
+    
+    costByChannel.forEach((channel, idx) => {
+        const percentOfTotal = (channel.cost / totalCost) * 100;
+        const efficiencyClass = channel.costToRevenue <= avgCostToRevenue ? 'positive' : 'negative';
+        const efficiencyText = channel.costToRevenue <= avgCostToRevenue 
+            ? `↓ на ${(avgCostToRevenue - channel.costToRevenue).toFixed(1)}% лучше среднего` 
+            : `↑ на ${(channel.costToRevenue - avgCostToRevenue).toFixed(1)}% хуже среднего`;
+        
+        let costLevelClass = '';
+        let costLevelText = '';
+        if (channel.costToRevenue < 30) {
+            costLevelClass = 'positive';
+            costLevelText = 'Низкая';
+        } else if (channel.costToRevenue < 50) {
+            costLevelClass = '';
+            costLevelText = 'Средняя';
+        } else {
+            costLevelClass = 'negative';
+            costLevelText = 'Высокая';
+        }
+        
+        html += `
+            <div class="cost-channel-item" style="margin-bottom: 20px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${idx * 0.05}s;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 600; font-size: 15px;">${channel.name}</span>
+                        <span style="font-weight: 700; font-size: 16px; color: #f56565;">${formatCurrency(channel.cost)}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="${efficiencyClass}" style="font-size: 12px; font-weight: 500;">${efficiencyText}</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; gap: 8px;">
+                    <span>📊 Доля в общей себестоимости: <strong>${percentOfTotal.toFixed(1)}%</strong></span>
+                    <span>💰 Себестоимость 1 шт: <strong>${formatCurrency(channel.costPerUnit)}</strong></span>
+                    <span class="${costLevelClass}">📈 Уровень: <strong>${costLevelText}</strong> (${channel.costToRevenue.toFixed(1)}% от выручки)</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                        <span>Маржинальность после себестоимости: ${channel.marginAfterCost.toFixed(1)}%</span>
+                        <span>Продажи: ${new Intl.NumberFormat('ru-RU').format(channel.sales)} шт</span>
+                    </div>
+                </div>
+                <div style="background: rgba(245,101,101,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div class="cost-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f56565, #ed8936); border-radius: 4px;"></div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    setTimeout(() => {
+        document.querySelectorAll('.cost-progress-bar').forEach((bar, i) => {
+            const targetWidth = costByChannel[i] ? (costByChannel[i].cost / totalCost) * 100 : 0;
+            setTimeout(() => { bar.style.width = targetWidth + '%'; }, 100);
+        });
+        document.querySelectorAll('.cost-channel-item').forEach((item, i) => {
+            setTimeout(() => {
+                item.style.opacity = '1';
+                item.style.transform = 'translateX(0)';
+            }, i * 50);
+        });
+    }, 200);
+    
+    const bestChannel = costByChannel.reduce((min, ch) => ch.costToRevenue < min.costToRevenue ? ch : min, costByChannel[0]);
+    const worstChannel = costByChannel.reduce((max, ch) => ch.costToRevenue > max.costToRevenue ? ch : max, costByChannel[0]);
+    const potentialSavings = totalCost * 0.1;
+    
+    return html;
+}
+
 // Экспорт в window
 window.renderDashboard = renderDashboard;
 window.renderChannelPage = renderChannelPage;
