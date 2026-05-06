@@ -334,14 +334,15 @@ body.dark .user-info {
 }
 
 /* ========================
-   БОКОВАЯ ПАНЕЛЬ
+   ИСПРАВЛЕНИЕ БОКОВОЙ ПАНЕЛИ - РАСШИРЕНИЕ ПРИ НАВЕДЕНИИ
    ======================== */
 
+/* Боковая панель - по умолчанию узкая */
 .sidebar-nav {
     width: 80px;
     min-width: 80px;
     max-width: 80px;
-    transition: all 0.2s ease;
+    transition: width 0.2s ease;
     overflow: hidden;
     position: sticky;
     top: 20px;
@@ -355,22 +356,14 @@ body.dark .user-info {
     z-index: 100;
 }
 
-body.light .sidebar-nav {
-    background: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-body.dark .sidebar-nav {
-    background: #1a1a2a;
-    border: 1px solid #2d2d3a;
-}
-
+/* ПРИ НАВЕДЕНИИ - РАСШИРЯЕМ */
 .sidebar-nav:hover {
     width: 280px;
     max-width: 280px;
     overflow: visible;
 }
 
+/* Заголовок навигации */
 .nav-title {
     font-size: 12px;
     text-transform: uppercase;
@@ -383,6 +376,7 @@ body.dark .sidebar-nav {
     overflow: hidden;
 }
 
+/* Скрываем текст заголовка в свёрнутом состоянии */
 .sidebar-nav:not(:hover) .nav-title {
     opacity: 0;
     visibility: hidden;
@@ -391,6 +385,7 @@ body.dark .sidebar-nav {
     border-bottom: none;
 }
 
+/* Показываем заголовок при наведении */
 .sidebar-nav:hover .nav-title {
     opacity: 1;
     visibility: visible;
@@ -399,14 +394,7 @@ body.dark .sidebar-nav {
     border-bottom: 1px solid rgba(102,126,234,0.3);
 }
 
-.sidebar-nav .nav-title span {
-    display: inline;
-}
-
-.sidebar-nav:not(:hover) .nav-title span {
-    display: none;
-}
-
+/* Скрываем текст пунктов меню в свёрнутом состоянии */
 .sidebar-nav .nav-item span:not(.nav-icon),
 .sidebar-nav .nav-subitem span:not(.nav-icon),
 .sidebar-nav .theme-toggle-label {
@@ -415,13 +403,14 @@ body.dark .sidebar-nav {
     white-space: nowrap;
 }
 
-.sidebar-nav:hover .nav-title span,
+/* Показываем текст при наведении */
 .sidebar-nav:hover .nav-item span:not(.nav-icon),
 .sidebar-nav:hover .nav-subitem span:not(.nav-icon),
 .sidebar-nav:hover .theme-toggle-label {
     opacity: 1;
 }
 
+/* Пункты меню */
 .nav-item {
     display: flex;
     align-items: center;
@@ -436,29 +425,13 @@ body.dark .sidebar-nav {
     white-space: nowrap;
 }
 
-body.light .nav-item {
-    color: #4a5568;
-}
-
-body.dark .nav-item {
-    color: #a0a0b0;
-}
-
-.nav-item:hover {
-    background: rgba(102,126,234,0.1);
-}
-
-.nav-item.active {
-    background: #667eea;
-    color: white;
-}
-
 .nav-item .nav-icon {
     font-size: 20px;
     min-width: 24px;
     text-align: center;
 }
 
+/* Стрелка для подменю */
 .arrow {
     margin-left: auto;
     transition: transform 0.2s;
@@ -474,6 +447,7 @@ body.dark .nav-item {
     transform: rotate(90deg);
 }
 
+/* ========== ПОДМЕНЮ - ИСПРАВЛЕННАЯ ВЕРСИЯ ========== */
 .nav-submenu {
     position: fixed;
     left: 105px;
@@ -487,24 +461,33 @@ body.dark .nav-item {
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
     pointer-events: none;
+    top: 0;
 }
 
+/* При наведении на панель - показываем подменю */
 .sidebar-nav:hover .nav-submenu {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
 }
 
-body.light .sidebar-nav .nav-submenu {
-    background: white;
-    border: 1px solid #e0e0e0;
+/* КОГДА ПАНЕЛЬ РАСШИРЕНА - подменю становится внутри */
+.sidebar-nav:hover .nav-submenu {
+    position: static;
+    left: auto;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    margin-left: 32px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    display: block;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
 }
 
-body.dark .sidebar-nav .nav-submenu {
-    background: #1a1a2a;
-    border: 1px solid #2d2d3a;
-}
-
+/* Стили для элементов подменю */
 .nav-subitem {
     display: flex;
     align-items: center;
@@ -541,6 +524,7 @@ body.dark .nav-subitem {
     text-align: center;
 }
 
+/* Переключатель темы */
 .theme-toggle {
     margin-top: 30px;
     padding: 20px 16px 0 16px;
@@ -558,6 +542,7 @@ body.dark .nav-subitem {
     transition: opacity 0.15s ease;
 }
 
+/* В свёрнутом состоянии */
 .sidebar-nav:not(:hover) .theme-toggle {
     justify-content: center;
     padding: 20px 8px 0 8px;
@@ -571,11 +556,6 @@ body.dark .nav-subitem {
     width: 26px;
     height: 26px;
     margin: 0;
-}
-
-.sidebar-nav:not(:hover) .toggle-switch .slider {
-    left: 2px;
-    top: 2px;
 }
 
 .toggle-switch {
