@@ -1535,18 +1535,36 @@ function renderBreakEvenAnalysisHtml(data, f, totalSalesQuantity) {
     
     return `
         <div class="break-even-container">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
-                <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px; text-align: center;">
-                    <div style="font-size: 12px;">📊 Точка безубыточности (шт)</div>
-                    <div style="font-size: 28px; font-weight: 700;">${new Intl.NumberFormat('ru-RU').format(analysis.breakEvenUnits || 0)}</div>
+            <div class="metrics-grid" style="margin-bottom: 20px;">
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">📊 Точка безубыточности (шт)</div>
+                    <div class="metric-value">${new Intl.NumberFormat('ru-RU').format(analysis.breakEvenUnits || 0)}</div>
+                    <div class="metric-sub">минимальный объем продаж</div>
                 </div>
-                <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px; text-align: center;">
-                    <div style="font-size: 12px;">💰 Точка безубыточности (₽)</div>
-                    <div style="font-size: 28px; font-weight: 700;">${formatCurrency(analysis.breakEvenRevenue || 0)}</div>
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">💰 Точка безубыточности (₽)</div>
+                    <div class="metric-value">${formatCurrency(analysis.breakEvenRevenue || 0)}</div>
+                    <div class="metric-sub">минимальная выручка</div>
                 </div>
-                <div style="background: rgba(102,126,234,0.1); border-radius: 12px; padding: 16px; text-align: center;">
-                    <div style="font-size: 12px;">🛡️ Запас прочности</div>
-                    <div style="font-size: 28px; font-weight: 700;">${(analysis.safetyMargin || 0).toFixed(1)}%</div>
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">🛡️ Запас финансовой прочности</div>
+                    <div class="metric-value" style="color: ${(analysis.safetyMargin || 0) >= 30 ? '#48bb78' : (analysis.safetyMargin || 0) >= 10 ? '#f59e0b' : '#f56565'}">
+                        ${(analysis.safetyMargin || 0).toFixed(1)}%
+                    </div>
+                    <div class="metric-sub">${formatCurrency(analysis.safetyMarginAbsolute || 0)} выше точки</div>
+                </div>
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">📈 Маржинальный доход на единицу</div>
+                    <div class="metric-value">${formatCurrency(analysis.contributionMarginPerUnit || 0)}</div>
+                    <div class="metric-sub">средняя цена минус переменные затраты</div>
+                </div>
+            </div>
+            <div style="margin-top: 12px; padding: 12px; background: rgba(102,126,234,0.1); border-radius: 12px;">
+                <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">💡 Анализ затрат</div>
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <span>🔴 Постоянные расходы: ${formatCurrency(analysis.totalFixedCosts || 0)}</span>
+                    <span>🟢 Переменные расходы: ${formatCurrency(analysis.totalVariableCosts || 0)}</span>
+                    <span>💰 Выручка: ${formatCurrency(analysis.totalRevenue || 0)}</span>
                 </div>
             </div>
         </div>
@@ -1554,10 +1572,42 @@ function renderBreakEvenAnalysisHtml(data, f, totalSalesQuantity) {
 }
 
 function renderTrendsAnalysisHtml(data, f, totalSalesQuantity) {
+    const trends = generateTrendsAnalysis(data, f, totalSalesQuantity);
+    
+    if (!trends || trends.profits.length < 2) {
+        return '<div style="padding: 20px; text-align: center;">📈 Недостаточно данных для анализа трендов (нужно минимум 2 месяца)</div>';
+    }
+    
+    const lastProfit = trends.profits[trends.profits.length - 1];
+    const firstProfit = trends.profits[0];
+    const totalGrowth = firstProfit !== 0 ? ((lastProfit - firstProfit) / Math.abs(firstProfit)) * 100 : 0;
+    const avgProfitGrowth = trends.growthRates.reduce((sum, g) => sum + g.profitGrowth, 0) / (trends.growthRates.length || 1);
+    
     return `
         <div class="trends-container">
-            <div style="padding: 20px; text-align: center;">
-                📈 Анализ трендов будет доступен после загрузки данных за несколько месяцев
+            <div class="metrics-grid" style="margin-bottom: 20px;">
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">📈 Рост прибыли</div>
+                    <div class="metric-value ${totalGrowth >= 0 ? 'positive' : 'negative'}">${totalGrowth >= 0 ? '+' : ''}${totalGrowth.toFixed(1)}%</div>
+                    <div class="metric-sub">за весь период</div>
+                </div>
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">📊 Средний рост в месяц</div>
+                    <div class="metric-value ${avgProfitGrowth >= 0 ? 'positive' : 'negative'}">${avgProfitGrowth >= 0 ? '+' : ''}${avgProfitGrowth.toFixed(1)}%</div>
+                    <div class="metric-sub">прибыли</div>
+                </div>
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">🏆 Лучший месяц</div>
+                    <div class="metric-value">${trends.bestMonth ? trends.bestMonth.split('-')[1] : '—'}</div>
+                    <div class="metric-sub">прибыль ${formatCurrency(Math.max(...trends.profits, 0))}</div>
+                </div>
+                <div class="metric-card" style="text-align: center;">
+                    <div class="metric-title">🔮 Прогноз прибыли</div>
+                    <div class="metric-value ${(trends.forecastProfit || 0) >= 0 ? 'positive' : 'negative'}">
+                        ${trends.forecastProfit ? formatCurrency(trends.forecastProfit) : '—'}
+                    </div>
+                    <div class="metric-sub">на следующий месяц</div>
+                </div>
             </div>
         </div>
     `;
@@ -2298,6 +2348,54 @@ function renderSalesChart(labels, salesData) {
 document.addEventListener('DOMContentLoaded', function() {
     renderDashboard();
 });
+
+// ========================
+// ОТРИСОВКА СТРАНИЦ КАНАЛОВ
+// ========================
+
+function renderChannelPage(channelKey) {
+    const channel = CHANNEL_MAPPING[channelKey];
+    if (!channel) return;
+    
+    const f = calculateFinancials(currentData, channelKey);
+    
+    // Продажи по каналу
+    let sales = currentData
+        .filter(d => d.канал === channel.displayName && d.статья === 'Продажи шт.')
+        .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+    
+    // Себестоимость по каналу
+    let costData = currentData
+        .filter(d => d.канал === channel.displayName && d.тип === 'Расход' && d.подканал === 'Себестоимость сырья')
+        .reduce((sum, d) => sum + Math.abs(d.сумма || 0), 0);
+    
+    const avgCheck = sales > 0 ? f.netRevenue / sales : 0;
+    const avgCost = sales > 0 ? costData / sales : 0;
+    
+    const container = document.getElementById(`channel${channelKey.charAt(0).toUpperCase() + channelKey.slice(1)}Metrics`);
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="metrics-grid">
+            <div class="metric-card"><div class="metric-title">💰 Выручка (с НДС)</div><div class="metric-value">${formatCurrency(f.totalRevenue)}</div></div>
+            <div class="metric-card"><div class="metric-title">💸 НДС</div><div class="metric-value">${formatCurrency(f.totalNDS)}</div></div>
+            <div class="metric-card"><div class="metric-title">📊 Выручка чистая</div><div class="metric-value">${formatCurrency(f.netRevenue)}</div></div>
+            <div class="metric-card"><div class="metric-title">📉 Расходы</div><div class="metric-value">${formatCurrency(f.totalExpenses)}</div></div>
+            <div class="metric-card"><div class="metric-title">📈 Прибыль</div><div class="metric-value ${f.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(f.profit)}</div></div>
+            <div class="metric-card"><div class="metric-title">📊 Рентабельность</div><div class="metric-value">${f.profitability.toFixed(1)}%</div></div>
+        </div>
+        <div class="metrics-grid" style="margin-top:20px">
+            <div class="metric-card"><div class="metric-title">📦 Продажи (шт)</div><div class="metric-value">${new Intl.NumberFormat('ru-RU').format(sales)}</div></div>
+            <div class="metric-card"><div class="metric-title">💰 Средний чек</div><div class="metric-value">${formatCurrency(avgCheck)}</div></div>
+            <div class="metric-card"><div class="metric-title">🏭 Себестоимость</div><div class="metric-value">${formatCurrency(costData)}</div></div>
+            <div class="metric-card"><div class="metric-title">📊 Себестоимость 1 шт</div><div class="metric-value">${formatCurrency(avgCost)}</div></div>
+        </div>
+    `;
+}
+
+// Экспортируем в window для использования в app.js
+window.renderChannelPage = renderChannelPage;
+
 
 // ========================
 // КОНЕЦ ФАЙЛА
