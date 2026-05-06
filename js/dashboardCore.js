@@ -1,17 +1,4 @@
 // ========================
-// dashboardCore.js - ОСНОВНЫЕ ФИНАНСОВЫЕ РАСЧЁТЫ (ПОЛНАЯ ВЕРСИЯ)
-// ========================
-
-// Глобальная переменная для месяцев
-const MONTHS_ORDER = window.MONTHS_ORDER || ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-const CHANNEL_MAPPING = window.CHANNEL_MAPPING || {
-    'wildberries': { displayName: 'Wildberries' },
-    'ozon': { displayName: 'Ozon' },
-    'detsky-mir': { displayName: 'Детский мир' },
-    'lamoda': { displayName: 'Lamoda' }
-};
-
-// ========================
 // ОСНОВНЫЕ ФИНАНСОВЫЕ РАСЧЕТЫ (ПОЛНАЯ ВЕРСИЯ ИЗ МОНОЛИТА)
 // ========================
 
