@@ -127,6 +127,18 @@ function renderMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
     if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) return;
     
+    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
+    if (data.length < 2) {
+        // Очищаем canvas и показываем сообщение
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
+        return;
+    }
+    
     if (miniRevenueChart) {
         try { if (typeof miniRevenueChart.destroy === 'function') miniRevenueChart.destroy(); } catch(e) {}
         miniRevenueChart = null;
@@ -135,7 +147,8 @@ function renderMiniChartJS(elementId, labels, data, color) {
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     const areaColor = isDarkMode ? 'rgba(72,187,120,0.08)' : 'rgba(72,187,120,0.05)';
-    const lineColor = data[data.length-1] >= data[0] ? '#48bb78' : '#f56565';
+    // ЦВЕТ ВСЕГДА ОДИНАКОВЫЙ (зелёный для доходов)
+    const lineColor = '#48bb78';
     
     miniRevenueChart = new Chart(ctx, {
         type: 'line',
@@ -146,7 +159,7 @@ function renderMiniChartJS(elementId, labels, data, color) {
                 borderColor: lineColor, 
                 backgroundColor: areaColor, 
                 borderWidth: 2, 
-                pointRadius: 0, 
+                pointRadius: data.length === 1 ? 4 : 0,  // Для одной точки показываем
                 pointHoverRadius: 5, 
                 tension: 0.4, 
                 fill: true,
@@ -156,8 +169,8 @@ function renderMiniChartJS(elementId, labels, data, color) {
         options: { 
             responsive: true, 
             maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
-            scales: { x: { display: false }, y: { display: false } },
+            plugins: { legend: { display: false }, tooltip: { enabled: data.length > 1 } }, 
+            scales: { x: { display: data.length > 1 }, y: { display: data.length > 1 } },
             layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
         }
     });
@@ -167,6 +180,17 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
     if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) return;
     
+    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
+    if (data.length < 2) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
+        return;
+    }
+    
     if (miniExpenseChart) {
         try { if (typeof miniExpenseChart.destroy === 'function') miniExpenseChart.destroy(); } catch(e) {}
         miniExpenseChart = null;
@@ -175,6 +199,8 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     const areaColor = isDarkMode ? 'rgba(245,101,101,0.08)' : 'rgba(245,101,101,0.05)';
+    // ЦВЕТ ВСЕГДА ОДИНАКОВЫЙ (красный для расходов)
+    const lineColor = '#f56565';
     
     miniExpenseChart = new Chart(ctx, {
         type: 'line',
@@ -182,10 +208,10 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
             labels: labels, 
             datasets: [{ 
                 data: data, 
-                borderColor: '#f56565', 
+                borderColor: lineColor, 
                 backgroundColor: areaColor, 
                 borderWidth: 2, 
-                pointRadius: 0, 
+                pointRadius: data.length === 1 ? 4 : 0,
                 pointHoverRadius: 5, 
                 tension: 0.4, 
                 fill: true,
@@ -195,8 +221,8 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
         options: { 
             responsive: true, 
             maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
-            scales: { x: { display: false }, y: { display: false } },
+            plugins: { legend: { display: false }, tooltip: { enabled: data.length > 1 } }, 
+            scales: { x: { display: data.length > 1 }, y: { display: data.length > 1 } },
             layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
         }
     });
@@ -238,6 +264,17 @@ function renderNetRevenueMiniChart() {
     
     if (labels.length === 0) return;
     
+    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
+    if (values.length < 2) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
+        return;
+    }
+    
     if (window.netRevenueMiniChartInstance) {
         try { if (typeof window.netRevenueMiniChartInstance.destroy === 'function') window.netRevenueMiniChartInstance.destroy(); } catch(e) {}
         window.netRevenueMiniChartInstance = null;
@@ -246,7 +283,7 @@ function renderNetRevenueMiniChart() {
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     const areaColor = isDarkMode ? 'rgba(72,187,120,0.08)' : 'rgba(72,187,120,0.05)';
-    const lineColor = values[values.length - 1] >= values[0] ? '#48bb78' : '#f56565';
+    const lineColor = '#48bb78'; // ФИКСИРОВАННЫЙ ЦВЕТ
     
     window.netRevenueMiniChartInstance = new Chart(ctx, {
         type: 'line',
@@ -266,8 +303,8 @@ function renderNetRevenueMiniChart() {
         options: { 
             responsive: true, 
             maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
-            scales: { x: { display: false }, y: { display: false } } 
+            plugins: { legend: { display: false }, tooltip: { enabled: true } }, 
+            scales: { x: { display: true, ticks: { font: { size: 10 } } }, y: { display: true, ticks: { font: { size: 10 } } } }
         }
     });
 }
@@ -314,6 +351,17 @@ function renderProfitMiniChart() {
     
     if (labels.length === 0) return;
     
+    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
+    if (values.length < 2) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
+        return;
+    }
+    
     if (window.profitMiniChartInstance) {
         try { if (typeof window.profitMiniChartInstance.destroy === 'function') window.profitMiniChartInstance.destroy(); } catch(e) {}
         window.profitMiniChartInstance = null;
@@ -322,7 +370,7 @@ function renderProfitMiniChart() {
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     const areaColor = isDarkMode ? 'rgba(72,187,120,0.08)' : 'rgba(72,187,120,0.05)';
-    const lineColor = values[values.length - 1] >= values[0] ? '#48bb78' : '#f56565';
+    const lineColor = '#48bb78'; // ФИКСИРОВАННЫЙ ЦВЕТ (зелёный для прибыли)
     
     window.profitMiniChartInstance = new Chart(ctx, {
         type: 'line',
@@ -342,8 +390,8 @@ function renderProfitMiniChart() {
         options: { 
             responsive: true, 
             maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
-            scales: { x: { display: false }, y: { display: false } } 
+            plugins: { legend: { display: false }, tooltip: { enabled: true } }, 
+            scales: { x: { display: true, ticks: { font: { size: 10 } } }, y: { display: true, ticks: { font: { size: 10 } } } }
         }
     });
 }
@@ -2492,16 +2540,20 @@ function renderDashboard() {
 }
 
 function getMonthlySalesData(data, monthlyLabels) {
+    if (!data || !monthlyLabels || monthlyLabels.length === 0) return [0];
+    
     const salesByMonth = {};
     monthlyLabels.forEach(month => { salesByMonth[month] = 0; });
+    
     data.forEach(d => {
-        if (d.месяц && monthlyLabels.includes(d.месяц)) {
+        if (d && d.месяц && monthlyLabels.includes(d.месяц)) {
             const article = d.статья?.toLowerCase() || '';
             if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
                 salesByMonth[d.месяц] += Math.abs(d.сумма || 0);
             }
         }
     });
+    
     return monthlyLabels.map(m => salesByMonth[m] || 0);
 }
 
