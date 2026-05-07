@@ -2477,3 +2477,191 @@ canvas {
         transform: translateY(0);
     }
 }
+
+/* ========================
+   СТИЛИ ДЛЯ ВКЛАДОК (MODERN TABS)
+   ======================== */
+
+.modern-tabs-container {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+body.dark .modern-tabs-container {
+    background: rgba(26, 26, 42, 0.9);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.tabs-header {
+    display: flex;
+    gap: 8px;
+    background: rgba(102, 126, 234, 0.1);
+    padding: 6px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+}
+
+.tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+body.dark .tab-btn {
+    color: #cbd5e0;
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.tab-icon {
+    font-size: 18px;
+    transition: transform 0.2s;
+}
+
+.tab-btn.active .tab-icon {
+    transform: scale(1.1);
+}
+
+.tab-pane {
+    display: none;
+    animation: tabFadeIn 0.4s ease-out;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+@keyframes tabFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tab-main-value {
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.tab-trend {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.trend-positive {
+    background: rgba(72, 187, 120, 0.15);
+    color: #48bb78;
+}
+
+.trend-negative {
+    background: rgba(245, 101, 101, 0.15);
+    color: #f56565;
+}
+
+/* Контейнер для графика во вкладке */
+.tab-chart-container {
+    margin: 16px 0;
+    padding: 0;
+    height: 200px;
+    width: 100%;
+    position: relative;
+}
+
+.tab-chart-container canvas {
+    width: 100% !important;
+    height: 200px !important;
+}
+
+/* Заголовок детализации */
+.tab-breakdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    margin-top: 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
+    transition: all 0.2s;
+}
+
+.tab-breakdown-header:hover {
+    color: #5a67d8;
+}
+
+.breakdown-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.breakdown-toggle {
+    font-size: 12px;
+    transition: transform 0.3s;
+}
+
+.tab-breakdown-header.open .breakdown-toggle {
+    transform: rotate(180deg);
+}
+
+.tab-breakdown-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-breakdown-content.show {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* Стили для элементов внутри вкладок */
+.tab-pane .metric-value {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.tab-pane .metric-sub {
+    font-size: 12px;
+    opacity: 0.7;
+}
