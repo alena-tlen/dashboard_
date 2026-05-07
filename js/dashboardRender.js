@@ -123,35 +123,46 @@ function showNotification(message, type = 'success') {
 // МИНИ-ГРАФИКИ (CHART.JS)
 // ========================
 
-function renderMiniChartJS(elementId, labels, data, color) {
+function renderRevenueMiniChart(elementId, labels, data) {
     const canvas = document.getElementById(elementId);
     if (!canvas) return;
     
-    // Если данных меньше 2 точек — скрываем график
+    // Получаем родительскую карточку
+    const card = canvas.closest('.metric-card');
+    
+    // Если данных меньше 2 точек — скрываем canvas и добавляем отступ карточке
     if (!data || data.length < 2) {
         canvas.style.display = 'none';
-        const card = canvas.closest('.metric-card');
         if (card) card.classList.add('no-chart');
         return;
     }
     
     canvas.style.display = 'block';
-    const card = canvas.closest('.metric-card');
     if (card) card.classList.remove('no-chart');
     
     // Уничтожаем старый график
     if (miniRevenueChart) {
-        try { if (typeof miniRevenueChart.destroy === 'function') miniRevenueChart.destroy(); } catch(e) {}
+        try { miniRevenueChart.destroy(); } catch(e) {}
         miniRevenueChart = null;
     }
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     
-    // Создаём градиент
-    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
-    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.4)');
-    gradient.addColorStop(0.6, 'rgba(72, 187, 120, 0.1)');
+    // Очищаем canvas перед рисованием
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Устанавливаем точные размеры canvas
+    const container = canvas.parentElement;
+    if (container) {
+        canvas.style.width = '100%';
+        canvas.style.height = '70px';
+    }
+    
+    // Создаём градиент от верхнего края к низу
+    const gradient = ctx.createLinearGradient(0, 0, 0, 70);
+    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.35)');
+    gradient.addColorStop(0.5, 'rgba(72, 187, 120, 0.12)');
     gradient.addColorStop(1, 'rgba(72, 187, 120, 0)');
     
     miniRevenueChart = new Chart(ctx, {
@@ -162,23 +173,28 @@ function renderMiniChartJS(elementId, labels, data, color) {
                 data: data, 
                 borderColor: '#48bb78', 
                 borderWidth: 2.5,
-                pointRadius: data.length === 1 ? 5 : 3,
-                pointHoverRadius: 8,
+                pointRadius: 0,
+                pointHoverRadius: 6,
                 pointBackgroundColor: '#48bb78',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.4,
+                tension: 0.3,
                 fill: true,
-                backgroundColor: gradient
+                backgroundColor: gradient,
+                segment: {
+                    borderDash: (ctx) => ctx.p0.parsed.y === null || ctx.p1.parsed.y === null ? [5, 5] : undefined
+                }
             }] 
         },
         options: { 
-            responsive: true, 
+            responsive: true,
             maintainAspectRatio: true,
             plugins: { 
                 legend: { display: false }, 
                 tooltip: { 
-                    enabled: data.length >= 2,
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
                     backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
                     titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
                     bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
@@ -192,41 +208,68 @@ function renderMiniChartJS(elementId, labels, data, color) {
                 }
             }, 
             scales: { 
-                x: { display: false, grid: { display: false }, ticks: { display: false } },
-                y: { display: false, grid: { display: false }, ticks: { display: false } }
+                x: { 
+                    display: false, 
+                    grid: { display: false }, 
+                    ticks: { display: false }
+                },
+                y: { 
+                    display: false, 
+                    grid: { display: false }, 
+                    ticks: { display: false },
+                    beginAtZero: false
+                }
             },
-            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
-            animation: { duration: 800, easing: 'easeOutQuart' }
+            elements: {
+                line: {
+                    borderJoin: 'round',
+                    borderCap: 'round'
+                }
+            },
+            layout: { 
+                padding: { 
+                    top: 5, 
+                    bottom: 0, 
+                    left: 0, 
+                    right: 0 
+                } 
+            },
+            animation: {
+                duration: 600,
+                easing: 'easeOutCubic'
+            }
         }
     });
 }
 
-function renderExpenseMiniChartJS(elementId, labels, data, color) {
+function renderExpenseMiniChart(elementId, labels, data) {
     const canvas = document.getElementById(elementId);
     if (!canvas) return;
     
+    const card = canvas.closest('.metric-card');
+    
     if (!data || data.length < 2) {
         canvas.style.display = 'none';
-        const card = canvas.closest('.metric-card');
         if (card) card.classList.add('no-chart');
         return;
     }
     
     canvas.style.display = 'block';
-    const card = canvas.closest('.metric-card');
     if (card) card.classList.remove('no-chart');
     
     if (miniExpenseChart) {
-        try { if (typeof miniExpenseChart.destroy === 'function') miniExpenseChart.destroy(); } catch(e) {}
+        try { miniExpenseChart.destroy(); } catch(e) {}
         miniExpenseChart = null;
     }
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     
-    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
-    gradient.addColorStop(0, 'rgba(245, 101, 101, 0.4)');
-    gradient.addColorStop(0.6, 'rgba(245, 101, 101, 0.1)');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 70);
+    gradient.addColorStop(0, 'rgba(245, 101, 101, 0.35)');
+    gradient.addColorStop(0.5, 'rgba(245, 101, 101, 0.12)');
     gradient.addColorStop(1, 'rgba(245, 101, 101, 0)');
     
     miniExpenseChart = new Chart(ctx, {
@@ -237,23 +280,23 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
                 data: data, 
                 borderColor: '#f56565', 
                 borderWidth: 2.5,
-                pointRadius: data.length === 1 ? 5 : 3,
-                pointHoverRadius: 8,
+                pointRadius: 0,
+                pointHoverRadius: 6,
                 pointBackgroundColor: '#f56565',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.4,
+                tension: 0.3,
                 fill: true,
                 backgroundColor: gradient
             }] 
         },
         options: { 
-            responsive: true, 
+            responsive: true,
             maintainAspectRatio: true,
             plugins: { 
                 legend: { display: false }, 
                 tooltip: { 
-                    enabled: data.length >= 2,
+                    enabled: true,
                     backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
                     titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
                     bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
@@ -270,8 +313,8 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
                 x: { display: false, grid: { display: false }, ticks: { display: false } },
                 y: { display: false, grid: { display: false }, ticks: { display: false } }
             },
-            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
-            animation: { duration: 800, easing: 'easeOutQuart' }
+            layout: { padding: { top: 5, bottom: 0, left: 0, right: 0 } },
+            animation: { duration: 600, easing: 'easeOutCubic' }
         }
     });
 }
@@ -1049,7 +1092,10 @@ function createCollapsibleBlock(title, icon, total, totalChange, channels, isExp
         </div>`;
     }).join('');
     
-    const chartHtml = (monthlyValues && monthlyValues.length > 0) ? `<div class="revenue-chart-wrapper" style="margin-top: 16px;"><canvas id="${isExpense ? 'expenseMiniChartNew' : 'revenueMiniChartNew'}" style="height: 100px; width: 100%; display: block;"></canvas></div>` : '';
+    const chartHtml = (monthlyValues && monthlyValues.length >= 2) ? 
+    `<div class="revenue-chart-wrapper" style="margin-top: 12px; width: 100%;">
+        <canvas id="${isExpense ? 'expenseMiniChartNew' : 'revenueMiniChartNew'}" style="height: 70px; width: 100%; display: block;"></canvas>
+    </div>` : '';
     
     return `<div class="metric-card" style="overflow: hidden; padding: 20px; height: 100%;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;"><div class="metric-title" style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 20px;">${icon}</span><span style="font-size: 16px; font-weight: 700;">${title}</span></div>
@@ -2542,6 +2588,21 @@ function renderDashboard() {
             renderSalesChart(monthlyLabels, getMonthlySalesData(window.currentData, monthlyLabels));
         }, 100);
         
+        // После всех вызовов render...Chart, добавьте:
+setTimeout(() => {
+    // Фиксим отступы у карточек без графиков
+    document.querySelectorAll('.metric-card').forEach(card => {
+        const hasCanvas = card.querySelector('canvas');
+        const hasChartWrapper = card.querySelector('.revenue-chart-wrapper');
+        
+        if (!hasCanvas || (hasChartWrapper && hasChartWrapper.style.display === 'none')) {
+            card.classList.add('no-chart');
+        } else {
+            card.classList.remove('no-chart');
+        }
+    });
+}, 200);
+
         // ========================
         // СЦЕНАРНЫЙ АНАЛИЗ
         // ========================
