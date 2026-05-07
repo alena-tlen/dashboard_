@@ -2334,3 +2334,98 @@ body.dark .metric-card .metric-value {
     min-height: auto !important;
     transition: all 0.3s ease;
 }
+
+/* ========================
+   ПОЛНОЕ ИСПРАВЛЕНИЕ ГРАФИКОВ И ОТСТУПОВ
+   ======================== */
+
+/* 1. Контейнеры графиков - строго от края до края */
+.revenue-chart-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+.revenue-chart-wrapper canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 70px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    left: 0 !important;
+}
+
+/* 2. Блок состояния компании - всегда с отступом снизу */
+.metric-card:has(.metric-title span:contains("СОСТОЯНИЕ КОМПАНИИ")),
+.metric-card:first-child {
+    padding-bottom: 20px !important;
+    margin-bottom: 0 !important;
+}
+
+/* 3. Все карточки без графиков получают нижний отступ */
+.metric-card:not(:has(canvas)) {
+    padding-bottom: 20px !important;
+}
+
+.metric-card:has(.revenue-chart-wrapper) {
+    padding-bottom: 0 !important;
+}
+
+/* 4. Отступ у блоков с графиками - убираем лишнее */
+.metric-card .revenue-chart-wrapper {
+    margin-top: 12px !important;
+    margin-bottom: -20px !important;
+}
+
+/* 5. Карточки без графиков - нормальный отступ */
+.metric-card.no-chart {
+    padding-bottom: 20px !important;
+}
+
+.metric-card.no-chart .revenue-chart-wrapper {
+    display: none !important;
+}
+
+/* 6. Убираем лишние внутренние отступы у графиков */
+.tab-chart-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+.tab-chart-container canvas {
+    width: 100% !important;
+    height: 70px !important;
+    display: block !important;
+}
+
+/* 7. Исправление для всех canvas элементов */
+canvas {
+    max-width: 100% !important;
+    display: block !important;
+}
+
+/* 8. Убираем лишние паддинги внутри metric-card */
+.metric-card > div:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* 9. Для блоков с метриками - единый стиль */
+.metrics-grid .metric-card {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.metrics-grid .metric-card > div:first-child {
+    flex: 1 !important;
+}
