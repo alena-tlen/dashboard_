@@ -125,14 +125,19 @@ function showNotification(message, type = 'success') {
 
 function renderMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
-    if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) {
-        // Если нет данных, очищаем canvas
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+    if (!canvas) return;
+    
+    // Если данных меньше 2 точек — скрываем график
+    if (!data || data.length < 2) {
+        canvas.style.display = 'none';
+        const card = canvas.closest('.metric-card');
+        if (card) card.classList.add('no-chart');
         return;
     }
+    
+    canvas.style.display = 'block';
+    const card = canvas.closest('.metric-card');
+    if (card) card.classList.remove('no-chart');
     
     // Уничтожаем старый график
     if (miniRevenueChart) {
@@ -142,11 +147,12 @@ function renderMiniChartJS(elementId, labels, data, color) {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(72,187,120,0.15)' : 'rgba(72,187,120,0.1)';
-    const lineColor = '#48bb78'; // Фиксированный зелёный цвет
     
-    // Для одной точки - показываем просто точку
-    const showPointOnly = data.length === 1;
+    // Создаём градиент
+    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
+    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.4)');
+    gradient.addColorStop(0.6, 'rgba(72, 187, 120, 0.1)');
+    gradient.addColorStop(1, 'rgba(72, 187, 120, 0)');
     
     miniRevenueChart = new Chart(ctx, {
         type: 'line',
@@ -154,19 +160,16 @@ function renderMiniChartJS(elementId, labels, data, color) {
             labels: labels, 
             datasets: [{ 
                 data: data, 
-                borderColor: lineColor, 
-                backgroundColor: areaColor, 
-                borderWidth: 2, 
-                pointRadius: showPointOnly ? 6 : 3,
+                borderColor: '#48bb78', 
+                borderWidth: 2.5,
+                pointRadius: data.length === 1 ? 5 : 3,
                 pointHoverRadius: 8,
-                pointBackgroundColor: lineColor,
+                pointBackgroundColor: '#48bb78',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.3, 
+                tension: 0.4,
                 fill: true,
-                segment: {
-                    borderDash: (ctx) => ctx.p0.parsed.y === null || ctx.p1.parsed.y === null ? [5, 5] : undefined
-                }
+                backgroundColor: gradient
             }] 
         },
         options: { 
@@ -175,13 +178,11 @@ function renderMiniChartJS(elementId, labels, data, color) {
             plugins: { 
                 legend: { display: false }, 
                 tooltip: { 
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
+                    enabled: data.length >= 2,
                     backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
                     titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
                     bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
-                    borderColor: lineColor,
+                    borderColor: '#48bb78',
                     borderWidth: 1,
                     callbacks: {
                         label: function(context) {
@@ -194,27 +195,26 @@ function renderMiniChartJS(elementId, labels, data, color) {
                 x: { display: false, grid: { display: false }, ticks: { display: false } },
                 y: { display: false, grid: { display: false }, ticks: { display: false } }
             },
-            elements: {
-                point: {
-                    hoverRadius: 8
-                }
-            },
-            layout: { 
-                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
-            }
+            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
+            animation: { duration: 800, easing: 'easeOutQuart' }
         }
     });
 }
 
 function renderExpenseMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
-    if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) {
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+    if (!canvas) return;
+    
+    if (!data || data.length < 2) {
+        canvas.style.display = 'none';
+        const card = canvas.closest('.metric-card');
+        if (card) card.classList.add('no-chart');
         return;
     }
+    
+    canvas.style.display = 'block';
+    const card = canvas.closest('.metric-card');
+    if (card) card.classList.remove('no-chart');
     
     if (miniExpenseChart) {
         try { if (typeof miniExpenseChart.destroy === 'function') miniExpenseChart.destroy(); } catch(e) {}
@@ -223,9 +223,11 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(245,101,101,0.15)' : 'rgba(245,101,101,0.1)';
-    const lineColor = '#f56565'; // Фиксированный красный цвет
-    const showPointOnly = data.length === 1;
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
+    gradient.addColorStop(0, 'rgba(245, 101, 101, 0.4)');
+    gradient.addColorStop(0.6, 'rgba(245, 101, 101, 0.1)');
+    gradient.addColorStop(1, 'rgba(245, 101, 101, 0)');
     
     miniExpenseChart = new Chart(ctx, {
         type: 'line',
@@ -233,16 +235,16 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
             labels: labels, 
             datasets: [{ 
                 data: data, 
-                borderColor: lineColor, 
-                backgroundColor: areaColor, 
-                borderWidth: 2, 
-                pointRadius: showPointOnly ? 6 : 3,
+                borderColor: '#f56565', 
+                borderWidth: 2.5,
+                pointRadius: data.length === 1 ? 5 : 3,
                 pointHoverRadius: 8,
-                pointBackgroundColor: lineColor,
+                pointBackgroundColor: '#f56565',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.3, 
-                fill: true 
+                tension: 0.4,
+                fill: true,
+                backgroundColor: gradient
             }] 
         },
         options: { 
@@ -251,13 +253,11 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
             plugins: { 
                 legend: { display: false }, 
                 tooltip: { 
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
+                    enabled: data.length >= 2,
                     backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
                     titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
                     bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
-                    borderColor: lineColor,
+                    borderColor: '#f56565',
                     borderWidth: 1,
                     callbacks: {
                         label: function(context) {
@@ -270,14 +270,8 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
                 x: { display: false, grid: { display: false }, ticks: { display: false } },
                 y: { display: false, grid: { display: false }, ticks: { display: false } }
             },
-            elements: {
-                point: {
-                    hoverRadius: 8
-                }
-            },
-            layout: { 
-                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
-            }
+            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
+            animation: { duration: 800, easing: 'easeOutQuart' }
         }
     });
 }
@@ -316,7 +310,16 @@ function renderNetRevenueMiniChart() {
         }
     }
     
-    if (labels.length === 0) return;
+    if (values.length < 2) {
+        canvas.style.display = 'none';
+        const card = canvas.closest('.metric-card');
+        if (card) card.classList.add('no-chart');
+        return;
+    }
+    
+    canvas.style.display = 'block';
+    const card = canvas.closest('.metric-card');
+    if (card) card.classList.remove('no-chart');
     
     if (window.netRevenueMiniChartInstance) {
         try { if (typeof window.netRevenueMiniChartInstance.destroy === 'function') window.netRevenueMiniChartInstance.destroy(); } catch(e) {}
@@ -325,8 +328,11 @@ function renderNetRevenueMiniChart() {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(72,187,120,0.15)' : 'rgba(72,187,120,0.1)';
-    const lineColor = '#48bb78';
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
+    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.4)');
+    gradient.addColorStop(0.6, 'rgba(72, 187, 120, 0.1)');
+    gradient.addColorStop(1, 'rgba(72, 187, 120, 0)');
     
     window.netRevenueMiniChartInstance = new Chart(ctx, {
         type: 'line',
@@ -334,16 +340,16 @@ function renderNetRevenueMiniChart() {
             labels: labels, 
             datasets: [{ 
                 data: values, 
-                borderColor: lineColor, 
-                backgroundColor: areaColor, 
-                borderWidth: 2, 
-                pointRadius: values.length === 1 ? 6 : 3,
+                borderColor: '#48bb78', 
+                borderWidth: 2.5,
+                pointRadius: values.length === 1 ? 5 : 3,
                 pointHoverRadius: 8,
-                pointBackgroundColor: lineColor,
+                pointBackgroundColor: '#48bb78',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.3, 
-                fill: true 
+                tension: 0.4,
+                fill: true,
+                backgroundColor: gradient
             }] 
         },
         options: { 
@@ -352,7 +358,12 @@ function renderNetRevenueMiniChart() {
             plugins: { 
                 legend: { display: false }, 
                 tooltip: { 
-                    enabled: true,
+                    enabled: values.length >= 2,
+                    backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
+                    titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    borderColor: '#48bb78',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
                             return `💰 ${(context.parsed.y * 1000).toLocaleString('ru-RU')} ₽`;
@@ -364,9 +375,8 @@ function renderNetRevenueMiniChart() {
                 x: { display: false, grid: { display: false }, ticks: { display: false } },
                 y: { display: false, grid: { display: false }, ticks: { display: false } }
             },
-            layout: { 
-                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
-            }
+            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
+            animation: { duration: 800, easing: 'easeOutQuart' }
         }
     });
 }
@@ -411,7 +421,16 @@ function renderProfitMiniChart() {
         }
     }
     
-    if (labels.length === 0) return;
+    if (values.length < 2) {
+        canvas.style.display = 'none';
+        const card = canvas.closest('.metric-card');
+        if (card) card.classList.add('no-chart');
+        return;
+    }
+    
+    canvas.style.display = 'block';
+    const card = canvas.closest('.metric-card');
+    if (card) card.classList.remove('no-chart');
     
     if (window.profitMiniChartInstance) {
         try { if (typeof window.profitMiniChartInstance.destroy === 'function') window.profitMiniChartInstance.destroy(); } catch(e) {}
@@ -420,8 +439,11 @@ function renderProfitMiniChart() {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(72,187,120,0.15)' : 'rgba(72,187,120,0.1)';
-    const lineColor = '#48bb78';
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
+    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.4)');
+    gradient.addColorStop(0.6, 'rgba(72, 187, 120, 0.1)');
+    gradient.addColorStop(1, 'rgba(72, 187, 120, 0)');
     
     window.profitMiniChartInstance = new Chart(ctx, {
         type: 'line',
@@ -429,16 +451,16 @@ function renderProfitMiniChart() {
             labels: labels, 
             datasets: [{ 
                 data: values, 
-                borderColor: lineColor, 
-                backgroundColor: areaColor, 
-                borderWidth: 2, 
-                pointRadius: values.length === 1 ? 6 : 3,
+                borderColor: values[values.length-1] >= values[0] ? '#48bb78' : '#f56565',
+                borderWidth: 2.5,
+                pointRadius: values.length === 1 ? 5 : 3,
                 pointHoverRadius: 8,
-                pointBackgroundColor: lineColor,
+                pointBackgroundColor: values[values.length-1] >= values[0] ? '#48bb78' : '#f56565',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.3, 
-                fill: true 
+                tension: 0.4,
+                fill: true,
+                backgroundColor: gradient
             }] 
         },
         options: { 
@@ -447,7 +469,12 @@ function renderProfitMiniChart() {
             plugins: { 
                 legend: { display: false }, 
                 tooltip: { 
-                    enabled: true,
+                    enabled: values.length >= 2,
+                    backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
+                    titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    borderColor: '#48bb78',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
                             const val = context.parsed.y * 1000;
@@ -460,9 +487,8 @@ function renderProfitMiniChart() {
                 x: { display: false, grid: { display: false }, ticks: { display: false } },
                 y: { display: false, grid: { display: false }, ticks: { display: false } }
             },
-            layout: { 
-                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
-            }
+            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
+            animation: { duration: 800, easing: 'easeOutQuart' }
         }
     });
 }
