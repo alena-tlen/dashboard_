@@ -2306,3 +2306,30 @@ body.dark .metric-card .metric-value {
     max-width: 100%;
     height: auto;
 }
+
+/* Фиксируем высоту контейнера с графиком, чтобы блок не растягивался */
+.revenue-chart-wrapper {
+    margin-left: -20px !important;
+    margin-right: -20px !important;
+    width: calc(100% + 40px) !important;
+    height: 100px !important;
+    min-height: 100px !important;
+    max-height: 100px !important;
+    overflow: hidden;
+}
+
+.revenue-chart-wrapper canvas {
+    display: block;
+    width: 100% !important;
+    height: 100px !important;
+    min-height: 100px !important;
+    max-height: 100px !important;
+}
+
+/* Для всех контейнеров с графиками */
+.metric-card .revenue-chart-wrapper,
+.metric-card .tab-chart-container {
+    height: 100px !important;
+    min-height: 100px !important;
+    max-height: 100px !important;
+}
