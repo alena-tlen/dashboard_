@@ -2313,3 +2313,24 @@ body.dark .metric-card .metric-value {
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
 }
+
+/* ========================
+   СТИЛИ ДЛЯ КАРТОЧЕК БЕЗ ГРАФИКОВ
+   ======================== */
+
+.metric-card.no-chart {
+    padding-bottom: 20px !important;
+}
+
+.metric-card.no-chart .revenue-chart-wrapper,
+.metric-card.no-chart canvas {
+    display: none !important;
+}
+
+/* Убираем лишние отступы у контейнеров с графиками */
+.revenue-chart-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    transition: all 0.3s ease;
+}
