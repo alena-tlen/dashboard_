@@ -125,20 +125,16 @@ function showNotification(message, type = 'success') {
 
 function renderMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
-    if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) return;
-    
-    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
-    if (data.length < 2) {
-        // Очищаем canvas и показываем сообщение
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.font = '12px sans-serif';
-        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
+    if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) {
+        // Если нет данных, очищаем canvas
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
         return;
     }
     
+    // Уничтожаем старый график
     if (miniRevenueChart) {
         try { if (typeof miniRevenueChart.destroy === 'function') miniRevenueChart.destroy(); } catch(e) {}
         miniRevenueChart = null;
@@ -146,9 +142,11 @@ function renderMiniChartJS(elementId, labels, data, color) {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(72,187,120,0.08)' : 'rgba(72,187,120,0.05)';
-    // ЦВЕТ ВСЕГДА ОДИНАКОВЫЙ (зелёный для доходов)
-    const lineColor = '#48bb78';
+    const areaColor = isDarkMode ? 'rgba(72,187,120,0.15)' : 'rgba(72,187,120,0.1)';
+    const lineColor = '#48bb78'; // Фиксированный зелёный цвет
+    
+    // Для одной точки - показываем просто точку
+    const showPointOnly = data.length === 1;
     
     miniRevenueChart = new Chart(ctx, {
         type: 'line',
@@ -159,35 +157,62 @@ function renderMiniChartJS(elementId, labels, data, color) {
                 borderColor: lineColor, 
                 backgroundColor: areaColor, 
                 borderWidth: 2, 
-                pointRadius: data.length === 1 ? 4 : 0,  // Для одной точки показываем
-                pointHoverRadius: 5, 
-                tension: 0.4, 
+                pointRadius: showPointOnly ? 6 : 3,
+                pointHoverRadius: 8,
+                pointBackgroundColor: lineColor,
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                tension: 0.3, 
                 fill: true,
-                cubicInterpolationMode: 'monotone'
+                segment: {
+                    borderDash: (ctx) => ctx.p0.parsed.y === null || ctx.p1.parsed.y === null ? [5, 5] : undefined
+                }
             }] 
         },
         options: { 
             responsive: true, 
-            maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: data.length > 1 } }, 
-            scales: { x: { display: data.length > 1 }, y: { display: data.length > 1 } },
-            layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
+            maintainAspectRatio: true,
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { 
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
+                    titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    borderColor: lineColor,
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return `💰 ${(context.parsed.y * 1000).toLocaleString('ru-RU')} ₽`;
+                        }
+                    }
+                }
+            }, 
+            scales: { 
+                x: { display: false, grid: { display: false }, ticks: { display: false } },
+                y: { display: false, grid: { display: false }, ticks: { display: false } }
+            },
+            elements: {
+                point: {
+                    hoverRadius: 8
+                }
+            },
+            layout: { 
+                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
+            }
         }
     });
 }
 
 function renderExpenseMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
-    if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) return;
-    
-    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
-    if (data.length < 2) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.font = '12px sans-serif';
-        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
+    if (!canvas || !labels || labels.length === 0 || !data || data.length === 0) {
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
         return;
     }
     
@@ -198,9 +223,9 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(245,101,101,0.08)' : 'rgba(245,101,101,0.05)';
-    // ЦВЕТ ВСЕГДА ОДИНАКОВЫЙ (красный для расходов)
-    const lineColor = '#f56565';
+    const areaColor = isDarkMode ? 'rgba(245,101,101,0.15)' : 'rgba(245,101,101,0.1)';
+    const lineColor = '#f56565'; // Фиксированный красный цвет
+    const showPointOnly = data.length === 1;
     
     miniExpenseChart = new Chart(ctx, {
         type: 'line',
@@ -211,19 +236,48 @@ function renderExpenseMiniChartJS(elementId, labels, data, color) {
                 borderColor: lineColor, 
                 backgroundColor: areaColor, 
                 borderWidth: 2, 
-                pointRadius: data.length === 1 ? 4 : 0,
-                pointHoverRadius: 5, 
-                tension: 0.4, 
-                fill: true,
-                cubicInterpolationMode: 'monotone'
+                pointRadius: showPointOnly ? 6 : 3,
+                pointHoverRadius: 8,
+                pointBackgroundColor: lineColor,
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                tension: 0.3, 
+                fill: true 
             }] 
         },
         options: { 
             responsive: true, 
-            maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: data.length > 1 } }, 
-            scales: { x: { display: data.length > 1 }, y: { display: data.length > 1 } },
-            layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
+            maintainAspectRatio: true,
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { 
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
+                    titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
+                    borderColor: lineColor,
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return `📉 ${(context.parsed.y * 1000).toLocaleString('ru-RU')} ₽`;
+                        }
+                    }
+                }
+            }, 
+            scales: { 
+                x: { display: false, grid: { display: false }, ticks: { display: false } },
+                y: { display: false, grid: { display: false }, ticks: { display: false } }
+            },
+            elements: {
+                point: {
+                    hoverRadius: 8
+                }
+            },
+            layout: { 
+                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
+            }
         }
     });
 }
@@ -264,17 +318,6 @@ function renderNetRevenueMiniChart() {
     
     if (labels.length === 0) return;
     
-    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
-    if (values.length < 2) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.font = '12px sans-serif';
-        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
-        return;
-    }
-    
     if (window.netRevenueMiniChartInstance) {
         try { if (typeof window.netRevenueMiniChartInstance.destroy === 'function') window.netRevenueMiniChartInstance.destroy(); } catch(e) {}
         window.netRevenueMiniChartInstance = null;
@@ -282,8 +325,8 @@ function renderNetRevenueMiniChart() {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(72,187,120,0.08)' : 'rgba(72,187,120,0.05)';
-    const lineColor = '#48bb78'; // ФИКСИРОВАННЫЙ ЦВЕТ
+    const areaColor = isDarkMode ? 'rgba(72,187,120,0.15)' : 'rgba(72,187,120,0.1)';
+    const lineColor = '#48bb78';
     
     window.netRevenueMiniChartInstance = new Chart(ctx, {
         type: 'line',
@@ -294,17 +337,36 @@ function renderNetRevenueMiniChart() {
                 borderColor: lineColor, 
                 backgroundColor: areaColor, 
                 borderWidth: 2, 
-                pointRadius: 0, 
-                pointHoverRadius: 5, 
-                tension: 0.4, 
+                pointRadius: values.length === 1 ? 6 : 3,
+                pointHoverRadius: 8,
+                pointBackgroundColor: lineColor,
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                tension: 0.3, 
                 fill: true 
             }] 
         },
         options: { 
             responsive: true, 
-            maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: true } }, 
-            scales: { x: { display: true, ticks: { font: { size: 10 } } }, y: { display: true, ticks: { font: { size: 10 } } } }
+            maintainAspectRatio: true,
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { 
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            return `💰 ${(context.parsed.y * 1000).toLocaleString('ru-RU')} ₽`;
+                        }
+                    }
+                }
+            }, 
+            scales: { 
+                x: { display: false, grid: { display: false }, ticks: { display: false } },
+                y: { display: false, grid: { display: false }, ticks: { display: false } }
+            },
+            layout: { 
+                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
+            }
         }
     });
 }
@@ -351,17 +413,6 @@ function renderProfitMiniChart() {
     
     if (labels.length === 0) return;
     
-    // НЕ РИСУЕМ ГРАФИК ДЛЯ ОДНОЙ ТОЧКИ
-    if (values.length < 2) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.font = '12px sans-serif';
-        ctx.fillStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚠️ Недостаточно данных для графика (нужно минимум 2 месяца)', canvas.width/2, canvas.height/2);
-        return;
-    }
-    
     if (window.profitMiniChartInstance) {
         try { if (typeof window.profitMiniChartInstance.destroy === 'function') window.profitMiniChartInstance.destroy(); } catch(e) {}
         window.profitMiniChartInstance = null;
@@ -369,8 +420,8 @@ function renderProfitMiniChart() {
     
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
-    const areaColor = isDarkMode ? 'rgba(72,187,120,0.08)' : 'rgba(72,187,120,0.05)';
-    const lineColor = '#48bb78'; // ФИКСИРОВАННЫЙ ЦВЕТ (зелёный для прибыли)
+    const areaColor = isDarkMode ? 'rgba(72,187,120,0.15)' : 'rgba(72,187,120,0.1)';
+    const lineColor = '#48bb78';
     
     window.profitMiniChartInstance = new Chart(ctx, {
         type: 'line',
@@ -381,17 +432,37 @@ function renderProfitMiniChart() {
                 borderColor: lineColor, 
                 backgroundColor: areaColor, 
                 borderWidth: 2, 
-                pointRadius: 0, 
-                pointHoverRadius: 5, 
-                tension: 0.4, 
+                pointRadius: values.length === 1 ? 6 : 3,
+                pointHoverRadius: 8,
+                pointBackgroundColor: lineColor,
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                tension: 0.3, 
                 fill: true 
             }] 
         },
         options: { 
             responsive: true, 
-            maintainAspectRatio: true, 
-            plugins: { legend: { display: false }, tooltip: { enabled: true } }, 
-            scales: { x: { display: true, ticks: { font: { size: 10 } } }, y: { display: true, ticks: { font: { size: 10 } } } }
+            maintainAspectRatio: true,
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { 
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.parsed.y * 1000;
+                            return `${val >= 0 ? '📈' : '📉'} ${val.toLocaleString('ru-RU')} ₽`;
+                        }
+                    }
+                }
+            }, 
+            scales: { 
+                x: { display: false, grid: { display: false }, ticks: { display: false } },
+                y: { display: false, grid: { display: false }, ticks: { display: false } }
+            },
+            layout: { 
+                padding: { top: 0, bottom: 0, left: 0, right: 0 } 
+            }
         }
     });
 }
