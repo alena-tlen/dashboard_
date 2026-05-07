@@ -462,7 +462,7 @@ function refreshChartsOnThemeChange() {
 }
 
 // ========================
-// ПЕРЕРИСОВКА ГРАФИКОВ ПРИ РАСШИРЕНИИ/СВОРАЧИВАНИИ ПАНЕЛИ
+// ПЕРЕРИСОВКА ГРАФИКОВ ПРИ РАСШИРЕНИИ/СВОРАЧИВАНИИ ПАНЕЛИ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ========================
 
 function initChartResizeHandler() {
@@ -470,62 +470,157 @@ function initChartResizeHandler() {
     if (!sidebar) return;
     
     let resizeTimeout;
+    let isResizing = false;
     
+    /**
+     * Полностью пересоздаёт мини-графики в блоках
+     */
     function forceChartResize() {
-        // Принудительно перерисовываем все Chart.js графики
-        const charts = [
-            window.miniRevenueChart,
-            window.miniExpenseChart,
-            window.netRevenueMiniChartInstance,
-            window.profitMiniChartInstance,
-            window.monthlyLineChart,
-            window.salesChart,
-            window.ndsToRevenueChart,
-            window.balanceTrendChart,
-            window.cccChart,
-            window.seasonalityChart
-        ];
+        if (isResizing) return;
+        isResizing = true;
         
-        charts.forEach(chart => {
-            if (chart && typeof chart.resize === 'function') {
-                chart.resize();
-            }
-            if (chart && typeof chart.update === 'function') {
-                chart.update();
-            }
-        });
+        // Получаем текущие данные для перерисовки
+        const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const monthlyDataMap = new Map();
+        monthsOrder.forEach(month => monthlyDataMap.set(month, { revenue: 0, profit: 0, expenses: 0 }));
         
-        // Перерисовываем графики вкладок
-        if (window.tabCharts) {
-            Object.values(window.tabCharts).forEach(chart => {
-                if (chart && typeof chart.resize === 'function') {
-                    chart.resize();
+        if (window.currentData) {
+            window.currentData.forEach(d => {
+                if (d.месяц && monthsOrder.includes(d.месяц)) {
+                    const monthData = monthlyDataMap.get(d.месяц);
+                    if (d.тип === 'Доход') monthData.revenue += d.сумма;
+                    if (d.тип === 'Расход') monthData.expenses += Math.abs(d.сумма);
+                }
+            });
+            
+            monthlyDataMap.forEach((data, month) => {
+                const ndsOut = window.currentData.filter(d => d.месяц === month && d.статья === 'НДС' && d.подканал === 'НДС исходящий').reduce((sum, d) => sum + d.сумма, 0);
+                const netRev = data.revenue - ndsOut;
+                data.profit = netRev - data.expenses;
+                data.netRevenue = netRev;
+            });
+        }
+        
+        const monthlyLabels = monthsOrder.filter(m => monthlyDataMap.get(m).revenue > 0 || monthlyDataMap.get(m).profit !== 0);
+        const monthlyRevenues = monthlyLabels.map(m => monthlyDataMap.get(m).revenue / 1000);
+        const monthlyExpensesArray = monthlyLabels.map(m => (monthlyDataMap.get(m)?.expenses || 0) / 1000);
+        
+        // Получаем элементы canvas
+        const revenueCanvas = document.getElementById('revenueMiniChartNew');
+        const expenseCanvas = document.getElementById('expenseMiniChartNew');
+        
+        // Уничтожаем старые графики
+        if (window.miniRevenueChart) {
+            try {
+                if (typeof window.miniRevenueChart.destroy === 'function') {
+                    window.miniRevenueChart.destroy();
+                }
+            } catch(e) {}
+            window.miniRevenueChart = null;
+        }
+        
+        if (window.miniExpenseChart) {
+            try {
+                if (typeof window.miniExpenseChart.destroy === 'function') {
+                    window.miniExpenseChart.destroy();
+                }
+            } catch(e) {}
+            window.miniExpenseChart = null;
+        }
+        
+        // Пересоздаём графики, если есть данные
+        if (revenueCanvas && monthlyLabels.length > 0 && monthlyRevenues.length > 0) {
+            const ctx = revenueCanvas.getContext('2d');
+            const isDarkMode = document.body.classList.contains('dark');
+            const areaColor = isDarkMode ? 'rgba(72,187,120,0.08)' : 'rgba(72,187,120,0.05)';
+            const lineColor = monthlyRevenues[monthlyRevenues.length-1] >= monthlyRevenues[0] ? '#48bb78' : '#f56565';
+            
+            window.miniRevenueChart = new Chart(ctx, {
+                type: 'line',
+                data: { 
+                    labels: monthlyLabels, 
+                    datasets: [{ 
+                        data: monthlyRevenues, 
+                        borderColor: lineColor, 
+                        backgroundColor: areaColor, 
+                        borderWidth: 2, 
+                        pointRadius: 0, 
+                        pointHoverRadius: 5, 
+                        tension: 0.4, 
+                        fill: true,
+                        cubicInterpolationMode: 'monotone'
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: true, 
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
+                    scales: { x: { display: false }, y: { display: false } },
+                    layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
                 }
             });
         }
+        
+        if (expenseCanvas && monthlyLabels.length > 0 && monthlyExpensesArray.length > 0) {
+            const ctx = expenseCanvas.getContext('2d');
+            const isDarkMode = document.body.classList.contains('dark');
+            const areaColor = isDarkMode ? 'rgba(245,101,101,0.08)' : 'rgba(245,101,101,0.05)';
+            
+            window.miniExpenseChart = new Chart(ctx, {
+                type: 'line',
+                data: { 
+                    labels: monthlyLabels, 
+                    datasets: [{ 
+                        data: monthlyExpensesArray, 
+                        borderColor: '#f56565', 
+                        backgroundColor: areaColor, 
+                        borderWidth: 2, 
+                        pointRadius: 0, 
+                        pointHoverRadius: 5, 
+                        tension: 0.4, 
+                        fill: true,
+                        cubicInterpolationMode: 'monotone'
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: true, 
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
+                    scales: { x: { display: false }, y: { display: false } },
+                    layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
+                }
+            });
+        }
+        
+        isResizing = false;
     }
     
     // Слушаем окончание анимации панели
     sidebar.addEventListener('transitionend', (e) => {
-        // Проверяем, что анимация связана с изменением ширины
         if (e.propertyName === 'width' || e.propertyName === 'max-width') {
             clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(forceChartResize, 30);
+            resizeTimeout = setTimeout(forceChartResize, 50);
         }
     });
     
-    // Также слушаем изменение размера окна
+    // Слушаем изменение размера окна
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(forceChartResize, 100);
+        resizeTimeout = setTimeout(forceChartResize, 150);
     });
-}
-
-// Запускаем после загрузки страницы
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initChartResizeHandler);
-} else {
-    initChartResizeHandler();
+    
+    // Наблюдатель за изменением класса на body (смена темы)
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'class') {
+                forceChartResize();
+            }
+        });
+    });
+    observer.observe(document.body, { attributes: true });
+    
+    // Первый запуск
+    setTimeout(forceChartResize, 500);
 }
 
 /**
