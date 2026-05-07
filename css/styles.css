@@ -2281,3 +2281,28 @@ body.dark .metric-card .metric-value {
     scrollbar-width: thin;
     scrollbar-color: rgba(102,126,234,0.3) rgba(102,126,234,0.1);
 }
+
+/* Принудительное обновление canvas при изменении размера */
+.revenue-chart-wrapper canvas,
+.channels-revenue-container canvas,
+.channels-expense-container canvas {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100px;
+}
+
+/* Обеспечиваем корректное изменение размеров */
+.revenue-chart-wrapper {
+    width: calc(100% + 40px) !important;
+    min-width: calc(100% + 40px) !important;
+    max-width: calc(100% + 40px) !important;
+    margin-left: -20px !important;
+    margin-right: -20px !important;
+    overflow: hidden;
+}
+
+/* Для всех canvas внутри метрик */
+.metric-card canvas {
+    max-width: 100%;
+    height: auto;
+}
