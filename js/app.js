@@ -461,6 +461,73 @@ function refreshChartsOnThemeChange() {
     }
 }
 
+// ========================
+// ПЕРЕРИСОВКА ГРАФИКОВ ПРИ РАСШИРЕНИИ/СВОРАЧИВАНИИ ПАНЕЛИ
+// ========================
+
+function initChartResizeHandler() {
+    const sidebar = document.querySelector('.sidebar-nav');
+    if (!sidebar) return;
+    
+    let resizeTimeout;
+    
+    function forceChartResize() {
+        // Принудительно перерисовываем все Chart.js графики
+        const charts = [
+            window.miniRevenueChart,
+            window.miniExpenseChart,
+            window.netRevenueMiniChartInstance,
+            window.profitMiniChartInstance,
+            window.monthlyLineChart,
+            window.salesChart,
+            window.ndsToRevenueChart,
+            window.balanceTrendChart,
+            window.cccChart,
+            window.seasonalityChart
+        ];
+        
+        charts.forEach(chart => {
+            if (chart && typeof chart.resize === 'function') {
+                chart.resize();
+            }
+            if (chart && typeof chart.update === 'function') {
+                chart.update();
+            }
+        });
+        
+        // Перерисовываем графики вкладок
+        if (window.tabCharts) {
+            Object.values(window.tabCharts).forEach(chart => {
+                if (chart && typeof chart.resize === 'function') {
+                    chart.resize();
+                }
+            });
+        }
+    }
+    
+    // Слушаем окончание анимации панели
+    sidebar.addEventListener('transitionend', (e) => {
+        // Проверяем, что анимация связана с изменением ширины
+        if (e.propertyName === 'width' || e.propertyName === 'max-width') {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(forceChartResize, 30);
+        }
+    });
+    
+    // Также слушаем изменение размера окна
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(forceChartResize, 100);
+    });
+}
+
+// Запускаем после загрузки страницы
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChartResizeHandler);
+} else {
+    initChartResizeHandler();
+}
+
 /**
  * Обработчик для ABC/XYZ загрузки файла
  */
