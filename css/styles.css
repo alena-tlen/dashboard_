@@ -2429,3 +2429,51 @@ canvas {
 .metrics-grid .metric-card > div:first-child {
     flex: 1 !important;
 }
+
+/* ========================
+   УЛУЧШЕННЫЕ ГРАФИКИ И ОТСТУПЫ
+   ======================== */
+
+/* Градиентная заливка под графиками */
+.revenue-chart-wrapper canvas,
+.metric-card canvas {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+}
+
+/* Карточки без графиков - нормальный отступ снизу */
+.metric-card.no-chart {
+    padding-bottom: 20px !important;
+}
+
+.metric-card.no-chart .revenue-chart-wrapper {
+    display: none !important;
+}
+
+/* Графики занимают всю ширину блока */
+.revenue-chart-wrapper {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 0 !important;
+}
+
+/* Убираем лишние отступы внутри карточек */
+.metric-card > div:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Плавное появление графиков */
+canvas {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
