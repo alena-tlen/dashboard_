@@ -1,5 +1,5 @@
 // ========================
-// dashboardRender.js - ПОЛНАЯ ОТРИСОВКА ДАШБОРДА
+// dashboardRender.js - ПОЛНАЯ ОТРИСОВКА ДАШБОРДА (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ========================
 
 // Глобальные переменные для графиков
@@ -120,10 +120,10 @@ function showNotification(message, type = 'success') {
 }
 
 // ========================
-// МИНИ-ГРАФИКИ (CHART.JS)
+// МИНИ-ГРАФИКИ (CHART.JS) - ИСПРАВЛЕННЫЕ ВЕРСИИ
 // ========================
 
-function renderRevenueMiniChart(elementId, labels, data) {
+function renderMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
     if (!canvas) return;
     
@@ -153,11 +153,8 @@ function renderRevenueMiniChart(elementId, labels, data) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Устанавливаем точные размеры canvas
-    const container = canvas.parentElement;
-    if (container) {
-        canvas.style.width = '100%';
-        canvas.style.height = '70px';
-    }
+    canvas.style.width = '100%';
+    canvas.style.height = '70px';
     
     // Создаём градиент от верхнего края к низу
     const gradient = ctx.createLinearGradient(0, 0, 0, 70);
@@ -242,7 +239,7 @@ function renderRevenueMiniChart(elementId, labels, data) {
     });
 }
 
-function renderExpenseMiniChart(elementId, labels, data) {
+function renderExpenseMiniChartJS(elementId, labels, data, color) {
     const canvas = document.getElementById(elementId);
     if (!canvas) return;
     
@@ -266,6 +263,8 @@ function renderExpenseMiniChart(elementId, labels, data) {
     const isDarkMode = document.body.classList.contains('dark');
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.style.width = '100%';
+    canvas.style.height = '70px';
     
     const gradient = ctx.createLinearGradient(0, 0, 0, 70);
     gradient.addColorStop(0, 'rgba(245, 101, 101, 0.35)');
@@ -353,15 +352,15 @@ function renderNetRevenueMiniChart() {
         }
     }
     
+    const card = canvas.closest('.metric-card');
+    
     if (values.length < 2) {
         canvas.style.display = 'none';
-        const card = canvas.closest('.metric-card');
         if (card) card.classList.add('no-chart');
         return;
     }
     
     canvas.style.display = 'block';
-    const card = canvas.closest('.metric-card');
     if (card) card.classList.remove('no-chart');
     
     if (window.netRevenueMiniChartInstance) {
@@ -372,9 +371,12 @@ function renderNetRevenueMiniChart() {
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     
-    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
-    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.4)');
-    gradient.addColorStop(0.6, 'rgba(72, 187, 120, 0.1)');
+    canvas.style.width = '100%';
+    canvas.style.height = '70px';
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 70);
+    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.35)');
+    gradient.addColorStop(0.5, 'rgba(72, 187, 120, 0.12)');
     gradient.addColorStop(1, 'rgba(72, 187, 120, 0)');
     
     window.netRevenueMiniChartInstance = new Chart(ctx, {
@@ -385,12 +387,12 @@ function renderNetRevenueMiniChart() {
                 data: values, 
                 borderColor: '#48bb78', 
                 borderWidth: 2.5,
-                pointRadius: values.length === 1 ? 5 : 3,
-                pointHoverRadius: 8,
+                pointRadius: 0,
+                pointHoverRadius: 6,
                 pointBackgroundColor: '#48bb78',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.4,
+                tension: 0.3,
                 fill: true,
                 backgroundColor: gradient
             }] 
@@ -418,8 +420,8 @@ function renderNetRevenueMiniChart() {
                 x: { display: false, grid: { display: false }, ticks: { display: false } },
                 y: { display: false, grid: { display: false }, ticks: { display: false } }
             },
-            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
-            animation: { duration: 800, easing: 'easeOutQuart' }
+            layout: { padding: { top: 5, bottom: 0, left: 0, right: 0 } },
+            animation: { duration: 600, easing: 'easeOutCubic' }
         }
     });
 }
@@ -464,15 +466,15 @@ function renderProfitMiniChart() {
         }
     }
     
+    const card = canvas.closest('.metric-card');
+    
     if (values.length < 2) {
         canvas.style.display = 'none';
-        const card = canvas.closest('.metric-card');
         if (card) card.classList.add('no-chart');
         return;
     }
     
     canvas.style.display = 'block';
-    const card = canvas.closest('.metric-card');
     if (card) card.classList.remove('no-chart');
     
     if (window.profitMiniChartInstance) {
@@ -483,10 +485,14 @@ function renderProfitMiniChart() {
     const ctx = canvas.getContext('2d');
     const isDarkMode = document.body.classList.contains('dark');
     
-    const gradient = ctx.createLinearGradient(0, 0, 0, 80);
-    gradient.addColorStop(0, 'rgba(72, 187, 120, 0.4)');
-    gradient.addColorStop(0.6, 'rgba(72, 187, 120, 0.1)');
-    gradient.addColorStop(1, 'rgba(72, 187, 120, 0)');
+    canvas.style.width = '100%';
+    canvas.style.height = '70px';
+    
+    const lineColor = values[values.length-1] >= values[0] ? '#48bb78' : '#f56565';
+    const gradient = ctx.createLinearGradient(0, 0, 0, 70);
+    gradient.addColorStop(0, lineColor === '#48bb78' ? 'rgba(72, 187, 120, 0.35)' : 'rgba(245, 101, 101, 0.35)');
+    gradient.addColorStop(0.5, lineColor === '#48bb78' ? 'rgba(72, 187, 120, 0.12)' : 'rgba(245, 101, 101, 0.12)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');
     
     window.profitMiniChartInstance = new Chart(ctx, {
         type: 'line',
@@ -494,14 +500,14 @@ function renderProfitMiniChart() {
             labels: labels, 
             datasets: [{ 
                 data: values, 
-                borderColor: values[values.length-1] >= values[0] ? '#48bb78' : '#f56565',
+                borderColor: lineColor,
                 borderWidth: 2.5,
-                pointRadius: values.length === 1 ? 5 : 3,
-                pointHoverRadius: 8,
-                pointBackgroundColor: values[values.length-1] >= values[0] ? '#48bb78' : '#f56565',
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                pointBackgroundColor: lineColor,
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                tension: 0.4,
+                tension: 0.3,
                 fill: true,
                 backgroundColor: gradient
             }] 
@@ -516,7 +522,7 @@ function renderProfitMiniChart() {
                     backgroundColor: isDarkMode ? '#1a1a2a' : '#ffffff',
                     titleColor: isDarkMode ? '#e2e8f0' : '#4a5568',
                     bodyColor: isDarkMode ? '#e2e8f0' : '#4a5568',
-                    borderColor: '#48bb78',
+                    borderColor: lineColor,
                     borderWidth: 1,
                     callbacks: {
                         label: function(context) {
@@ -530,8 +536,8 @@ function renderProfitMiniChart() {
                 x: { display: false, grid: { display: false }, ticks: { display: false } },
                 y: { display: false, grid: { display: false }, ticks: { display: false } }
             },
-            layout: { padding: { top: 8, bottom: 0, left: 0, right: 0 } },
-            animation: { duration: 800, easing: 'easeOutQuart' }
+            layout: { padding: { top: 5, bottom: 0, left: 0, right: 0 } },
+            animation: { duration: 600, easing: 'easeOutCubic' }
         }
     });
 }
@@ -1027,7 +1033,7 @@ function renderQuadrantMatrix(data, f) {
             <div style="background: rgba(245,101,101,0.15); border-left: 3px solid #f56565; border-radius: 8px; padding: 10px;"><div style="font-size: 12px; font-weight: 600;">⚠️ Проблемные</div><div style="font-size: 11px; opacity: 0.8;">Низкая маржа + низкие продажи</div><div style="font-size: 11px; margin-top: 4px; color: #f56565;">${channelData.filter(c => c.quadrant === 'problem').map(c => c.name).join(', ') || '—'}</div></div>
         </div>
         <div style="margin-top: 16px; overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <thead><tr style="background: rgba(102,126,234,0.1);"><th style="padding: 10px; text-align: left;">Канал</th><th style="padding: 10px; text-align: right;">Маржинальность</th><th style="padding: 10px; text-align: right;">Продажи (шт)</th><th style="padding: 10px; text-align: right;">Выручка</th><th style="padding: 10px; text-align: left;">Стратегия</th> </tr></thead>
+            <thead><tr style="background: rgba(102,126,234,0.1);"><th style="padding: 10px; text-align: left;">Канал</th><th style="padding: 10px; text-align: right;">Маржинальность</th><th style="padding: 10px; text-align: right;">Продажи (шт)</th><th style="padding: 10px; text-align: right;">Выручка</th><th style="padding: 10px; text-align: left;">Стратегия</th>   </tr></thead>
             <tbody>${channelData.map(channel => {
                 let strategy = '', strategyColor = '';
                 switch(channel.quadrant) {
@@ -1042,9 +1048,9 @@ function renderQuadrantMatrix(data, f) {
                     <td style="padding: 10px; text-align: right;">${new Intl.NumberFormat('ru-RU').format(channel.sales)} шт</td>
                     <td style="padding: 10px; text-align: right;">${formatCurrency(channel.netRevenue)}</td>
                     <td style="padding: 10px; color: ${strategyColor};">${strategy}</td>
-                 </tr>`;
+                  </tr>`;
             }).join('')}</tbody>
-         </table></div>
+        </table></div>
         <div style="padding: 16px; background: rgba(102,126,234,0.1); border-radius: 12px;">
             <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">💡 Рекомендации</div>
             <div style="font-size: 13px; line-height: 1.5;">${(() => {
@@ -2154,7 +2160,7 @@ function renderDashboard() {
             
             const chartHtml = (monthlyValues && monthlyValues.length > 0) ? `
                 <div class="revenue-chart-wrapper" style="margin-top: 16px;">
-                    <canvas id="${isExpense ? 'expenseMiniChartNew' : 'revenueMiniChartNew'}" style="height: 100px; width: 100%; display: block;"></canvas>
+                    <canvas id="${isExpense ? 'expenseMiniChartNew' : 'revenueMiniChartNew'}" style="height: 70px; width: 100%; display: block;"></canvas>
                 </div>
             ` : '';
             
@@ -2240,7 +2246,7 @@ function renderDashboard() {
                 ${netRevenueChange ? getChangeHtml(netRevenueChange) : ''}
             </div>
             <div class="revenue-chart-wrapper" style="margin-top: 16px;">
-                <canvas id="netRevenueMiniChart" style="height: 100px; width: 100%;"></canvas>
+                <canvas id="netRevenueMiniChart" style="height: 70px; width: 100%;"></canvas>
             </div>
             <div class="netrevenue-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 16px;">
                 <div style="padding-top: 16px;">${generateChannelBreakdown('ВЫРУЧКА ЧИСТАЯ ПО КАНАЛАМ', 'value', window.calculateNetRevenueByChannel ? window.calculateNetRevenueByChannel(window.currentData) : [], true, '')}</div>
@@ -2268,7 +2274,7 @@ function renderDashboard() {
             </div>
             <div class="metric-sub">Рентабельность: ${f.profitability.toFixed(1)}% ${profitabilityChange ? getChangeHtml(profitabilityChange) : ''}</div>
             <div class="revenue-chart-wrapper" style="margin-top: 16px;">
-                <canvas id="profitMiniChart" style="height: 100px; width: 100%;"></canvas>
+                <canvas id="profitMiniChart" style="height: 70px; width: 100%;"></canvas>
             </div>
             <div class="profit-channels-container" style="max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-top: 16px;">
                 <div style="padding-top: 16px;">${generateProfitByChannels(f, revenueChannelsList, expenseChannelsList, window.calculateNetRevenueByChannel ? window.calculateNetRevenueByChannel(window.currentData) : [])}</div>
@@ -2589,20 +2595,20 @@ function renderDashboard() {
         }, 100);
         
         // После всех вызовов render...Chart, добавьте:
-setTimeout(() => {
-    // Фиксим отступы у карточек без графиков
-    document.querySelectorAll('.metric-card').forEach(card => {
-        const hasCanvas = card.querySelector('canvas');
-        const hasChartWrapper = card.querySelector('.revenue-chart-wrapper');
+        setTimeout(() => {
+            // Фиксим отступы у карточек без графиков
+            document.querySelectorAll('.metric-card').forEach(card => {
+                const hasCanvas = card.querySelector('canvas');
+                const hasChartWrapper = card.querySelector('.revenue-chart-wrapper');
+                
+                if (!hasCanvas || (hasChartWrapper && hasChartWrapper.style.display === 'none')) {
+                    card.classList.add('no-chart');
+                } else {
+                    card.classList.remove('no-chart');
+                }
+            });
+        }, 200);
         
-        if (!hasCanvas || (hasChartWrapper && hasChartWrapper.style.display === 'none')) {
-            card.classList.add('no-chart');
-        } else {
-            card.classList.remove('no-chart');
-        }
-    });
-}, 200);
-
         // ========================
         // СЦЕНАРНЫЙ АНАЛИЗ
         // ========================
@@ -2765,7 +2771,7 @@ function generateChannelBreakdown(title, dataKey, channels, isCurrency = true, s
     channels.forEach((channel, idx) => {
         const value = channel[dataKey] || channel.value || 0;
         const percent = total > 0 ? (value / total) * 100 : 0;
-        const formattedValue = isCurrency ? formatCurrency(value) : value.toLocaleString('ru-RU') + (suffix || '');
+                const formattedValue = isCurrency ? formatCurrency(value) : value.toLocaleString('ru-RU') + (suffix || '');
         
         html += `
             <div class="breakdown-channel-item" style="margin-bottom: 16px; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; transition-delay: ${idx * 0.05}s;">
@@ -2954,6 +2960,8 @@ function generateAverageCheckBreakdown(data) {
         const avgCheck = totalSalesChannel > 0 ? netRevenue / totalSalesChannel : 0;
         if (netRevenue > 0 && totalSalesChannel > 0) {
             avgCheckByChannel.push({ name: channel, avgCheck: avgCheck });
+            totalNetRevenue += netRevenue;
+            totalSales += totalSalesChannel;
         }
     });
     
@@ -3158,5 +3166,9 @@ window.renderChannelPage = renderChannelPage;
 window.formatCurrency = formatCurrency;
 window.showNotification = showNotification;
 window.getPreviousMonths = getPreviousMonths;
+window.renderMiniChartJS = renderMiniChartJS;
+window.renderExpenseMiniChartJS = renderExpenseMiniChartJS;
+window.renderNetRevenueMiniChart = renderNetRevenueMiniChart;
+window.renderProfitMiniChart = renderProfitMiniChart;
 
 console.log('✅ dashboardRender.js: ПОЛНЫЙ файл загружен (' + document.querySelectorAll('script').length + ' скриптов)');
