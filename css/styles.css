@@ -1502,21 +1502,6 @@ body.dark .cash-sidebar {
    ГРАФИКИ
    ======================== */
 
-.revenue-chart-wrapper:hover canvas {
-    opacity: 1;
-}
-
-.chart-gradient-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 30px;
-    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.05));
-    pointer-events: none;
-    z-index: 2;
-}
-
 body.dark .chart-gradient-overlay {
     background: linear-gradient(to bottom, rgba(26,26,42,0), rgba(26,26,42,0.1));
 }
@@ -2109,11 +2094,6 @@ body.dark .filter-group select {
         margin-bottom: 16px !important;
     }
     
-    .metric-card {
-        padding: 16px !important;
-        margin-bottom: 0 !important;
-    }
-    
     .metric-title {
         font-size: 14px !important;
     }
@@ -2272,24 +2252,18 @@ body.dark .metric-card .metric-value {
 }
 
 /* ========================
-   ГРАФИКИ - ПРИЖАТЫ К НИЖНЕЙ ГРАНИЦЕ
+   ГРАФИКИ
    ======================== */
 
-/* Контейнер графика в карточке метрики */
 .revenue-chart-wrapper {
-    position: relative;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: calc(100% + 40px) !important;
     margin-left: -20px !important;
     margin-right: -20px !important;
+    margin-bottom: -20px !important;
+    width: calc(100% + 40px) !important;
     height: 80px !important;
     min-height: 80px !important;
     max-height: 80px !important;
     overflow: hidden;
-    /* Прижимаем к нижней границе */
-    margin-top: auto !important;
-    margin-bottom: -20px !important;
 }
 
 .revenue-chart-wrapper canvas {
@@ -2300,34 +2274,8 @@ body.dark .metric-card .metric-value {
     padding: 0 !important;
 }
 
-/* Для карточек метрик - делаем flex-контейнером, чтобы прижать график к низу */
-.metric-card {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    height: 100% !important;
-    min-height: 180px !important;
-}
-
-/* Содержимое карточки (значения) - вверху */
-.metric-card > div:not(.revenue-chart-wrapper) {
-    flex-shrink: 0;
-}
-
-/* График - прижимаем к низу */
-.metric-card .revenue-chart-wrapper {
-    margin-top: auto !important;
-    margin-bottom: -20px !important;
-}
-
-/* Для всех контейнеров с графиками в метриках */
-.metric-card .revenue-chart-wrapper,
-.metric-card .tab-chart-container {
-    margin-top: auto !important;
-    margin-bottom: -20px !important;
-    height: 80px !important;
-    min-height: 80px !important;
-    max-height: 80px !important;
+.revenue-chart-wrapper:hover canvas {
+    opacity: 1;
 }
 
 /* Графики во вкладках */
@@ -2337,8 +2285,6 @@ body.dark .metric-card .metric-value {
     height: 80px !important;
     min-height: 80px !important;
     max-height: 80px !important;
-    margin-top: auto !important;
-    margin-bottom: -20px !important;
 }
 
 .tab-chart-container canvas {
@@ -2355,54 +2301,15 @@ body.dark .metric-card .metric-value {
     overflow: hidden;
 }
 
-/* Убираем бордеры у контейнеров с графиками */
+/* Убираем бордеры у контейнеров с графиками во вкладках */
 .tab-chart-container {
     border-top: none !important;
     border-bottom: none !important;
 }
 
-/* Исправление для карточек с графиками */
-.metric-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-/* Контент карточки (значения, заголовки) */
-.metric-card .metric-title,
-.metric-card .metric-value,
-.metric-card .metric-sub,
-.metric-card .metric-change {
-    flex-shrink: 0;
-}
-
-/* Кнопка "Показать каналы" */
-.metric-card .toggle-channels-revenue-btn,
-.metric-card .toggle-channels-expense-btn,
-.metric-card .toggle-nds-breakdown-btn,
-.metric-card .toggle-breakdown-btn,
-.metric-card .toggle-sales-breakdown-btn,
-.metric-card .toggle-avgcheck-breakdown-btn,
-.metric-card .toggle-cost-breakdown-btn,
-.metric-card .toggle-channels-profit-btn {
-    flex-shrink: 0;
-}
-
-/* Принудительное прижатие графиков к низу */
-.metric-card {
-    position: relative;
+/* Убираем лишние отступы в контейнерах каналов */
+.channels-revenue-container,
+.channels-expense-container {
+    margin-bottom: 0 !important;
     padding-bottom: 0 !important;
-}
-
-.revenue-chart-wrapper {
-    position: absolute;
-    bottom: 0;
-    left: -20px;
-    right: -20px;
-    width: calc(100% + 40px);
-    margin: 0 !important;
-}
-
-.metric-card {
-    padding-bottom: 80px !important;
 }
