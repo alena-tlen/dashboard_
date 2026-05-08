@@ -841,6 +841,7 @@ body.dark .tab-btn {
     width: 100% !important;
     height: 200px !important;
     display: block;
+    image-rendering: crisp-edges; /* Добавьте эту строку */
 }
 
 /* Заголовок детализации - всегда под графиком */
@@ -883,11 +884,6 @@ body.dark .tab-btn {
 .tab-breakdown-content.show {
     max-height: 500px;
     overflow-y: auto;
-}
-
-/* Улучшение чёткости графиков */
-.tab-chart-container canvas {
-    image-rendering: auto;
 }
 
 canvas {
