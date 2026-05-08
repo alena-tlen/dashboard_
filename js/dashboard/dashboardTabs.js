@@ -159,14 +159,13 @@ function renderSingleTabChart(index) {
         return;
     }
     
-    // ========== ИСПРАВЛЕНИЕ РАЗМЕРОВ CANVAS для чёткости ==========
-    const container = canvas.parentElement;
-    if (container) {
-        const rect = container.getBoundingClientRect();
+    // Исправление размеров canvas для чёткости
+    const canvasContainer = canvas.parentElement;
+    if (canvasContainer) {
+        const rect = canvasContainer.getBoundingClientRect();
         const width = rect.width;
         const height = 200;
         
-        // Устанавливаем реальные пиксельные размеры canvas для чёткости
         canvas.width = width;
         canvas.height = height;
         canvas.style.width = `${width}px`;
@@ -190,11 +189,9 @@ function renderSingleTabChart(index) {
         return;
     }
     
-    // Месяцы по порядку
     const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const monthNamesShort = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
     
-    // Инициализация массивов для данных
     const monthlyRevenue = {};
     const monthlySales = {};
     const monthlyExpenses = {};
@@ -208,7 +205,7 @@ function renderSingleTabChart(index) {
         monthlyNdsOut[month] = 0;
     }
     
-    // СБОР ДАННЫХ - ИСПРАВЛЕННАЯ ВЕРСИЯ ДЛЯ ВАШЕЙ СТРУКТУРЫ
+    // Сбор данных
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const month = row.месяц;
@@ -217,72 +214,26 @@ function renderSingleTabChart(index) {
         const monthIndex = monthsOrder.indexOf(month);
         if (monthIndex === -1) continue;
         
-        // Доходы (тип = 'Доход')
         if (row.тип === 'Доход') {
             monthlyRevenue[month] += (row.сумма || 0);
         }
-        
-        // Расходы (тип = 'Расход')
         if (row.тип === 'Расход') {
             monthlyExpenses[month] += Math.abs(row.сумма || 0);
         }
-        
-        // НДС исходящий
         if (row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
             monthlyNdsOut[month] += (row.сумма || 0);
         }
         
-        // ========== ПРОДАЖИ В ШТУКАХ - ДЛЯ ВАШЕЙ СТРУКТУРЫ ==========
-        // У вас: Статья = "Справочно", Подканал = "Продажи шт."
-        const article = (row.статья || '').toLowerCase();
+        // Продажи - ищем в подканале "Продажи шт."
         const subCategory = (row.подканал || '').toLowerCase();
-        
-        // Проверка на продажи в штуках
-        let isSales = false;
-        
-        // Вариант 1: Подканал содержит "продажи" и "шт"
         if (subCategory.includes('продажи') && subCategory.includes('шт')) {
-            isSales = true;
-        }
-        // Вариант 2: Подканал точно равен "Продажи шт." (регистр не важен)
-        else if (subCategory === 'продажи шт.' || subCategory === 'продажи шт') {
-            isSales = true;
-        }
-        // Вариант 3: Статья или подканал содержат "продажи шт"
-        else if (article.includes('продажи шт') || subCategory.includes('продажи шт')) {
-            isSales = true;
-        }
-        // Вариант 4: Тип "Справочная" и подканал содержит "продажи"
-        else if (row.тип === 'Справочная' && subCategory.includes('продажи')) {
-            isSales = true;
-        }
-        
-        if (isSales) {
-            const salesAmount = Math.abs(row.сумма || 0);
-            monthlySales[month] += salesAmount;
-            console.log(`📦 Продажи найдены: месяц=${month}, сумма=${salesAmount}, статья=${row.статья}, подканал=${row.подканал}`);
+            monthlySales[month] += Math.abs(row.сумма || 0);
         }
     }
     
-    // ДИАГНОСТИКА: выводим ВСЕ строки с продажами
-    console.log('🔍 ДИАГНОСТИКА: поиск продаж в данных...');
-    let salesRowsCount = 0;
-    for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        const subCategory = (row.подканал || '').toLowerCase();
-        if (subCategory.includes('продажи') && subCategory.includes('шт')) {
-            salesRowsCount++;
-            console.log(`  Найдено: месяц=${row.месяц}, статья=${row.статья}, подканал=${row.подканал}, сумма=${row.сумма}, тип=${row.тип}`);
-        }
-    }
-    console.log(`📊 Всего найдено строк с продажами: ${salesRowsCount}`);
+    console.log('📊 Собраны данные:');
+    console.log('  Продажи (шт):', monthlySales);
     
-    console.log('📊 Собраны данные по месяцам:');
-    console.log('  Выручка:', JSON.stringify(monthlyRevenue));
-    console.log('  Продажи (шт):', JSON.stringify(monthlySales));
-    console.log('  Расходы:', JSON.stringify(monthlyExpenses));
-    
-    // Формируем данные для графика
     const labels = [];
     const chartData = [];
     
@@ -307,7 +258,6 @@ function renderSingleTabChart(index) {
                 break;
         }
         
-        // Добавляем месяц, если есть хоть какие-то данные
         if (monthlyRevenue[month] !== 0 || monthlySales[month] !== 0 || monthlyExpenses[month] !== 0) {
             labels.push(monthNamesShort[i]);
             chartData.push(value);
@@ -316,44 +266,19 @@ function renderSingleTabChart(index) {
     
     console.log(`📊 Данные для графика (${tabId}):`, { labels, chartData });
     
-    // Если нет данных для графика
     if (labels.length === 0 || chartData.every(v => v === 0)) {
         canvas.style.display = 'none';
-        // Показываем сообщение об отсутствии данных для вкладки продаж
-        if (tabId === 'sales') {
-            const container = canvas.closest('.tab-chart-container');
-            if (container) {
-                const existingMsg = container.querySelector('.no-data-message');
-                if (!existingMsg) {
-                    const msgDiv = document.createElement('div');
-                    msgDiv.className = 'no-data-message';
-                    msgDiv.style.cssText = 'text-align: center; padding: 60px 20px; color: #a0aec0; font-size: 14px;';
-                    msgDiv.innerHTML = '📊 Нет данных по продажам в штуках<br><small>Проверьте наличие в Excel: Статья="Справочно", Подканал="Продажи шт."</small>';
-                    container.appendChild(msgDiv);
-                    setTimeout(() => { if (msgDiv.parentNode) msgDiv.remove(); }, 5000);
-                }
-            }
-        }
         console.log('❌ Нет данных для отображения графика');
         return;
     }
     
     canvas.style.display = 'block';
-    // Удаляем сообщение об отсутствии данных, если оно есть
-    const container = canvas.closest('.tab-chart-container');
-    if (container) {
-        const existingMsg = container.querySelector('.no-data-message');
-        if (existingMsg) existingMsg.remove();
-    }
     
     const isDarkMode = document.body.classList.contains('dark');
     const textColor = isDarkMode ? '#e2e8f0' : '#4a5568';
     const ctx = canvas.getContext('2d');
-    
-    // Очищаем canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Настройки для разных типов графиков
     let chartType = 'line';
     let chartColor = '#667eea';
     let displayData = [...chartData];
@@ -383,14 +308,12 @@ function renderSingleTabChart(index) {
         case 'efficiency':
             chartType = 'line';
             chartColor = '#ed8936';
-            displayData = chartData;
             yAxisLabel = 'Прибыль на 1₽ расходов';
             formatYValue = (val) => val.toFixed(2) + ' ₽';
             break;
     }
     
     if (chartType === 'bar') {
-        // ГИСТОГРАММА для продаж
         const maxVal = Math.max(...displayData);
         const minVal = Math.min(...displayData);
         const barColors = displayData.map(v => {
@@ -434,29 +357,13 @@ function renderSingleTabChart(index) {
                     }
                 },
                 scales: {
-                    x: {
-                        ticks: { color: textColor, font: { size: 11 } },
-                        grid: { display: false }
-                    },
-                    y: {
-                        ticks: { color: textColor },
-                        grid: { color: isDarkMode ? '#2d3748' : '#e2e8f0' },
-                        title: {
-                            display: true,
-                            text: yAxisLabel,
-                            color: textColor,
-                            font: { size: 10 }
-                        }
-                    }
+                    x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                    y: { ticks: { color: textColor }, grid: { color: isDarkMode ? '#2d3748' : '#e2e8f0' }, title: { display: true, text: yAxisLabel, color: textColor, font: { size: 10 } } }
                 },
-                animation: {
-                    duration: 800,
-                    easing: 'easeOutQuart'
-                }
+                animation: { duration: 800, easing: 'easeOutQuart' }
             }
         });
     } else {
-        // ЛИНЕЙНЫЙ ГРАФИК с градиентом
         const gradient = ctx.createLinearGradient(0, 0, 0, 200);
         gradient.addColorStop(0, chartColor + '50');
         gradient.addColorStop(0.5, chartColor + '20');
@@ -501,37 +408,22 @@ function renderSingleTabChart(index) {
                     }
                 },
                 scales: {
-                    x: {
-                        ticks: { color: textColor, font: { size: 11 } },
-                        grid: { display: false }
-                    },
-                    y: {
-                        ticks: { color: textColor },
-                        grid: { color: isDarkMode ? '#2d3748' : '#e2e8f0' },
-                        title: {
-                            display: true,
-                            text: yAxisLabel,
-                            color: textColor,
-                            font: { size: 10 }
-                        }
-                    }
+                    x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                    y: { ticks: { color: textColor }, grid: { color: isDarkMode ? '#2d3748' : '#e2e8f0' }, title: { display: true, text: yAxisLabel, color: textColor, font: { size: 10 } } }
                 },
-                animation: {
-                    duration: 800,
-                    easing: 'easeOutQuart'
-                }
+                animation: { duration: 800, easing: 'easeOutQuart' }
             }
         });
     }
     
     console.log('✅ График создан для вкладки:', tabId);
-
+    
     // Принудительное обновление размеров canvas
-setTimeout(() => {
-    if (window.tabCharts && window.tabCharts[tabId]) {
-        window.tabCharts[tabId].resize();
-    }
-}, 100);
+    setTimeout(() => {
+        if (window.tabCharts && window.tabCharts[tabId]) {
+            window.tabCharts[tabId].resize();
+        }
+    }, 100);
 }
 
 console.log('✅ dashboardTabs.js: загружен');
