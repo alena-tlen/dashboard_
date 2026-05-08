@@ -2828,3 +2828,163 @@ body.dark .tab-btn {
     max-height: 500px;
     overflow-y: auto;
 }
+
+/* ========================
+   СТИЛИ ДЛЯ ГРАФИКОВ ВО ВКЛАДКАХ
+   ======================== */
+
+/* Контейнер для графика во вкладке */
+.tab-chart-container {
+    margin: 16px 0;
+    padding: 0;
+    height: 200px;
+    width: 100%;
+    position: relative;
+}
+
+.tab-chart-container canvas {
+    width: 100% !important;
+    height: 200px !important;
+    display: block;
+}
+
+/* Заголовок детализации - всегда под графиком */
+.tab-breakdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    margin-top: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
+    transition: all 0.2s;
+    clear: both;
+}
+
+/* Основное значение вкладки */
+.tab-main-value {
+    font-size: 32px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+/* Тренд во вкладке */
+.tab-trend {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.trend-positive {
+    background: rgba(72, 187, 120, 0.15);
+    color: #48bb78;
+}
+
+.trend-negative {
+    background: rgba(245, 101, 101, 0.15);
+    color: #f56565;
+}
+
+/* Контейнер для всего блока вкладок */
+.modern-tabs-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: background 0.3s ease;
+}
+
+body.dark .modern-tabs-container {
+    background: rgba(26, 26, 42, 0.95);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Заголовки вкладок */
+.tabs-header {
+    display: flex;
+    gap: 8px;
+    background: rgba(102, 126, 234, 0.1);
+    padding: 6px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+body.dark .tab-btn {
+    color: #cbd5e0;
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.tab-icon {
+    font-size: 18px;
+}
+
+/* Анимация появления панели */
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Разделитель для детализации */
+.breakdown-toggle {
+    transition: transform 0.3s;
+}
+
+.tab-breakdown-header.open .breakdown-toggle {
+    transform: rotate(180deg);
+}
+
+.tab-breakdown-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+}
+
+.tab-breakdown-content.show {
+    max-height: 500px;
+    overflow-y: auto;
+}
