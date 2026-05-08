@@ -1,6 +1,6 @@
-// =======================
+// ======================
 // dashboardTabs.js - ВКЛАДКИ (MODERN TABS)
-// =======================
+// ======================
 
 function generateTabsPanel() {
     if (!window.currentData || window.currentData.length === 0) {
