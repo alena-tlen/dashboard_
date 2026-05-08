@@ -159,6 +159,21 @@ function renderSingleTabChart(index) {
         return;
     }
     
+    // ========== ИСПРАВЛЕНИЕ РАЗМЕРОВ CANVAS для чёткости ==========
+    const container = canvas.parentElement;
+    if (container) {
+        const rect = container.getBoundingClientRect();
+        const width = rect.width;
+        const height = 200;
+        
+        // Устанавливаем реальные пиксельные размеры canvas для чёткости
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        console.log(`📐 Установлены размеры canvas: ${width}x${height}`);
+    }
+    
     // Уничтожаем старый график
     if (window.tabCharts && window.tabCharts[tabId]) {
         try { window.tabCharts[tabId].destroy(); } catch(e) { console.log('Ошибка уничтожения графика:', e); }
