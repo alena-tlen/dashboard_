@@ -1281,22 +1281,39 @@ function initTabs() {
 }
 
 function renderTabChart(index) {
-    const tabPanes = document.querySelectorAll('.tab-pane');
-    if (!tabPanes[index]) return;
-    const tabId = tabPanes[index].dataset.tab;
-    const canvas = document.getElementById(`tabChart_${tabId}`);
-    if (!canvas) return;
+    console.log('renderTabChart called for index:', index);
     
-    // Уничтожаем старый график
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    if (!tabPanes[index]) {
+        console.log('No tab pane found for index', index);
+        return;
+    }
+    
+    const tabId = tabPanes[index].dataset.tab;
+    console.log('Rendering chart for tab:', tabId);
+    
+    const canvas = document.getElementById(`tabChart_${tabId}`);
+    if (!canvas) {
+        console.log('Canvas not found for tab:', tabId);
+        return;
+    }
+    
+    // Уничтожаем старый график если есть
     if (window.tabCharts && window.tabCharts[tabId]) {
-        try { window.tabCharts[tabId].destroy(); } catch(e) {}
+        try { window.tabCharts[tabId].destroy(); } catch(e) { console.log('Error destroying chart:', e); }
     }
     if (!window.tabCharts) window.tabCharts = {};
     
-    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const data = window.currentData || [];
-    const isDarkMode = document.body.classList.contains('dark');
-    const textColor = isDarkMode ? '#e2e8f0' : '#4a5568';
+    console.log('Total data rows:', data.length);
+    
+    if (data.length === 0) {
+        canvas.style.display = 'none';
+        return;
+    }
+    
+    // Месяцы по порядку
+    const monthsOrder = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     
     // Инициализация массивов
     const monthlyRevenue = {};
@@ -1314,113 +1331,154 @@ function renderTabChart(index) {
     
     // Сбор данных
     for (let i = 0; i < data.length; i++) {
-        const d = data[i];
-        if (d && d.месяц && monthsOrder.includes(d.месяц)) {
-            // Доходы
-            if (d.тип === 'Доход') {
-                monthlyRevenue[d.месяц] += d.сумма || 0;
-            }
-            // Расходы
-            if (d.тип === 'Расход') {
-                monthlyExpenses[d.месяц] += Math.abs(d.сумма || 0);
-            }
-            // НДС исходящий
-            if (d.статья === 'НДС' && d.подканал === 'НДС исходящий') {
-                monthlyNdsOut[d.месяц] += d.сумма || 0;
-            }
-            // Продажи в штуках
-            const article = (d.статья || '').toLowerCase();
-            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
-                monthlySales[d.месяц] += Math.abs(d.сумма || 0);
-            }
+        const row = data[i];
+        const month = row.месяц;
+        if (!month) continue;
+        
+        // Находим индекс месяца
+        const monthIndex = monthsOrder.indexOf(month);
+        if (monthIndex === -1) continue;
+        
+        // Доходы
+        if (row.тип === 'Доход') {
+            monthlyRevenue[month] += (row.сумма || 0);
+        }
+        
+        // Расходы
+        if (row.тип === 'Расход') {
+            monthlyExpenses[month] += Math.abs(row.сумма || 0);
+        }
+        
+        // НДС исходящий
+        if (row.статья === 'НДС' && row.подканал === 'НДС исходящий') {
+            monthlyNdsOut[month] += (row.сумма || 0);
+        }
+        
+        // Продажи в штуках (ищем по статье)
+        const article = (row.статья || '').toLowerCase();
+        if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+            monthlySales[month] += Math.abs(row.сумма || 0);
+        }
+        
+        // Дополнительная проверка для справочных данных
+        if (row.тип === 'Справочная' && (article.includes('продажи'))) {
+            monthlySales[month] += Math.abs(row.сумма || 0);
         }
     }
     
-    // Формируем массив месяцев, в которых есть хоть какие-то данные
-    const monthsWithData = [];
-    const netRevenueData = [];
-    const salesData = [];
-    const avgCheckData = [];
-    const efficiencyData = [];
+    console.log('Monthly sales collected:', monthlySales);
+    console.log('Monthly revenue collected:', monthlyRevenue);
     
+    // Формируем данные для графика
+    const labels = [];
+    const chartData = [];
+    
+    // Проходим по всем месяцам и собираем только те, где есть данные
     for (let i = 0; i < monthsOrder.length; i++) {
         const month = monthsOrder[i];
-        const netRevenue = monthlyRevenue[month] - monthlyNdsOut[month];
-        const profit = netRevenue - monthlyExpenses[month];
-        const avgCheck = monthlySales[month] > 0 ? netRevenue / monthlySales[month] : 0;
-        const efficiency = monthlyExpenses[month] > 0 ? profit / monthlyExpenses[month] : 0;
         
-        // Если есть хоть какие-то данные за месяц
-        if (monthlyRevenue[month] !== 0 || monthlySales[month] !== 0 || monthlyExpenses[month] !== 0) {
-            monthsWithData.push(month);
-            netRevenueData.push(netRevenue / 1000); // в тысячах
-            salesData.push(monthlySales[month]);
-            avgCheckData.push(avgCheck);
-            efficiencyData.push(efficiency);
+                // Рассчитываем чистую выручку (доходы минус НДС)
+        const netRevenue = monthlyRevenue[month] - monthlyNdsOut[month];
+        
+        let value = 0;
+        
+        // Определяем какое значение показывать в зависимости от вкладки
+        switch (tabId) {
+            case 'netRevenue':
+                value = netRevenue;
+                break;
+            case 'sales':
+                value = monthlySales[month];
+                break;
+            case 'avgCheck':
+                if (monthlySales[month] > 0) {
+                    value = netRevenue / monthlySales[month];
+                } else {
+                    value = 0;
+                }
+                break;
+            case 'efficiency':
+                const profit = netRevenue - monthlyExpenses[month];
+                if (monthlyExpenses[month] > 0) {
+                    value = profit / monthlyExpenses[month];
+                } else {
+                    value = 0;
+                }
+                break;
+            default:
+                value = netRevenue;
+        }
+        
+        // Добавляем месяц если есть данные (значение не 0)
+        if (value !== 0 || monthlyRevenue[month] !== 0 || monthlySales[month] !== 0) {
+            labels.push(month.slice(0, 3)); // "янв", "фев" и т.д.
+            chartData.push(value);
         }
     }
     
-    if (monthsWithData.length === 0) {
+    console.log('Labels for chart:', labels);
+    console.log('Chart data for tab', tabId, ':', chartData);
+    
+    // Если нет данных для графика
+    if (labels.length === 0 || chartData.every(v => v === 0)) {
         canvas.style.display = 'none';
+        console.log('No data to display for tab:', tabId);
         return;
     }
     
     canvas.style.display = 'block';
-    const labels = monthsWithData.map(m => m.slice(0, 3)); // "янв", "фев", etc.
     
-    // Выбираем данные для текущей вкладки
-    let chartData = [];
-    let yAxisLabel = '';
-    let chartColor = '';
+    const isDarkMode = document.body.classList.contains('dark');
+    const textColor = isDarkMode ? '#e2e8f0' : '#4a5568';
+    const ctx = canvas.getContext('2d');
+    
+    // Настройки для разных типов графиков
     let chartType = 'line';
+    let chartColor = '#667eea';
+    let yAxisLabel = '';
+    let formatValue = (val) => val;
     
     switch (tabId) {
         case 'netRevenue':
-            chartData = netRevenueData;
-            yAxisLabel = 'Чистая выручка (тыс. ₽)';
-            chartColor = '#48bb78';
             chartType = 'line';
+            chartColor = '#48bb78';
+            yAxisLabel = 'Чистая выручка (₽)';
+            formatValue = (val) => formatCurrency(val);
             break;
         case 'sales':
-            chartData = salesData;
-            yAxisLabel = 'Продажи (шт)';
-            chartColor = '#4299e1';
             chartType = 'bar';
+            chartColor = '#4299e1';
+            yAxisLabel = 'Продажи (шт)';
+            formatValue = (val) => val.toLocaleString('ru-RU') + ' шт';
             break;
         case 'avgCheck':
-            chartData = avgCheckData;
-            yAxisLabel = 'Средний чек (₽)';
-            chartColor = '#9f7aea';
             chartType = 'line';
+            chartColor = '#9f7aea';
+            yAxisLabel = 'Средний чек (₽)';
+            formatValue = (val) => formatCurrency(val);
             break;
         case 'efficiency':
-            chartData = efficiencyData;
-            yAxisLabel = 'Прибыль на 1₽ расходов';
+            chartType = 'line';
             chartColor = '#ed8936';
-            chartType = 'line';
+            yAxisLabel = 'Прибыль на 1₽ расходов';
+            formatValue = (val) => val.toFixed(2) + ' ₽';
             break;
-        default:
-            chartData = netRevenueData;
-            yAxisLabel = 'Чистая выручка (тыс. ₽)';
-            chartColor = '#48bb78';
-            chartType = 'line';
     }
     
-    // Проверка на пустые данные
-    if (chartData.every(v => v === 0)) {
-        canvas.style.display = 'none';
-        return;
+    // Преобразуем данные для отображения (для чистой выручки переводим в тысячи для читаемости)
+    let displayData = [...chartData];
+    if (tabId === 'netRevenue') {
+        displayData = chartData.map(v => v / 1000);
+        yAxisLabel = 'Чистая выручка (тыс. ₽)';
     }
-    
-    const ctx = canvas.getContext('2d');
     
     if (chartType === 'bar') {
-        // Гистограмма для продаж
-        const maxValue = Math.max(...chartData);
-        const minValue = Math.min(...chartData);
-        const barColors = chartData.map(value => {
+        // ГИСТОГРАММА для продаж
+        const maxValue = Math.max(...displayData);
+        const minValue = Math.min(...displayData);
+        const barColors = displayData.map(value => {
             if (value === maxValue && maxValue > 0) return '#48bb78';
-            if (value === minValue && chartData.length > 1 && minValue !== maxValue) return '#f56565';
+            if (value === minValue && displayData.length > 1 && minValue !== maxValue) return '#f56565';
             return chartColor;
         });
         
@@ -1430,7 +1488,7 @@ function renderTabChart(index) {
                 labels: labels,
                 datasets: [{
                     label: yAxisLabel,
-                    data: chartData,
+                    data: displayData,
                     backgroundColor: barColors,
                     borderColor: barColors,
                     borderWidth: 1,
@@ -1452,9 +1510,8 @@ function renderTabChart(index) {
                         borderWidth: 1,
                         callbacks: {
                             label: function(context) {
-                                let value = context.parsed.y;
-                                if (tabId === 'sales') return `📦 ${value.toLocaleString('ru-RU')} шт`;
-                                return `💰 ${value.toLocaleString('ru-RU')}`;
+                                let rawValue = chartData[context.dataIndex];
+                                return formatValue(rawValue);
                             }
                         }
                     }
@@ -1482,7 +1539,7 @@ function renderTabChart(index) {
             }
         });
     } else {
-        // Линейный график с градиентом
+        // ЛИНЕЙНЫЙ ГРАФИК с градиентом
         const gradient = ctx.createLinearGradient(0, 0, 0, 200);
         gradient.addColorStop(0, chartColor + '40');
         gradient.addColorStop(0.6, chartColor + '10');
@@ -1493,7 +1550,7 @@ function renderTabChart(index) {
             data: {
                 labels: labels,
                 datasets: [{
-                    data: chartData,
+                    data: displayData,
                     borderColor: chartColor,
                     borderWidth: 2.5,
                     pointRadius: 4,
@@ -1519,11 +1576,8 @@ function renderTabChart(index) {
                         borderWidth: 1,
                         callbacks: {
                             label: function(context) {
-                                let value = context.parsed.y;
-                                if (tabId === 'avgCheck') return `💰 ${formatCurrency(value)}`;
-                                if (tabId === 'efficiency') return `📊 ${value.toFixed(2)} ₽ прибыли`;
-                                if (tabId === 'netRevenue') return `💰 ${formatCurrency(value * 1000)}`;
-                                return `📈 ${value.toFixed(2)}`;
+                                let rawValue = chartData[context.dataIndex];
+                                return formatValue(rawValue);
                             }
                         }
                     }
@@ -1551,6 +1605,8 @@ function renderTabChart(index) {
             }
         });
     }
+    
+    console.log('Chart created successfully for tab:', tabId);
 }
 
 // ========================
