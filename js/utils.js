@@ -359,6 +359,61 @@ function renderMiniChart(elementId, data, color) {
 }
 
 // ========================
+// ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДАШБОРДА
+// ========================
+
+/**
+ * Возвращает иконку для канала продаж
+ * @param {string} channelName - название канала
+ * @returns {string} эмодзи иконка
+ */
+function getChannelIcon(channelName) {
+    const icons = {
+        'Wildberries': '🛍️',
+        'Ozon': '📦',
+        'Детский мир': '🧸',
+        'Lamoda': '👗',
+        'Оптовики': '📊',
+        'Фулфилмент': '📁'
+    };
+    return icons[channelName] || '📌';
+}
+
+/**
+ * Синхронизирует глобальные данные
+ */
+function syncGlobalData() {
+    window.originalData = window.originalData || [];
+    window.currentData = window.currentData || [];
+    window.currentFilters = window.currentFilters || { company: '', year: '', month: [], channel: '' };
+}
+
+/**
+ * Получает данные по продажам по месяцам
+ * @param {Array} data - массив данных
+ * @param {Array} monthlyLabels - массив месяцев для фильтрации
+ * @returns {Array} массив продаж по месяцам
+ */
+function getMonthlySalesData(data, monthlyLabels) {
+    if (!data || !monthlyLabels || monthlyLabels.length === 0) return [0];
+    
+    const salesByMonth = {};
+    monthlyLabels.forEach(month => { salesByMonth[month] = 0; });
+    
+    data.forEach(d => {
+        if (d && d.месяц && monthlyLabels.includes(d.месяц)) {
+            const article = d.статья?.toLowerCase() || '';
+            if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
+                salesByMonth[d.месяц] += Math.abs(d.сумма || 0);
+            }
+        }
+    });
+    
+    return monthlyLabels.map(m => salesByMonth[m] || 0);
+}
+
+
+// ========================
 // ЭКСПОРТ ФУНКЦИЙ В WINDOW
 // ========================
 
@@ -377,5 +432,8 @@ window.getMonthIndex = getMonthIndex;
 window.getChangePercent = getChangePercent;
 window.getChangeHtml = getChangeHtml;
 window.renderMiniChart = renderMiniChart;
+window.getChannelIcon = getChannelIcon;
+window.syncGlobalData = syncGlobalData;
+window.getMonthlySalesData = getMonthlySalesData;
 
 console.log('✅ utils.js: ПОЛНАЯ версия загружена');
