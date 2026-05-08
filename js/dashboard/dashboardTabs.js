@@ -86,6 +86,32 @@ function initTabsNew() {
         }, 50);
     }
     
+    // Обработчики для детализации - ВАЖНАЯ ЧАСТЬ
+    document.querySelectorAll('.tab-breakdown-header').forEach(header => {
+        // Убираем старый обработчик, чтобы не было дублирования
+        header.removeEventListener('click', header._clickHandler);
+        
+        // Создаём новый обработчик
+        const clickHandler = (e) => {
+            e.stopPropagation();
+            const tabId = header.dataset.tab;
+            const content = document.getElementById(`breakdown_${tabId}`);
+            if (content) {
+                if (content.classList.contains('show')) {
+                    content.classList.remove('show');
+                    header.classList.remove('open');
+                } else {
+                    content.classList.add('show');
+                    header.classList.add('open');
+                }
+            }
+        };
+        
+        header._clickHandler = clickHandler;
+        header.addEventListener('click', clickHandler);
+    });
+    
+    // Автопереключение вкладок
     function startAutoSwitch() { 
         if (tabInterval) clearInterval(tabInterval); 
         tabInterval = setInterval(() => { 
@@ -113,22 +139,6 @@ function initTabsNew() {
         tabsContainer.addEventListener('mouseenter', stopAutoSwitch); 
         tabsContainer.addEventListener('mouseleave', startAutoSwitch); 
     }
-    
-    document.querySelectorAll('.tab-breakdown-header').forEach(header => {
-        header.addEventListener('click', () => {
-            const tabId = header.dataset.tab;
-            const content = document.getElementById(`breakdown_${tabId}`);
-            if (content) {
-                if (content.classList.contains('show')) {
-                    content.classList.remove('show');
-                    header.classList.remove('open');
-                } else {
-                    content.classList.add('show');
-                    header.classList.add('open');
-                }
-            }
-        });
-    });
     
     startAutoSwitch();
 }
