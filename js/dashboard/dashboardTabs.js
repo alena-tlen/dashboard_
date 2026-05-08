@@ -37,22 +37,24 @@ function generateTabsPanel() {
         </div>
         <div class="tabs-content" id="tabsContent">
             ${tabs.map((tab, idx) => `<div class="tab-pane ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}">
-                <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>
-                ${tab.trend && tab.trend.html ? `<div class="tab-trend ${tab.trend.class}">${tab.trend.html} <span style="margin-left: 4px; opacity: 0.7;">к предыдущему периоду</span></div>` : ''}
-                <div class="tab-chart-container">
-                    <canvas id="tabChart_${tab.id}" style="height: 200px; width: 100%;"></canvas>
-                </div>
-                <div class="tab-breakdown-header" data-tab="${tab.id}">
-                    <span class="breakdown-title">📊 Детализация по каналам</span>
-                    <span class="breakdown-toggle">▼</span>
-                </div>
-                <div class="tab-breakdown-content" id="breakdown_${tab.id}">
-                    ${tab.id === 'netRevenue' ? generateFullChannelBreakdown('ВЫРУЧКА ЧИСТАЯ ПО КАНАЛАМ', netRevenueByChannel, true, '') : 
-                      tab.id === 'sales' ? generateFullSalesBreakdown(window.currentData) :
-                      tab.id === 'avgCheck' ? generateFullAverageCheckBreakdown(window.currentData) :
-                      generateFullEfficiencyBreakdown(window.currentData)}
-                </div>
-            </div>`).join('')}
+    <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>
+    ${tab.trend && tab.trend.html ? `<div class="tab-trend ${tab.trend.class}">${tab.trend.html} <span style="margin-left: 4px; opacity: 0.7;">к предыдущему периоду</span></div>` : ''}
+    <!-- СНАЧАЛА ДЕТАЛИЗАЦИЯ -->
+    <div class="tab-breakdown-header" data-tab="${tab.id}">
+        <span class="breakdown-title">📊 Детализация по каналам</span>
+        <span class="breakdown-toggle">▼</span>
+    </div>
+    <div class="tab-breakdown-content" id="breakdown_${tab.id}">
+        ${tab.id === 'netRevenue' ? generateFullChannelBreakdown('ВЫРУЧКА ЧИСТАЯ ПО КАНАЛАМ', netRevenueByChannel, true, '') : 
+          tab.id === 'sales' ? generateFullSalesBreakdown(window.currentData) :
+          tab.id === 'avgCheck' ? generateFullAverageCheckBreakdown(window.currentData) :
+          generateFullEfficiencyBreakdown(window.currentData)}
+    </div>
+    <!-- ПОТОМ ГРАФИК -->
+    <div class="tab-chart-container">
+        <canvas id="tabChart_${tab.id}" style="height: 200px; width: 100%;"></canvas>
+    </div>
+</div>`).join('')}
         </div>
     </div>`;
     
