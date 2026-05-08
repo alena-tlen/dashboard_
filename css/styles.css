@@ -725,7 +725,7 @@ body.dark .metric-title {
 }
 
 /* ========================
-   ВКЛАДКИ (MODERN TABS) - ЕДИНАЯ ВЕРСИЯ
+   ВКЛАДКИ (MODERN TABS) - ДЕТАЛИЗАЦИЯ СВЕРХУ, ГРАФИК СНИЗУ
    ======================== */
 
 .modern-tabs-container {
@@ -828,36 +828,27 @@ body.dark .tab-btn {
     color: #f56565;
 }
 
-/* Контейнер для графика во вкладке */
-.tab-chart-container {
-    margin: 16px 0;
-    padding: 0;
-    height: 200px;
-    width: 100%;
-    position: relative;
-}
+/* ========== ПОРЯДОК ЭЛЕМЕНТОВ ========== */
+/* Детализация СВЕРХУ, график СНИЗУ */
 
-.tab-chart-container canvas {
-    width: 100% !important;
-    height: 200px !important;
-    display: block;
-    image-rendering: crisp-edges; /* Добавьте эту строку */
-}
-
-/* Заголовок детализации - всегда под графиком */
+/* Заголовок детализации - ПЕРВЫЙ после значения */
 .tab-breakdown-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 12px 0;
-    margin-top: 8px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 600;
     color: #667eea;
     border-top: 1px solid rgba(102, 126, 234, 0.2);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
     transition: all 0.2s;
-    clear: both;
+    margin-bottom: 12px;
+}
+
+.tab-breakdown-header:hover {
+    color: #5a67d8;
 }
 
 .breakdown-title {
@@ -875,20 +866,39 @@ body.dark .tab-btn {
     transform: rotate(180deg);
 }
 
+/* Контент детализации - раскрывается плавно, график сдвигается вниз */
 .tab-breakdown-content {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.4s ease;
+    margin-bottom: 0;
 }
 
 .tab-breakdown-content.show {
     max-height: 500px;
     overflow-y: auto;
+    margin-bottom: 16px;
 }
 
-canvas {
-    max-width: 100%;
-    height: auto;
+/* Контейнер для графика - ВНИЗУ */
+.tab-chart-container {
+    margin: 16px 0 0 0;
+    padding: 0;
+    height: 200px;
+    width: 100%;
+    position: relative;
+    transition: margin 0.3s ease;
+}
+
+.tab-chart-container canvas {
+    width: 100% !important;
+    height: 200px !important;
+    display: block;
+}
+
+/* Когда детализация открыта, график остается внизу */
+.tab-breakdown-content.show + .tab-chart-container {
+    margin-top: 16px;
 }
 
 /* ========================
