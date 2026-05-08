@@ -192,7 +192,7 @@ function renderSingleTabChart(index) {
         monthlyNdsOut[month] = 0;
     }
     
-    // СБОР ДАННЫХ
+    // СБОР ДАННЫХ - ИСПРАВЛЕННАЯ ВЕРСИЯ ДЛЯ ВАШЕЙ СТРУКТУРЫ
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const month = row.месяц;
@@ -201,12 +201,12 @@ function renderSingleTabChart(index) {
         const monthIndex = monthsOrder.indexOf(month);
         if (monthIndex === -1) continue;
         
-        // Доходы
+        // Доходы (тип = 'Доход')
         if (row.тип === 'Доход') {
             monthlyRevenue[month] += (row.сумма || 0);
         }
         
-        // Расходы
+        // Расходы (тип = 'Расход')
         if (row.тип === 'Расход') {
             monthlyExpenses[month] += Math.abs(row.сумма || 0);
         }
@@ -216,22 +216,55 @@ function renderSingleTabChart(index) {
             monthlyNdsOut[month] += (row.сумма || 0);
         }
         
-        // Продажи в штуках
+        // ========== ПРОДАЖИ В ШТУКАХ - ДЛЯ ВАШЕЙ СТРУКТУРЫ ==========
+        // У вас: Статья = "Справочно", Подканал = "Продажи шт."
         const article = (row.статья || '').toLowerCase();
-        if (article.includes('продажи') && (article.includes('шт') || article.includes('штук'))) {
-            monthlySales[month] += Math.abs(row.сумма || 0);
+        const subCategory = (row.подканал || '').toLowerCase();
+        
+        // Проверка на продажи в штуках
+        let isSales = false;
+        
+        // Вариант 1: Подканал содержит "продажи" и "шт"
+        if (subCategory.includes('продажи') && subCategory.includes('шт')) {
+            isSales = true;
+        }
+        // Вариант 2: Подканал точно равен "Продажи шт." (регистр не важен)
+        else if (subCategory === 'продажи шт.' || subCategory === 'продажи шт') {
+            isSales = true;
+        }
+        // Вариант 3: Статья или подканал содержат "продажи шт"
+        else if (article.includes('продажи шт') || subCategory.includes('продажи шт')) {
+            isSales = true;
+        }
+        // Вариант 4: Тип "Справочная" и подканал содержит "продажи"
+        else if (row.тип === 'Справочная' && subCategory.includes('продажи')) {
+            isSales = true;
         }
         
-        // Справочные данные по продажам
-        if (row.тип === 'Справочная' && article.includes('продажи')) {
-            monthlySales[month] += Math.abs(row.сумма || 0);
+        if (isSales) {
+            const salesAmount = Math.abs(row.сумма || 0);
+            monthlySales[month] += salesAmount;
+            console.log(`📦 Продажи найдены: месяц=${month}, сумма=${salesAmount}, статья=${row.статья}, подканал=${row.подканал}`);
         }
     }
     
+    // ДИАГНОСТИКА: выводим ВСЕ строки с продажами
+    console.log('🔍 ДИАГНОСТИКА: поиск продаж в данных...');
+    let salesRowsCount = 0;
+    for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const subCategory = (row.подканал || '').toLowerCase();
+        if (subCategory.includes('продажи') && subCategory.includes('шт')) {
+            salesRowsCount++;
+            console.log(`  Найдено: месяц=${row.месяц}, статья=${row.статья}, подканал=${row.подканал}, сумма=${row.сумма}, тип=${row.тип}`);
+        }
+    }
+    console.log(`📊 Всего найдено строк с продажами: ${salesRowsCount}`);
+    
     console.log('📊 Собраны данные по месяцам:');
-    console.log('  Выручка:', monthlyRevenue);
-    console.log('  Продажи:', monthlySales);
-    console.log('  Расходы:', monthlyExpenses);
+    console.log('  Выручка:', JSON.stringify(monthlyRevenue));
+    console.log('  Продажи (шт):', JSON.stringify(monthlySales));
+    console.log('  Расходы:', JSON.stringify(monthlyExpenses));
     
     // Формируем данные для графика
     const labels = [];
@@ -265,15 +298,37 @@ function renderSingleTabChart(index) {
         }
     }
     
-    console.log('📊 Данные для графика:', { labels, chartData, tabId });
+    console.log(`📊 Данные для графика (${tabId}):`, { labels, chartData });
     
+    // Если нет данных для графика
     if (labels.length === 0 || chartData.every(v => v === 0)) {
         canvas.style.display = 'none';
+        // Показываем сообщение об отсутствии данных для вкладки продаж
+        if (tabId === 'sales') {
+            const container = canvas.closest('.tab-chart-container');
+            if (container) {
+                const existingMsg = container.querySelector('.no-data-message');
+                if (!existingMsg) {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'no-data-message';
+                    msgDiv.style.cssText = 'text-align: center; padding: 60px 20px; color: #a0aec0; font-size: 14px;';
+                    msgDiv.innerHTML = '📊 Нет данных по продажам в штуках<br><small>Проверьте наличие в Excel: Статья="Справочно", Подканал="Продажи шт."</small>';
+                    container.appendChild(msgDiv);
+                    setTimeout(() => { if (msgDiv.parentNode) msgDiv.remove(); }, 5000);
+                }
+            }
+        }
         console.log('❌ Нет данных для отображения графика');
         return;
     }
     
     canvas.style.display = 'block';
+    // Удаляем сообщение об отсутствии данных, если оно есть
+    const container = canvas.closest('.tab-chart-container');
+    if (container) {
+        const existingMsg = container.querySelector('.no-data-message');
+        if (existingMsg) existingMsg.remove();
+    }
     
     const isDarkMode = document.body.classList.contains('dark');
     const textColor = isDarkMode ? '#e2e8f0' : '#4a5568';
