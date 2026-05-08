@@ -1487,3 +1487,366 @@ body.dark .cash-sidebar {
     color: #4299e1;
 }
 
+/* ========================
+   AI АНАЛИТИК - ВОССТАНОВЛЕНИЕ
+   ======================== */
+
+.ai-agent-card {
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(102,126,234,0.3);
+}
+
+.ai-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ai-icon {
+    font-size: 28px;
+    background: #667eea;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.ai-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.ai-subtitle {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.ai-chat-messages {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+}
+
+.ai-message {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.ai-message.user {
+    background: rgba(102,126,234,0.2);
+    border-left: 3px solid #667eea;
+}
+
+.ai-message.assistant {
+    background: rgba(72,187,120,0.1);
+    border-left: 3px solid #48bb78;
+}
+
+.ai-input-area {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.ai-input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    background: white;
+    font-size: 14px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+body.dark .ai-input {
+    background: #0f0f1a;
+    border-color: #2d2d3a;
+    color: #e4e4e7;
+}
+
+.ai-suggestions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.ai-suggestion {
+    padding: 6px 12px;
+    background: rgba(102,126,234,0.2);
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ai-suggestion:hover {
+    background: rgba(102,126,234,0.4);
+    transform: translateY(-1px);
+}
+
+/* ========================
+   МОДАЛЬНОЕ ОКНО ФИЛЬТРОВ - ВОССТАНОВЛЕНИЕ
+   ======================== */
+
+.filter-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.filter-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.filter-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    padding: 0;
+    transform: scale(0.9);
+    transition: all 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+.filter-modal.active .filter-modal-content {
+    transform: scale(1);
+}
+
+body.dark .filter-modal-content {
+    background: #1a1a2a;
+    border: 1px solid #2d2d3a;
+}
+
+.filter-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(102,126,234,0.2);
+    background: rgba(102,126,234,0.05);
+}
+
+.filter-modal-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #667eea;
+    margin: 0;
+}
+
+.filter-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #a0aec0;
+    transition: all 0.2s;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.filter-modal-close:hover {
+    background: rgba(245,101,101,0.1);
+    color: #f56565;
+}
+
+.filter-modal-body {
+    padding: 24px;
+}
+
+.filter-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(102,126,234,0.2);
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: rgba(102,126,234,0.03);
+}
+
+.filter-group {
+    margin-bottom: 20px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.filter-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+body.dark .filter-group select {
+    background: #0f0f1a;
+    border-color: #2d2d3a;
+    color: #e4e4e7;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.2);
+}
+
+.filter-group select[multiple] {
+    min-height: 100px;
+}
+
+.filter-modal-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-modal-btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.filter-modal-btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+}
+
+.filter-modal-btn-secondary {
+    background: rgba(245,101,101,0.1);
+    color: #f56565;
+}
+
+.filter-modal-btn-secondary:hover {
+    background: rgba(245,101,101,0.2);
+}
+
+/* ========================
+   ПЛАВАЮЩАЯ КНОПКА ФИЛЬТРОВ
+   ======================== */
+
+.floating-filter-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(102,126,234,0.4);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    color: white;
+    font-size: 28px;
+    animation: pulse 2s infinite;
+}
+
+.floating-filter-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.6);
+}
+
+.floating-filter-btn:active {
+    transform: scale(0.95);
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(102,126,234,0); }
+    100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
+}
+
+/* ========================
+   АНИМАЦИИ УВЕДОМЛЕНИЙ
+   ======================== */
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+#temporaryNotification {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 10000;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    animation: slideInRight 0.3s ease-out;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    color: white;
+}
+
+#temporaryNotification:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
