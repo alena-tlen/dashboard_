@@ -1,6 +1,6 @@
-// ========================
+// =======================
 // dashboardBreakdown.js - ВСЕ РАЗБИВКИ ДЛЯ ВКЛАДОК
-// ========================
+// =======================
 
 function generateFullChannelBreakdown(title, channels, isCurrency = true, suffix = '') {
     if (!channels || channels.length === 0) {
