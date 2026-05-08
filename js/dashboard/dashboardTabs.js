@@ -38,6 +38,7 @@ function generateTabsPanel() {
         <div class="tabs-content" id="tabsContent">
             ${tabs.map((tab, idx) => `<div class="tab-pane ${idx === 0 ? 'active' : ''}" data-tab="${tab.id}">
                 <div class="tab-main-value" style="color: ${tab.valueColor}">${tab.value}</div>
+                ${tab.trend && tab.trend.html ? `<div class="tab-trend ${tab.trend.class}">${tab.trend.html} <span style="margin-left: 4px; opacity: 0.7;">к предыдущему периоду</span></div>` : ''}
                 <div class="tab-chart-container">
                     <canvas id="tabChart_${tab.id}" style="height: 200px; width: 100%;"></canvas>
                 </div>
@@ -509,6 +510,13 @@ function renderSingleTabChart(index) {
     }
     
     console.log('✅ График создан для вкладки:', tabId);
+
+    // Принудительное обновление размеров canvas
+setTimeout(() => {
+    if (window.tabCharts && window.tabCharts[tabId]) {
+        window.tabCharts[tabId].resize();
+    }
+}, 100);
 }
 
 console.log('✅ dashboardTabs.js: загружен');
