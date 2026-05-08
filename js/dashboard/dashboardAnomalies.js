@@ -1,6 +1,6 @@
-// ========================
+// =======================
 // dashboardAnomalies.js - АНОМАЛИИ И ВЫБРОСЫ
-// ========================
+// =======================
 
 function renderAnomaliesBlock(data, f, totalSalesQuantity, avgCheck) {
     const anomalies = window.detectAnomalies ? window.detectAnomalies(data, f, totalSalesQuantity, avgCheck) : [];
