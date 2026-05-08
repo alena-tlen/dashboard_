@@ -1,6 +1,6 @@
-// ========================
+// =======================
 // dashboardScenario.js - СЦЕНАРНЫЙ АНАЛИЗ С ПОЛЗУНКАМИ
-// ========================
+// =======================
 
 let currentScenario = { revenueGrowth: 0, expenseGrowth: 0, ndsGrowth: 0, priceChange: 0, volumeChange: 0 };
 
