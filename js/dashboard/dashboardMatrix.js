@@ -1,6 +1,6 @@
-// ========================
+// =======================
 // dashboardMatrix.js - МАТРИЦА 4 КВАДРАНТОВ
-// ========================
+// =======================
 
 function renderQuadrantMatrix(data, f) {
     const channels = ['Wildberries', 'Ozon', 'Детский мир', 'Lamoda', 'Оптовики', 'Фулфилмент'];
