@@ -725,25 +725,30 @@ body.dark .metric-title {
 }
 
 /* ========================
-   ВКЛАДКИ (MODERN TABS)
+   ВКЛАДКИ (MODERN TABS) - ЕДИНАЯ ВЕРСИЯ
    ======================== */
 
 .modern-tabs-container {
-    background: transparent;
-    border-radius: 16px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: background 0.3s ease;
+}
+
+body.dark .modern-tabs-container {
+    background: rgba(26, 26, 42, 0.95);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .tabs-header {
     display: flex;
     gap: 8px;
-    background: rgba(102,126,234,0.08);
+    background: rgba(102, 126, 234, 0.1);
     padding: 6px;
-    border-radius: 14px;
+    border-radius: 16px;
     margin-bottom: 20px;
-    backdrop-filter: blur(10px);
 }
 
 .tab-btn {
@@ -752,13 +757,13 @@ body.dark .metric-title {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 10px 16px;
     background: transparent;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: #4a5568;
 }
@@ -770,36 +775,16 @@ body.dark .tab-btn {
 .tab-btn.active {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
-    box-shadow: 0 2px 8px rgba(102,126,234,0.3);
-}
-
-.tab-btn.active .tab-icon {
-    transform: scale(1.1);
-}
-
-.tab-btn:hover:not(.active) {
-    background: rgba(102,126,234,0.15);
-    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .tab-icon {
-    font-size: 16px;
-    transition: transform 0.2s;
-}
-
-.tab-title {
-    font-size: 12px;
-    white-space: nowrap;
-}
-
-.tabs-content {
-    flex: 1;
-    overflow: hidden;
+    font-size: 18px;
 }
 
 .tab-pane {
     display: none;
-    animation: fadeIn 0.4s ease;
+    animation: fadeIn 0.4s ease-out;
 }
 
 .tab-pane.active {
@@ -807,85 +792,77 @@ body.dark .tab-btn {
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .tab-main-value {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 800;
-    margin-bottom: 8px;
-    line-height: 1.2;
     text-align: center;
+    margin-bottom: 8px;
 }
 
 .tab-trend {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 12px;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     margin-bottom: 16px;
-    text-align: center;
     width: auto;
     margin-left: auto;
     margin-right: auto;
 }
 
 .trend-positive {
-    background: rgba(72, 187, 120, 0.12);
+    background: rgba(72, 187, 120, 0.15);
     color: #48bb78;
 }
 
 .trend-negative {
-    background: rgba(245, 101, 101, 0.12);
+    background: rgba(245, 101, 101, 0.15);
     color: #f56565;
 }
 
-.trend-arrow {
-    font-size: 12px;
-}
-
-.trend-value {
-    font-weight: 700;
-}
-
+/* Контейнер для графика во вкладке */
 .tab-chart-container {
     margin: 16px 0;
-    padding: 12px 0;
-    border-top: 1px solid rgba(102, 126, 234, 0.1);
-    border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+    padding: 0;
+    height: 200px;
+    width: 100%;
+    position: relative;
 }
 
+.tab-chart-container canvas {
+    width: 100% !important;
+    height: 200px !important;
+    display: block;
+}
+
+/* Заголовок детализации - всегда под графиком */
 .tab-breakdown-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0 8px;
+    padding: 12px 0;
+    margin-top: 8px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: #667eea;
-    border-top: 1px solid rgba(102, 126, 234, 0.1);
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
     transition: all 0.2s;
-}
-
-.tab-breakdown-header:hover {
-    color: #5a67d8;
+    clear: both;
 }
 
 .breakdown-title {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .breakdown-toggle {
@@ -900,16 +877,22 @@ body.dark .tab-btn {
 .tab-breakdown-content {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: max-height 0.4s ease;
 }
 
 .tab-breakdown-content.show {
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
 }
 
-.breakdown-list {
-    padding: 12px 0;
+/* Улучшение чёткости графиков */
+.tab-chart-container canvas {
+    image-rendering: auto;
+}
+
+canvas {
+    max-width: 100%;
+    height: auto;
 }
 
 /* ========================
@@ -1480,7 +1463,7 @@ body.dark .cash-sidebar {
 .cash-detail-row {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: 12px;	
     padding: 6px 0;
     border-bottom: 1px solid rgba(102,126,234,0.1);
 }
@@ -1498,1493 +1481,3 @@ body.dark .cash-sidebar {
     color: #4299e1;
 }
 
-/* ========================
-   ГРАФИКИ
-   ======================== */
-
-body.dark .chart-gradient-overlay {
-    background: linear-gradient(to bottom, rgba(26,26,42,0), rgba(26,26,42,0.1));
-}
-
-#salesChart {
-    transition: all 0.3s ease;
-}
-
-#salesChart:hover {
-    opacity: 0.95;
-}
-
-#ndsToRevenueChart {
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-#ndsToRevenueChart:hover {
-    opacity: 0.95;
-}
-
-/* ========================
-   СТРАНИЦА ОДДС
-   ======================== */
-
-#oddsPageContainer input[type="date"] {
-    background: transparent;
-    transition: all 0.2s ease;
-}
-
-body.light #oddsPageContainer input[type="date"] {
-    background: white;
-    border-color: #e2e8f0;
-    color: #1a1a2e;
-}
-
-body.dark #oddsPageContainer input[type="date"] {
-    background: #0f0f1a;
-    border-color: #2d2d3a;
-    color: #e2e8f0;
-}
-
-#oddsPageContainer input[type="date"]:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102,126,234,0.2);
-}
-
-.odds-quick-btn {
-    transition: all 0.2s ease;
-}
-
-.odds-quick-btn:hover {
-    background: rgba(102,126,234,0.3) !important;
-    transform: translateY(-1px);
-}
-
-.odds-section-card {
-    background: white;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
-}
-
-body.dark .odds-section-card {
-    background: #1a1a2a;
-    border: 1px solid #2d2d3a;
-}
-
-.odds-section-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.odds-stat-item {
-    background: rgba(102,126,234,0.08);
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-.odds-stat-item:hover {
-    transform: scale(1.02);
-    background: rgba(102,126,234,0.15);
-}
-
-.odds-cashflow-positive {
-    animation: pulseCashflow 1s ease-in-out;
-}
-
-@keyframes pulseCashflow {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-/* Скрытие плавающей кнопки на странице ОДДС */
-body:has(#page-odds.active) .floating-filter-btn {
-    display: none !important;
-}
-
-/* ========================
-   СТРАНИЦА ABC/XYZ
-   ======================== */
-
-.abcxyz-container .metric-card {
-    overflow: visible;
-}
-
-#paretoChart {
-    max-height: 300px;
-}
-
-/* ========================
-   AI АНАЛИТИК
-   ======================== */
-
-.ai-agent-card {
-    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 24px;
-    border: 1px solid rgba(102,126,234,0.3);
-}
-
-.ai-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.ai-icon {
-    font-size: 28px;
-    background: #667eea;
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.ai-title {
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.ai-subtitle {
-    font-size: 12px;
-    opacity: 0.7;
-}
-
-.ai-message {
-    padding: 16px;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    line-height: 1.5;
-}
-
-.ai-message.user {
-    background: rgba(102,126,234,0.2);
-    border-left: 3px solid #667eea;
-}
-
-.ai-message.assistant {
-    background: rgba(72,187,120,0.1);
-    border-left: 3px solid #48bb78;
-}
-
-.ai-input-area {
-    display: flex;
-    gap: 12px;
-    margin-top: 16px;
-}
-
-.ai-input {
-    flex: 1;
-    padding: 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    background: white;
-    font-size: 14px;
-    resize: vertical;
-}
-
-body.dark .ai-input {
-    background: #0f0f1a;
-    border-color: #2d2d3a;
-    color: #e4e4e7;
-}
-
-.ai-suggestions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 12px;
-}
-
-.ai-suggestion {
-    padding: 6px 12px;
-    background: rgba(102,126,234,0.2);
-    border-radius: 20px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.ai-suggestion:hover {
-    background: rgba(102,126,234,0.4);
-}
-
-/* ========================
-   МЕТРИКИ И ИЗМЕНЕНИЯ
-   ======================== */
-
-.metric-change {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 10px !important;
-    border-radius: 8px !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-    color: #1a1a2e !important;
-    margin-left: 12px !important;
-    vertical-align: middle !important;
-}
-
-.change-positive {
-    background: linear-gradient(135deg, #54db63, #e5f230) !important;
-    box-shadow: 0 2px 4px rgba(72,187,120,0.3);
-}
-
-.change-negative {
-    background: linear-gradient(135deg, #f237ef, #fc5252) !important;
-    box-shadow: 0 2px 4px rgba(245,101,101,0.3);
-}
-
-body.dark .metric-change {
-    color: #1a1a2e !important;
-}
-
-/* ========================
-   ПЛАВАЮЩАЯ КНОПКА ФИЛЬТРОВ
-   ======================== */
-
-.floating-filter-btn {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 15px rgba(102,126,234,0.4);
-    transition: all 0.3s ease;
-    z-index: 1000;
-    color: white;
-    font-size: 28px;
-    animation: pulse 2s infinite;
-}
-
-.floating-filter-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(102,126,234,0.6);
-}
-
-.floating-filter-btn:active {
-    transform: scale(0.95);
-}
-
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(102,126,234,0); }
-    100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
-}
-
-/* Пульсация для красной карточки убытка */
-@keyframes pulseRed {
-    0% {
-        box-shadow: 0 0 0 0 rgba(245,101,101,0.4);
-        border-color: #f56565;
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(245,101,101,0);
-        border-color: #f56565;
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(245,101,101,0);
-        border-color: #f56565;
-    }
-}
-
-/* ========================
-   МОДАЛЬНОЕ ОКНО ФИЛЬТРОВ
-   ======================== */
-
-.filter-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(5px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-}
-
-.filter-modal.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-.filter-modal-content {
-    background: white;
-    border-radius: 20px;
-    width: 90%;
-    max-width: 500px;
-    padding: 0;
-    transform: scale(0.9);
-    transition: all 0.3s ease;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    overflow: hidden;
-}
-
-.filter-modal.active .filter-modal-content {
-    transform: scale(1);
-}
-
-body.dark .filter-modal-content {
-    background: #1a1a2a;
-    border: 1px solid #2d2d3a;
-}
-
-.filter-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid rgba(102,126,234,0.2);
-    background: rgba(102,126,234,0.05);
-}
-
-.filter-modal-header h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #667eea;
-    margin: 0;
-}
-
-.filter-modal-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #a0aec0;
-    transition: all 0.2s;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
-
-.filter-modal-close:hover {
-    background: rgba(245,101,101,0.1);
-    color: #f56565;
-}
-
-.filter-modal-body {
-    padding: 24px;
-}
-
-.filter-modal-footer {
-    padding: 16px 24px;
-    border-top: 1px solid rgba(102,126,234,0.2);
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    background: rgba(102,126,234,0.03);
-}
-
-.filter-group {
-    margin-bottom: 20px;
-}
-
-.filter-group label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: #667eea;
-    margin-bottom: 8px;
-}
-
-.filter-group select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    font-size: 14px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-body.dark .filter-group select {
-    background: #0f0f1a;
-    border-color: #2d2d3a;
-    color: #e4e4e7;
-}
-
-.filter-group select:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102,126,234,0.2);
-}
-
-.filter-group select[multiple] {
-    min-height: 100px;
-}
-
-.filter-modal-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.filter-modal-btn-primary {
-    background: #667eea;
-    color: white;
-}
-
-.filter-modal-btn-primary:hover {
-    background: #5a67d8;
-    transform: translateY(-1px);
-}
-
-.filter-modal-btn-secondary {
-    background: rgba(245,101,101,0.1);
-    color: #f56565;
-}
-
-.filter-modal-btn-secondary:hover {
-    background: rgba(245,101,101,0.2);
-}
-
-/* ========================
-   АНИМАЦИИ УВЕДОМЛЕНИЙ
-   ======================== */
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOutRight {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-}
-
-#temporaryNotification:hover {
-    transform: scale(1.02);
-    transition: transform 0.2s ease;
-}
-
-/* ========================
-   АДАПТИВНОСТЬ
-   ======================== */
-
-@media (max-width: 1024px) {
-    .container {
-        display: flex;
-        max-width: 1600px;
-        margin: 0;
-        min-height: calc(100vh - 100px);
-        width: 100%;
-    }
-    
-    .sidebar-nav {
-        width: auto;
-        margin: 20px;
-        position: static;
-    }
-    
-    .right-sidebar {
-        width: auto;
-        margin: 0 20px 20px 20px;
-        position: static;
-    }
-    
-    .main-content {
-        margin: 0 20px 20px 20px;
-    }
-    
-    .dashboard-two-columns {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    .dashboard-col {
-        height: auto;
-    }
-    
-    .dashboard-metrics-grid {
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 16px;
-    }
-}
-
-@media (max-width: 768px) {
-    .container {
-        flex-direction: column;
-    }
-    
-    .sidebar-nav {
-        width: auto;
-        margin: 20px;
-        position: static;
-    }
-    
-    .header {
-        margin: 12px 12px 0 12px;
-        padding: 16px 20px;
-    }
-    
-    .header-content {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 16px;
-    }
-    
-    .logo-section {
-        justify-content: center;
-    }
-    
-    .buttons-section {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    .logo-text h1 {
-        font-size: 16px;
-    }
-    
-    .logo-text p {
-        font-size: 11px;
-    }
-    
-    .logo-icon {
-        font-size: 32px;
-        width: 48px;
-        height: 48px;
-    }
-    
-    .metrics-grid {
-        grid-template-columns: 1fr !important;
-        gap: 16px !important;
-        margin-bottom: 16px !important;
-    }
-    
-    .metric-title {
-        font-size: 14px !important;
-    }
-    
-    .metric-value {
-        font-size: 24px !important;
-    }
-    
-    /* Вкладки на мобильных */
-    .tabs-header {
-        gap: 4px;
-        padding: 4px;
-    }
-    
-    .tab-btn {
-        padding: 8px 4px;
-        font-size: 11px;
-    }
-    
-    .tab-btn .tab-icon {
-        font-size: 14px;
-    }
-    
-    .tab-main-value {
-        font-size: 24px;
-    }
-    
-    /* Скрываем текст на кнопках вкладок на очень маленьких экранах */
-    @media (max-width: 480px) {
-        .tab-btn .tab-title {
-            display: none;
-        }
-        
-        .tab-btn {
-            padding: 8px;
-        }
-        
-        .tab-btn .tab-icon {
-            font-size: 18px;
-        }
-    }
-    
-    /* Карточки с внутренними flex-контейнерами */
-    .metric-card > div[style*="display: flex"] {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 12px !important;
-    }
-    
-    .channel-header {
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-    }
-    
-    .channel-total {
-        font-size: 12px !important;
-    }
-    
-    .sub-item > div {
-        flex-direction: column !important;
-        gap: 6px !important;
-    }
-}
-
-@media (max-width: 480px) {
-    .tab-btn .tab-title {
-        display: none;
-    }
-    
-    .tab-btn {
-        padding: 8px;
-    }
-    
-    .tab-btn .tab-icon {
-        font-size: 18px;
-    }
-}
-
-/* ========================
-   ПЛАВНЫЕ ПЕРЕХОДЫ
-   ======================== */
-
-.metric-card,
-.revenue-chart-wrapper canvas,
-.channels-main-container,
-.channel-item,
-.sub-item,
-button,
-select,
-.ai-message {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-/* Явные стили для светлой темы */
-body.light .metric-card {
-    background: #ffffff !important;
-    border: 1px solid #e5e7eb !important;
-}
-
-body.light .metric-card .metric-title {
-    color: #4a5568 !important;
-}
-
-body.light .metric-card .metric-value {
-    color: #1a1a2e !important;
-}
-
-body.light .channels-main-container {
-    background: transparent !important;
-}
-
-/* Явные стили для темной темы */
-body.dark .metric-card {
-    background: #1a1a2a !important;
-    border: 1px solid #2d2d3a !important;
-}
-
-body.dark .metric-card .metric-title {
-    color: #a0aec0 !important;
-}
-
-body.dark .metric-card .metric-value {
-    color: #e2e8f0 !important;
-}
-
-/* Стили для скролла */
-.channels-main-container::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-}
-
-.channels-main-container::-webkit-scrollbar-track {
-    background: rgba(102,126,234,0.1);
-    border-radius: 4px;
-}
-
-.channels-main-container::-webkit-scrollbar-thumb {
-    background: rgba(102,126,234,0.3);
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-
-.channels-main-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(102,126,234,0.6);
-}
-
-.channels-main-container {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(102,126,234,0.3) rgba(102,126,234,0.1);
-}
-
-/* Для всех canvas внутри метрик */
-.metric-card canvas {
-    max-width: 100%;
-    height: auto;
-}
-
-/* ========================
-   ГРАФИКИ
-   ======================== */
-
-.revenue-chart-wrapper {
-    margin-left: -20px !important;
-    margin-right: -20px !important;
-    margin-bottom: -20px !important;
-    width: calc(100% + 40px) !important;
-    height: 80px !important;
-    min-height: 80px !important;
-    max-height: 80px !important;
-    overflow: hidden;
-}
-
-.revenue-chart-wrapper canvas {
-    display: block;
-    width: 100% !important;
-    height: 80px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.revenue-chart-wrapper:hover canvas {
-    opacity: 1;
-}
-
-/* Графики во вкладках */
-.tab-chart-container {
-    margin: 0 !important;
-    padding: 0 !important;
-    height: 80px !important;
-    min-height: 80px !important;
-    max-height: 80px !important;
-}
-
-.tab-chart-container canvas {
-    display: block;
-    width: 100% !important;
-    height: 80px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* Убираем лишние отступы в карточке метрики */
-.metric-card {
-    padding-bottom: 0 !important;
-    overflow: hidden;
-}
-
-/* Убираем бордеры у контейнеров с графиками во вкладках */
-.tab-chart-container {
-    border-top: none !important;
-    border-bottom: none !important;
-}
-
-/* Убираем лишние отступы в контейнерах каналов */
-.channels-revenue-container,
-.channels-expense-container {
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-
-/* ========================
-   СТИЛИ ДЛЯ КАРТОЧЕК БЕЗ ГРАФИКОВ
-   ======================== */
-
-.metric-card.no-chart {
-    padding-bottom: 20px !important;
-}
-
-.metric-card.no-chart .revenue-chart-wrapper,
-.metric-card.no-chart canvas {
-    display: none !important;
-}
-
-/* Убираем лишние отступы у контейнеров с графиками */
-.revenue-chart-wrapper {
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: auto !important;
-    transition: all 0.3s ease;
-}
-
-/* ========================
-   ПОЛНОЕ ИСПРАВЛЕНИЕ ГРАФИКОВ И ОТСТУПОВ
-   ======================== */
-
-/* 1. Контейнеры графиков - строго от края до края */
-.revenue-chart-wrapper {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    min-height: 70px !important;
-    max-height: 70px !important;
-    overflow: hidden !important;
-    position: relative !important;
-    left: 0 !important;
-    right: 0 !important;
-}
-
-.revenue-chart-wrapper canvas {
-    display: block !important;
-    width: 100% !important;
-    height: 70px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    position: relative !important;
-    left: 0 !important;
-}
-
-/* 2. Блок состояния компании - всегда с отступом снизу */
-.metric-card:has(.metric-title span:contains("СОСТОЯНИЕ КОМПАНИИ")),
-.metric-card:first-child {
-    padding-bottom: 20px !important;
-    margin-bottom: 0 !important;
-}
-
-/* 3. Все карточки без графиков получают нижний отступ */
-.metric-card:not(:has(canvas)) {
-    padding-bottom: 20px !important;
-}
-
-.metric-card:has(.revenue-chart-wrapper) {
-    padding-bottom: 0 !important;
-}
-
-/* 4. Отступ у блоков с графиками - убираем лишнее */
-.metric-card .revenue-chart-wrapper {
-    margin-top: 12px !important;
-    margin-bottom: -20px !important;
-}
-
-/* 5. Карточки без графиков - нормальный отступ */
-.metric-card.no-chart {
-    padding-bottom: 20px !important;
-}
-
-.metric-card.no-chart .revenue-chart-wrapper {
-    display: none !important;
-}
-
-/* 6. Убираем лишние внутренние отступы у графиков */
-.tab-chart-container {
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: 70px !important;
-    max-height: 70px !important;
-    width: 100% !important;
-    overflow: hidden !important;
-}
-
-.tab-chart-container canvas {
-    width: 100% !important;
-    height: 70px !important;
-    display: block !important;
-}
-
-/* 7. Исправление для всех canvas элементов */
-canvas {
-    max-width: 100% !important;
-    display: block !important;
-}
-
-/* 8. Убираем лишние паддинги внутри metric-card */
-.metric-card > div:last-child {
-    margin-bottom: 0 !important;
-}
-
-/* 9. Для блоков с метриками - единый стиль */
-.metrics-grid .metric-card {
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-.metrics-grid .metric-card > div:first-child {
-    flex: 1 !important;
-}
-
-/* ========================
-   УЛУЧШЕННЫЕ ГРАФИКИ И ОТСТУПЫ
-   ======================== */
-
-/* Градиентная заливка под графиками */
-.revenue-chart-wrapper canvas,
-.metric-card canvas {
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
-}
-
-/* Карточки без графиков - нормальный отступ снизу */
-.metric-card.no-chart {
-    padding-bottom: 20px !important;
-}
-
-.metric-card.no-chart .revenue-chart-wrapper {
-    display: none !important;
-}
-
-/* Графики занимают всю ширину блока */
-.revenue-chart-wrapper {
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding: 0 !important;
-}
-
-/* Убираем лишние отступы внутри карточек */
-.metric-card > div:last-child {
-    margin-bottom: 0 !important;
-}
-
-/* Плавное появление графиков */
-canvas {
-    animation: fadeInUp 0.5s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ========================
-   СТИЛИ ДЛЯ ВКЛАДОК (MODERN TABS)
-   ======================== */
-
-.modern-tabs-container {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-}
-
-body.dark .modern-tabs-container {
-    background: rgba(26, 26, 42, 0.9);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.tabs-header {
-    display: flex;
-    gap: 8px;
-    background: rgba(102, 126, 234, 0.1);
-    padding: 6px;
-    border-radius: 16px;
-    margin-bottom: 24px;
-}
-
-.tab-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: transparent;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 14px;
-    font-weight: 500;
-    color: #4a5568;
-}
-
-body.dark .tab-btn {
-    color: #cbd5e0;
-}
-
-.tab-btn.active {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.tab-icon {
-    font-size: 18px;
-    transition: transform 0.2s;
-}
-
-.tab-btn.active .tab-icon {
-    transform: scale(1.1);
-}
-
-.tab-pane {
-    display: none;
-    animation: tabFadeIn 0.4s ease-out;
-}
-
-.tab-pane.active {
-    display: block;
-}
-
-@keyframes tabFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.tab-main-value {
-    font-size: 32px;
-    font-weight: 800;
-    margin-bottom: 8px;
-    line-height: 1.2;
-    text-align: center;
-}
-
-.tab-trend {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    width: auto;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.trend-positive {
-    background: rgba(72, 187, 120, 0.15);
-    color: #48bb78;
-}
-
-.trend-negative {
-    background: rgba(245, 101, 101, 0.15);
-    color: #f56565;
-}
-
-/* Контейнер для графика во вкладке */
-.tab-chart-container {
-    margin: 16px 0;
-    padding: 0;
-    height: 200px;
-    width: 100%;
-    position: relative;
-}
-
-.tab-chart-container canvas {
-    width: 100% !important;
-    height: 200px !important;
-}
-
-/* Заголовок детализации */
-.tab-breakdown-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    margin-top: 16px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: #667eea;
-    border-top: 1px solid rgba(102, 126, 234, 0.2);
-    transition: all 0.2s;
-}
-
-.tab-breakdown-header:hover {
-    color: #5a67d8;
-}
-
-.breakdown-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.breakdown-toggle {
-    font-size: 12px;
-    transition: transform 0.3s;
-}
-
-.tab-breakdown-header.open .breakdown-toggle {
-    transform: rotate(180deg);
-}
-
-.tab-breakdown-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.tab-breakdown-content.show {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-/* Стили для элементов внутри вкладок */
-.tab-pane .metric-value {
-    font-size: 28px;
-    font-weight: 700;
-}
-
-.tab-pane .metric-sub {
-    font-size: 12px;
-    opacity: 0.7;
-}
-
-/* Стили для вкладок - фон и отображение */
-.modern-tabs-container {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    transition: background 0.3s ease;
-}
-
-body.dark .modern-tabs-container {
-    background: rgba(26, 26, 42, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.tab-chart-container {
-    margin: 16px 0;
-    padding: 0;
-    height: 200px;
-    width: 100%;
-    position: relative;
-}
-
-.tab-chart-container canvas {
-    width: 100% !important;
-    height: 200px !important;
-}
-
-/* Анимация для появления графиков */
-@keyframes chartFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.tab-chart-container canvas {
-    animation: chartFadeIn 0.5s ease-out;
-}
-
-/* Стили для вкладок - полное обновление */
-.modern-tabs-container {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    transition: background 0.3s ease;
-}
-
-body.dark .modern-tabs-container {
-    background: rgba(26, 26, 42, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.tabs-header {
-    display: flex;
-    gap: 8px;
-    background: rgba(102, 126, 234, 0.1);
-    padding: 6px;
-    border-radius: 16px;
-    margin-bottom: 24px;
-}
-
-.tab-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: transparent;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 14px;
-    font-weight: 500;
-    color: #4a5568;
-}
-
-body.dark .tab-btn {
-    color: #cbd5e0;
-}
-
-.tab-btn.active {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.tab-icon {
-    font-size: 18px;
-}
-
-.tab-pane {
-    display: none;
-    animation: fadeIn 0.4s ease-out;
-}
-
-.tab-pane.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.tab-main-value {
-    font-size: 32px;
-    font-weight: 800;
-    text-align: center;
-    margin-bottom: 16px;
-}
-
-.tab-chart-container {
-    margin: 16px 0;
-    height: 200px;
-    width: 100%;
-}
-
-.tab-chart-container canvas {
-    width: 100% !important;
-    height: 200px !important;
-}
-
-.tab-breakdown-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    margin-top: 16px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: #667eea;
-    border-top: 1px solid rgba(102, 126, 234, 0.2);
-}
-
-.tab-breakdown-header.open .breakdown-toggle {
-    transform: rotate(180deg);
-}
-
-.breakdown-toggle {
-    transition: transform 0.3s;
-}
-
-.tab-breakdown-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease;
-}
-
-.tab-breakdown-content.show {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-/* ========================
-   СТИЛИ ДЛЯ ГРАФИКОВ ВО ВКЛАДКАХ
-   ======================== */
-
-/* Контейнер для графика во вкладке */
-.tab-chart-container {
-    margin: 16px 0;
-    padding: 0;
-    height: 200px;
-    width: 100%;
-    position: relative;
-}
-
-.tab-chart-container canvas {
-    width: 100% !important;
-    height: 200px !important;
-    display: block;
-}
-
-/* Заголовок детализации - всегда под графиком */
-.tab-breakdown-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    margin-top: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: #667eea;
-    border-top: 1px solid rgba(102, 126, 234, 0.2);
-    transition: all 0.2s;
-    clear: both;
-}
-
-/* Основное значение вкладки */
-.tab-main-value {
-    font-size: 32px;
-    font-weight: 800;
-    text-align: center;
-    margin-bottom: 8px;
-}
-
-/* Тренд во вкладке */
-.tab-trend {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    width: auto;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.trend-positive {
-    background: rgba(72, 187, 120, 0.15);
-    color: #48bb78;
-}
-
-.trend-negative {
-    background: rgba(245, 101, 101, 0.15);
-    color: #f56565;
-}
-
-/* Контейнер для всего блока вкладок */
-.modern-tabs-container {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    transition: background 0.3s ease;
-}
-
-body.dark .modern-tabs-container {
-    background: rgba(26, 26, 42, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-/* Заголовки вкладок */
-.tabs-header {
-    display: flex;
-    gap: 8px;
-    background: rgba(102, 126, 234, 0.1);
-    padding: 6px;
-    border-radius: 16px;
-    margin-bottom: 20px;
-}
-
-.tab-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: transparent;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 14px;
-    font-weight: 500;
-    color: #4a5568;
-}
-
-body.dark .tab-btn {
-    color: #cbd5e0;
-}
-
-.tab-btn.active {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.tab-icon {
-    font-size: 18px;
-}
-
-/* Анимация появления панели */
-.tab-pane {
-    display: none;
-    animation: fadeIn 0.4s ease-out;
-}
-
-.tab-pane.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Разделитель для детализации */
-.breakdown-toggle {
-    transition: transform 0.3s;
-}
-
-.tab-breakdown-header.open .breakdown-toggle {
-    transform: rotate(180deg);
-}
-
-.tab-breakdown-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease;
-}
-
-.tab-breakdown-content.show {
-    max-height: 500px;
-    overflow-y: auto;
-}
